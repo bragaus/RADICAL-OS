@@ -9,11 +9,11 @@
 -- Initialising, order is important!
 
 local awful = require("awful")
-local gfs = require("gears.filesystem")
 local plano_gif = require("src.widgets.plano_gif")
 plano_gif.preload(500)
 require("src.theme.user_variables")
 require("src.theme.init")
+require("src.widgets.alacritty_lain_overlay")
 require("src.core.error_handling")
 require("src.core.signals")
 require("src.core.notifications")
@@ -25,3 +25,15 @@ require("src.tools.auto_starter")(user_vars.autostart)
 awful.spawn.with_shell("xset s off")
 awful.spawn.with_shell("xset -dpms")
 awful.spawn.with_shell("xset s noblank")
+--local cyber = require("cyber_hotkeys_dashboard")
+--
+--cyber.setup({
+  --modkey = modkey,
+  --terminal = terminal,
+  --browser = "firefox",
+  --file_manager = "thunar",
+  --launcher = "rofi -show drun",
+--})
+--
+--globalkeys = gears.table.join(globalkeys, cyber.keys)
+--root.keys(globalkeys)

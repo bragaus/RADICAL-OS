@@ -11,6 +11,7 @@ require("src.core.signals")
 
 -- Icon directory path
 local icondir = awful.util.getdir("config") .. "src/assets/icons/audio/"
+local bt_icondir = awful.util.getdir("config") .. "src/assets/icons/bluetooth/"
 
 -- Returns the audio widget
 return function(s)
@@ -38,6 +39,24 @@ return function(s)
           align = "center",
           valign = "center",
           widget = wibox.widget.textbox
+        },
+        {
+          id = "bt_status",
+          visible = false,
+          spacing = dpi(4),
+          layout = wibox.layout.fixed.horizontal,
+          {
+            id = "bt_icon",
+            image = gears.color.recolor_image(bt_icondir .. "bluetooth-on.svg", "#ff8c00"),
+            widget = wibox.widget.imagebox,
+            resize = false
+          },
+          {
+            id = "bt_label",
+            align = "center",
+            valign = "center",
+            widget = wibox.widget.textbox
+          }
         },
         id = "audio_layout",
         layout = wibox.layout.fixed.horizontal
@@ -102,6 +121,24 @@ return function(s)
     )
   end
 
+  local update_bluetooth = function()
+    awful.spawn.easy_async_with_shell(
+      "./.config/awesome/src/scripts/bt.sh",
+      function(stdout)
+        local compact = (stdout or ""):gsub("\n", " "):gsub("%s+", " "):gsub("^%s+", ""):gsub("%s+$", "")
+        local bt_status = audio_widget.container.audio_layout.bt_status
+
+        if compact == "" then
+          bt_status.visible = false
+          return
+        end
+
+        bt_status.visible = true
+        bt_status.bt_label:set_text(compact:sub(1, 16):upper())
+      end
+    )
+  end
+
   -- Signals
   Hover_signal(audio_widget, color["Yellow200"], "#ff8c00" )
 
@@ -120,6 +157,13 @@ return function(s)
     call_now = true,
     autostart = true,
     callback = check_muted
+  }
+
+  gears.timer {
+    timeout = 5,
+    call_now = true,
+    autostart = true,
+    callback = update_bluetooth
   }
 
   check_muted()

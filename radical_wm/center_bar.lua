@@ -9,27 +9,66 @@ local gears = require("gears")
 local wibox = require("wibox")
 
 return function(s, widgets)
+  widgets = widgets or {}
+
+  local max_width = dpi(500)
+  local max_height = dpi(45)
+  local popup_ontop = true
+  local popup_type = "dock"
+  local popup_opacity = 1
+  local reserve_space = true
+  local input_passthrough = false
+
+  for _, widget in ipairs(widgets) do
+    max_width = math.max(max_width, widget._preferred_segment_width or dpi(500))
+    max_height = math.max(max_height, widget._preferred_segment_height or dpi(45))
+
+    if widget._popup_ontop == false then
+      popup_ontop = false
+    end
+
+    if widget._popup_type then
+      popup_type = widget._popup_type
+    end
+
+    if widget._popup_opacity then
+      popup_opacity = math.min(popup_opacity, widget._popup_opacity)
+    end
+
+    if widget._reserve_space == false then
+      reserve_space = false
+    end
+
+    if widget._input_passthrough then
+      input_passthrough = true
+    end
+  end
 
   local top_center = awful.popup {
     screen = s,
     widget = wibox.container.background,
-    ontop = false,
-    bg = color["Grey900"],
+    ontop = popup_ontop,
+    bg = "#00000000",
     visible = true,
-    maximum_width = dpi(500),
+    opacity = popup_opacity,
+    type = popup_type,
+    input_passthrough = input_passthrough,
+    maximum_width = max_width + dpi(36),
     placement = function(c) awful.placement.top(c, { margins = dpi(10) }) end,
     shape = function(cr, width, height)
       gears.shape.rounded_rect(cr, width, height, 5)
     end
   }
 
-  top_center:struts {
-    top = 55
-  }
+  if reserve_space then
+    top_center:struts {
+      top = math.max(dpi(55), math.min(max_height + dpi(24), dpi(132)))
+    }
+  end
 
   local function prepare_widgets(widgets)
     local layout = {
-      forced_height = 45,
+      forced_height = max_height,
       layout = wibox.layout.fixed.horizontal
     }
     for i, widget in pairs(widgets) do
@@ -77,7 +116,16 @@ return function(s, widgets)
 
   local function update_visibility()
     local selected_tag = s.selected_tag
-    top_center.visible = selected_tag and #selected_tag:clients() > 0 or false
+    local always_visible = false
+
+    for _, widget in ipairs(widgets) do
+      if widget._always_visible then
+        always_visible = true
+        break
+      end
+    end
+
+    top_center.visible = always_visible or (selected_tag and #selected_tag:clients() > 0 or false)
   end
 
   client.connect_signal("manage", update_visibility)

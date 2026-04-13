@@ -32,6 +32,7 @@ user_vars = {
 
   -- Write the terminal command to start anything here
   autostart = {
+    "picom --config ~/.config/picom.conf",
     "alacritty"
   },
 

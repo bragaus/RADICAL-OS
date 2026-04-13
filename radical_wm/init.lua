@@ -59,45 +59,43 @@ awful.screen.connect_for_each_screen(
   if s.index == 2 then
 
 s.cyber_chart = require("src.widgets.system_monitor_chart") {
-  width = dpi(320),
-  height = dpi(96),
+  width = dpi(1180),
+  height = dpi(720),
   interval = 1,
   samples = 42,
-  radius = dpi(10),
+  radius = dpi(18),
   palette = {
-    cpu = "#00F6FF",
-    mem = "#FF00F5",
-    gpu = "#8BFF00",
-    net = "#FF9F1C",
-    grid = "#5A2A82",
-    text = "#E8D9FF",
-    overlay = "#0B0714"
+    accent = "#ff7a00",
+    cpu = "#ff9a1f",
+    mem = "#9c63ff",
+    gpu = "#62b9ff",
+    net = "#55ffd7",
+    grid = "#ff7a00",
+    text = "#fff4e8",
+    overlay = "#120d22",
+    glow = "#8d72ff"
   }
 }
 
     s.tasklist = require("src.widgets.tasklist")(s)
-    s.network = require("src.widgets.network")()
-    s.ram_info = require("src.widgets.ram_info")()
-    s.audio = require("src.widgets.audio")(s)
     s.kblayout = require("src.widgets.kblayout")(s)
-    s.date = require("src.widgets.date")()
-    s.clock = require("src.widgets.clock")()
     s.powerbutton = require("src.widgets.power")()
     s.layoutlist = require("src.widgets.layout_list")(s)
-    s.cpu_usage = require("src.widgets.cpu_info")("usage")
-    s.cpu_temp = require("src.widgets.cpu_info")("temp")
-    s.gpu_usage = require("src.widgets.gpu_info")("usage")
     s.app_launcher = require("src.widgets.app_launcher")(s)
+    s.clock_br = require("src.widgets.world_clock") { city = "BRASIL", timezone = "America/Sao_Paulo", country = "br", width = dpi(84), segment_bg = "#1f8f52" }
+    s.clock_fr = require("src.widgets.world_clock") { city = "FRANCA", timezone = "Europe/Paris", country = "fr", width = dpi(84), segment_bg = "#191338" }
+    s.clock_jp = require("src.widgets.world_clock") { city = "JAPAO", timezone = "Asia/Tokyo", country = "jp", width = dpi(84), segment_bg = "#C24347" }
+    s.clock_us = require("src.widgets.world_clock") { city = "EUA", timezone = "America/New_York", country = "us", width = dpi(84), segment_bg = "#1E588D" }
     --s.systray = require("src.widgets.systray")(s)
 
 
    -- s.battery = require("src.widgets.battery")()
    -- require("crylia_bar.center_bar")(s, { s.systray })
    -- require("crylia_bar.first_bar")(s { s.app_launcher })
-   -- require("radical_wm.left_bar")(s, { s.layoutlist, s.taglist })
+    -- require("radical_wm.left_bar")(s, { s.layoutlist, s.taglist })
     require("radical_wm.radical_bar")(s, { s.layoutlist, s.tasklist, s.taglist }, { s.app_launcher })
     require("radical_wm.center_bar")(s, { s.cyber_chart })
-    require("radical_wm.right_bar")(s, { s.cpu_usage, s.gpu_usage, s.ram_info, s.network, s.audio, s.kblayout, s.date, s.clock, s.powerbutton })
+    require("radical_wm.right_bar")(s, { s.clock_br, s.clock_fr, s.clock_jp, s.clock_us, s.powerbutton })
     require("radical_wm.dock")(s, user_vars.dock_programs)
   end
 end

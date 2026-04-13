@@ -4,7 +4,6 @@
 
 -- Awesome Libs
 local awful = require("awful")
-local color = require("src.theme.colors")
 local dpi = require("beautiful").xresources.apply_dpi
 local gears = require("gears")
 local wibox = require("wibox")
@@ -14,43 +13,56 @@ require("src.core.signals")
 local icondir = awful.util.getdir("config") .. "src/assets/icons/power/"
 
 return function()
+  local power_icon = wibox.widget {
+    {
+      {
+        image = gears.color.recolor_image(icondir .. "power.svg", "#ffffff"),
+        resize = true,
+        widget = wibox.widget.imagebox,
+      },
+      halign = "center",
+      valign = "center",
+      widget = wibox.container.place,
+    },
+    forced_width = dpi(18),
+    forced_height = dpi(18),
+    strategy = "exact",
+    widget = wibox.container.constraint,
+  }
 
   local power_widget = wibox.widget {
     {
       {
-        {
-          {
-            {
-              id = "icon",
-              image = gears.color.recolor_image(icondir .. "power.svg", "#ff8c00"),
-              widget = wibox.widget.imagebox,
-              resize = false
-            },
-            id = "icon_layout",
-            widget = wibox.container.place
-          },
-          id = "icon_margin",
-          top = dpi(2),
-          widget = wibox.container.margin
-        },
+        power_icon,
+        halign = "center",
+        valign = "center",
         id = "power_layout",
-        layout = wibox.layout.fixed.horizontal
+        widget = wibox.container.place,
       },
       id = "container",
-      left = dpi(8),
-      right = dpi(8),
+      left = dpi(10),
+      right = dpi(10),
+      top = dpi(3),
+      bottom = dpi(3),
       widget = wibox.container.margin
     },
-    bg = color["Red200"],
-    fg = color["Grey800"],
+    bg = "#1f1f1f",
+    fg = "#ffffff",
     shape = function(cr, width, height)
       gears.shape.rounded_rect(cr, width, height, 5)
     end,
     widget = wibox.container.background
   }
 
+  power_widget._preserve_colors = true
+  power_widget._segment_bg = "#1f1f1f"
+  power_widget._segment_edge = "#1f1f1f"
+  power_widget._segment_border_width = 0
+  power_widget._preferred_segment_width = dpi(44)
+  power_widget._preferred_segment_height = dpi(46)
+
   -- Signals
-  Hover_signal(power_widget, color["Red200"], "#ff8c00")
+  Hover_signal(power_widget, "#1f1f1f", "#ffffff")
 
   power_widget:connect_signal(
     "button::release",

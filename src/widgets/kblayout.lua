@@ -12,6 +12,13 @@ require("src.core.signals")
 
 -- Icon directory path
 local icondir = awful.util.getdir("config") .. "src/assets/icons/kblayout/"
+local active_keymaps = { "us", "fr", "jp" }
+
+local xkeyboard_country_code = {
+  us = { "English (United States)", "USA" },
+  fr = { "Francais (France)", "FRA" },
+  jp = { "Japanese", "JPN" },
+}
 
 return function(s)
   local kblayout_widget = wibox.widget {
@@ -67,20 +74,9 @@ return function(s)
   end
 
   local function create_kb_layout_item(keymap)
-    -- TODO: Add more, too lazy rn
-    local longname, shortname
-
-    local xkeyboard_country_code = {
-      { "br", "Portugues (Brasil)", "BRA" }, -- Brazil
-      { "us", "English (United States)", "USA" }, -- USA
-    }
-
-    for _, c in ipairs(xkeyboard_country_code) do
-      if c[1] == keymap then
-        longname = c[2]
-        shortname = c[3]
-      end
-    end
+    local keymap_meta = xkeyboard_country_code[keymap] or { keymap:upper(), keymap:upper() }
+    local longname = keymap_meta[1]
+    local shortname = keymap_meta[2]
 
     local kb_layout_item = wibox.widget {
       {
@@ -171,7 +167,7 @@ return function(s)
       layout = wibox.layout.fixed.vertical,
       spacing = dpi(10)
     }
-    for i, keymap in pairs(user_vars.kblayout) do
+    for i, keymap in ipairs(active_keymaps) do
       kb_layout_items[i] = create_kb_layout_item(keymap)
     end
     local cont = {
@@ -232,18 +228,18 @@ return function(s)
     awful.spawn.easy_async_with_shell(
       "setxkbmap -query | grep layout: | awk '{print $2}'",
       function(stdout)
-        for j, n in ipairs(user_vars.kblayout) do
+        for j, n in ipairs(active_keymaps) do
           if stdout:match(n) then
-            if j == #user_vars.kblayout then
+            if j == #active_keymaps then
               awful.spawn.easy_async_with_shell(
-                "setxkbmap " .. user_vars.kblayout[1],
+                "setxkbmap " .. active_keymaps[1],
                 function()
                   get_kblayout()
                 end
               )
             else
               awful.spawn.easy_async_with_shell(
-                "setxkbmap " .. user_vars.kblayout[j + 1],
+                "setxkbmap " .. active_keymaps[j + 1],
                 function()
                   get_kblayout()
                 end
@@ -296,7 +292,12 @@ return function(s)
     end
   )
 
-  get_kblayout()
+  awful.spawn.easy_async_with_shell(
+    "setxkbmap " .. active_keymaps[1],
+    function()
+      get_kblayout()
+    end
+  )
   kb_menu_widget.visible = false
   return kblayout_widget
 end
