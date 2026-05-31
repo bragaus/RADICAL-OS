@@ -117,8 +117,15 @@ return function(s)
     offset = dpi(5),
   }
 
+  -- Cached refs: the re-skin wrapped some textboxes/imageboxes in extra background
+  -- containers (to set fg), which breaks the dotted id chains. get_children_by_id
+  -- resolves an id regardless of nesting depth.
+  local value_label       = brightness_osd_widget:get_children_by_id("value")[1]
+  local icon_image        = brightness_osd_widget:get_children_by_id("icon")[1]
+  local brightness_slider = brightness_osd_widget:get_children_by_id("brightness_slider")[1]
+
   local refresh_label = function(brightness_value)
-    brightness_osd_widget.container.osd_layout.icon_slider_layout.label_value_layout.value:set_text(tostring(brightness_value) .. "%")
+    value_label:set_text(tostring(brightness_value) .. "%")
 
     local icon = icondir .. "brightness"
     if brightness_value >= 0 and brightness_value < 34 then
@@ -128,17 +135,17 @@ return function(s)
     elseif brightness_value >= 67 then
       icon = icon .. "-high"
     end
-    brightness_osd_widget.container.osd_layout.icon_slider_layout.icon_margin1.icon_margin2.icon:set_image(icon .. ".svg")
+    icon_image:set_image(icon .. ".svg")
   end
 
   -- Guard so programmatic set_value() (from update_slider) does not re-trigger an xrandr write.
   local syncing_slider = false
 
-  brightness_osd_widget.container.osd_layout.icon_slider_layout.slider_layout.brightness_slider:connect_signal(
+  brightness_slider:connect_signal(
     "property::value",
     function()
     if syncing_slider then return end
-    local brightness_value = brightness_osd_widget.container.osd_layout.icon_slider_layout.slider_layout.brightness_slider.value
+    local brightness_value = brightness_slider.value
     awful.spawn.easy_async_with_shell(
       BRIGHTNESS_SCRIPT .. " set " .. tostring(brightness_value),
       function(stdout)
@@ -163,7 +170,7 @@ return function(s)
       local value = tonumber(stdout)
       if not value then return end
       syncing_slider = true
-      brightness_osd_widget.container.osd_layout.icon_slider_layout.slider_layout.brightness_slider:set_value(value)
+      brightness_slider:set_value(value)
       syncing_slider = false
       refresh_label(value)
     end
@@ -180,7 +187,7 @@ return function(s)
   awesome.connect_signal(
     "widget::brightness:update",
     function(value)
-    brightness_osd_widget.container.osd_layout.icon_slider_layout.slider_layout.brightness_slider:set_value(tonumber(value))
+    brightness_slider:set_value(tonumber(value))
   end
   )
 

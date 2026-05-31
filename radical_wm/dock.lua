@@ -29,12 +29,12 @@ return function(screen, programs)
   }
   local dock_margin = dpi(10)
   local dock_spacing = dpi(4)
-  local panel_bg = color.with_alpha("#08111f", dock_alpha)
-  local panel_edge = color.with_alpha("#3b82f6", dock_border_alpha)
-  local button_bg = color.with_alpha("#0d1728", dock_button_alpha)
-  local button_hover_bg = "#16233a"
-  local button_active_bg = color.with_alpha("#173969", math.min(1, dock_button_alpha + 0.04))
-  local button_inactive_edge = color.with_alpha("#1e3556", dock_border_alpha)
+  local panel_bg = color.with_alpha("#0c0617", dock_alpha)              -- base
+  local panel_edge = color.with_alpha("#5b21b6", dock_border_alpha)     -- line_base
+  local button_bg = color.with_alpha("#130a24", dock_button_alpha)      -- panel
+  local button_hover_bg = "#241640"                                     -- raised
+  local button_active_bg = color.with_alpha("#6d28d9", math.min(1, dock_button_alpha + 0.04)) -- v700
+  local button_inactive_edge = color.with_alpha("#2e1065", dock_border_alpha) -- v950
   local dock_items = {}
   local launcher_apps = {}
   local launcher_apps_loading = false
@@ -150,7 +150,7 @@ return function(screen, programs)
     border_width = dpi(1),
     border_color = panel_edge,
     shape = function(cr, width, height)
-      gears.shape.rounded_rect(cr, width, height, dpi(14))
+      gears.shape.rounded_rect(cr, width, height, dpi(8))
     end,
     widget = wibox.container.background,
   }
@@ -280,7 +280,7 @@ return function(screen, programs)
           widget = wibox.container.background,
         }
 
-        Hover_signal(orbit_button, button_hover_bg, color["White"])
+        Hover_signal(orbit_button, button_hover_bg, "#e9dcff")
 
         orbit_button:buttons(gears.table.join(
           awful.button({}, 1, function()
@@ -489,22 +489,22 @@ PY]], function(stdout)
 
   local function indicator_color(c)
     if c == client.focus then
-      return color["BlueA200"]
+      return "#9d6ff6" -- v400
     end
     if c.urgent then
-      return color["RedA200"]
+      return "#fb5e8a" -- crit
     end
     if c.maximized then
-      return color["GreenA200"]
+      return "#5ad1a0" -- ok
     end
     if c.minimized then
-      return color["BlueGrey400"] or color["Grey600"]
+      return "#6f5a96" -- text_muted
     end
     if c.fullscreen then
-      return color["PinkA200"]
+      return "#c026d3" -- glow_hot
     end
 
-    return color["Grey600"]
+    return "#463566" -- text_faint
   end
 
   local function build_indicator_strip(item)
@@ -601,7 +601,7 @@ PY]], function(stdout)
       widget = wibox.container.background,
     }
 
-    Hover_signal(background, button_hover_bg, color["White"])
+    Hover_signal(background, button_hover_bg, "#e9dcff")
 
     local dock_element = wibox.widget {
       {
