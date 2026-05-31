@@ -45,54 +45,56 @@ awful.screen.connect_for_each_screen(
   s.layoutlist = require("src.widgets.layout_list")(s)
   s.taglist = require("src.widgets.taglist")(s)
   if s == resolve_primary() then
-    s.cyber_chart = require("src.widgets.system_monitor_chart") {
-      width = dpi(1180),
-      height = dpi(720),
-      interval = 1,
-      samples = 42,
-      radius = dpi(18),
-      palette = {
-        accent = "#8b5cf6",
-        cpu = "#a855f7",
-        mem = "#c084fc",
-        gpu = "#7c3aed",
-        net = "#d946ef",
-        grid = "#3a1f63",
-        text = "#cbb6ff",
-        overlay = "#0c0617",
-        glow = "#b794ff"
-      }
+    -- =====================================================================================
+    -- HUD DE 3 COLUNAS — estrutura da Image #6 (DESIGN_SYSTEM §5.1).
+    -- O system_monitor_chart monolítico foi APOSENTADO do centro; o dock inferior também.
+    -- =====================================================================================
+
+    -- ----- BARRA SUPERIOR -----
+    s.tag_controls = require("src.widgets.tag_controls")(s)
+    s.tag_controls._preserve_colors = true
+    s.powerbutton  = require("src.widgets.power")()
+    s.status_dock  = require("src.widgets.status_dock")()
+
+    -- tags + controle de tags (canto superior-ESQUERDO)
+    require("radical_wm.radical_bar")(s, { s.layoutlist, s.taglist, s.tag_controls })
+    -- power (canto superior-DIREITO)
+    require("radical_wm.right_bar")(s, { s.powerbutton })
+    -- STATUS DO MEIO (lozenges Image #7) — topo-CENTRO, entre tags e power
+    if s._status_popup then s._status_popup.visible = false end
+    s._status_popup = awful.popup {
+      screen      = s,
+      widget      = s.status_dock,
+      ontop       = false,
+      bg          = "#0c0617cc", -- base@cc
+      visible     = true,
+      placement   = function(c) awful.placement.top(c, { margins = { top = dpi(8) } }) end,
     }
 
-    s.tasklist = require("src.widgets.tasklist")(s)
-    s.kblayout = require("src.widgets.kblayout")(s)
-    s.powerbutton = require("src.widgets.power")()
-    s.layoutlist = require("src.widgets.layout_list")(s)
+    -- ----- PAINÉIS (reusam coletores; todos com chrome de painel) -----
+    s.info_panel        = require("src.widgets.info_panel")()
+    s.usage_panel       = require("src.widgets.usage_panel")()
+    s.process_panel     = require("src.widgets.process_panel")()
+    s.net_graph_panel   = require("src.widgets.net_graph_panel")()
+    s.ip_panel          = require("src.widgets.ip_panel")()
+    s.connections_panel = require("src.widgets.connections_panel")()
+    s.protocols_donut   = require("src.widgets.protocols_donut")()
+    s.apps_panel        = require("src.widgets.apps_panel")()
+    s.calendar_panel    = require("src.widgets.calendar_panel")()
     s.clock_br = require("src.widgets.world_clock") { city = "BRASIL", timezone = "America/Sao_Paulo", country = "br", width = dpi(84), segment_bg = "#130a24" }
     s.clock_fr = require("src.widgets.world_clock") { city = "FRANCA", timezone = "Europe/Paris", country = "fr", width = dpi(84), segment_bg = "#1b1030" }
     s.clock_jp = require("src.widgets.world_clock") { city = "JAPAO", timezone = "Asia/Tokyo", country = "jp", width = dpi(84), segment_bg = "#241640" }
     s.clock_us = require("src.widgets.world_clock") { city = "EUA", timezone = "America/New_York", country = "us", width = dpi(84), segment_bg = "#2e1065" }
-    -- cluster de controle de tags (add/remove/mover) no fim da taglist + status dock central
-    s.tag_controls = require("src.widgets.tag_controls")(s)
-    s.tag_controls._preserve_colors = true
-    s.status_dock = require("src.widgets.status_dock")()
-    s.status_dock._preserve_colors = true
-    require("radical_wm.radical_bar")(s, { s.layoutlist, s.taglist, s.tag_controls, s.tasklist })
-    require("radical_wm.center_bar")(s, { s.cyber_chart })
-    require("radical_wm.right_bar")(s, { s.status_dock, s.clock_br, s.clock_fr, s.clock_jp, s.clock_us, s.powerbutton })
-    require("radical_wm.dock")(s, user_vars.dock_programs)
 
-    -- VIOLET HUD §5: coluna lateral esquerda de painéis de dado
-    s.process_panel     = require("src.widgets.process_panel")()
-    s.connections_panel = require("src.widgets.connections_panel")()
-    s.calendar_panel    = require("src.widgets.calendar_panel")()
-    s.protocols_donut   = require("src.widgets.protocols_donut")()
-    require("radical_wm.side_panels")(s, {
-      s.calendar_panel,
-      s.process_panel,
-      s.protocols_donut,
-      s.connections_panel,
-    }, { side = "left", top = dpi(70) })
+    -- COLUNA ESQUERDA: INFO · USAGE · PROCESS
+    require("radical_wm.side_panels")(s, { s.info_panel, s.usage_panel, s.process_panel },
+      { side = "left", top = dpi(70) })
+    -- COLUNA DO MEIO: GRAPH · IP · CONNECTIONS · PROTOCOLS · APPLICATIONS
+    require("radical_wm.side_panels")(s, { s.net_graph_panel, s.ip_panel, s.connections_panel, s.protocols_donut, s.apps_panel },
+      { side = "center", top = dpi(70) })
+    -- COLUNA DIREITA: CALENDAR · INTERNATIONAL (relógios)
+    require("radical_wm.side_panels")(s, { s.calendar_panel, s.clock_br, s.clock_fr, s.clock_jp, s.clock_us },
+      { side = "right", top = dpi(70) })
   end
 end
 )
