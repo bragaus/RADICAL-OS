@@ -125,9 +125,9 @@ return function(s, widgets)
           font = "JetBrainsMono Nerd Font, ExtraBold 30",
           widget = wibox.widget.textbox
         },
-        fg = "#00000000", -- powerline arrow neutralizado (HUD plano)
+        fg = current_bg.edge, -- seta powerline afiada = cor do segmento (aponta ESQUERDA, barra direita)
         bg = "#00000000",
-        forced_width = dpi(2),
+        forced_width = dpi(26),
         widget = wibox.container.background
       },
       {
@@ -153,7 +153,7 @@ return function(s, widgets)
 
   local function prepare_widgets(widget_list)
     local layout = wibox.layout.fixed.horizontal()
-    layout.spacing = dpi(6)
+    layout.spacing = -dpi(18)
 
     local max_h = dpi(48)
 

@@ -452,8 +452,16 @@ ex. `src/tools/panel.lua`, com a assinatura `panel({ title=, body=, accent=, w=,
   - hover: clarear bg (selecionada `#9b6bffdd`, outra `#3f1680dd`) — já implementado no taglist atual; **mantenha a mecânica, ajuste só as cores p/ tokens**.
   - Rótulo no estilo da referência: `1 PLANO-WEB3` ou bracket `[1]`.
 - **Centro — Tasklist:** título da janela focada em `text_primary`; inativas `text_muted`.
-- **Separadores:** divisória vertical fina `line_dim` **ou** chevron angular fino (`◣`/`◢`)
-  em `v700` entre seções — **chevron sutil**, não o powerline grosso atual.
+- **Separadores — setas powerline AFIADAS, direcionais (idêntico à Image #1):** o dockbar
+  de cima imita a barra de tags da referência (Image #1) — um *breadcrumb* de segmentos
+  (ícone + label em CAIXA-ALTA) ligados por **setas afiadas (sharp)**. A direção da seta
+  depende de **qual canto superior** a barra ocupa:
+  - barra do **canto superior-ESQUERDO** (tags) → seta aponta para a **DIREITA** (``, glyph Nerd Font powerline U+E0B0).
+  - barra do **canto superior-DIREITO** (relógios/status) → seta aponta para a **ESQUERDA** (``, U+E0B2).
+  Efeito powerline contínuo: a **cor da seta = cor do segmento que ela segue**, sobrepondo o
+  segmento vizinho (`spacing` negativo, ~`-dpi(18)`). Segmentos em sombras violeta da paleta
+  (`panel` → `panel_hi` → `raised` → `v950`), texto/ícone em `text_bright`/`v400`.
+  *(Esta diretriz substitui — só para a barra superior — a antiga nota de "sem powerline / chevron sutil".)*
 - **Direita:** systray (`bg_systray = panel`, `systray_icon_spacing = dpi(6)`), mini-relógio
   `%H:%M` em `text_bright`, e indicadores compactos (layoutbox, kb layout) em `text_muted`.
 

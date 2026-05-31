@@ -147,11 +147,6 @@ return function(s, widgets_top, widgets_bottom)
           widget = wibox.container.margin
         },
         bg = current_bg,
-        border_width = dpi(1),
-        border_color = "#5b21b6", -- line_base
-        shape = function(cr, w, h)
-          gears.shape.rounded_rect(cr, w, h, dpi(4))
-        end,
         widget = wibox.container.background
       },
       {
@@ -162,9 +157,9 @@ return function(s, widgets_top, widgets_bottom)
           font = "JetBrainsMono Nerd Font, ExtraBold 30",
           widget = wibox.widget.textbox
         },
-        fg = "#00000000", -- powerline arrow neutralizado (HUD plano)
+        fg = current_bg, -- seta powerline afiada = cor do segmento (aponta DIREITA, barra esquerda)
         bg = "#00000000",
-        forced_width = dpi(2),
+        forced_width = dpi(26),
         widget = wibox.container.background
       },
       layout = wibox.layout.fixed.horizontal
@@ -173,7 +168,7 @@ return function(s, widgets_top, widgets_bottom)
 
   local function prepare_widgets(widget_list)
     local layout = wibox.layout.fixed.horizontal()
-    layout.spacing = dpi(6)
+    layout.spacing = -dpi(18)
 
     for i, widget in ipairs(widget_list) do
       layout:add(create_powerline_segment(widget, i))

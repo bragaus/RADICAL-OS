@@ -31,7 +31,6 @@ end
 local function cell(text, color, align, width)
   return wibox.widget {
     {
-      markup = "",
       text   = text or "",
       font   = MONO .. " 9",
       align  = align or "left",
