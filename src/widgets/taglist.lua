@@ -25,15 +25,16 @@ local palette = {
   separator_fg = p.line_dim
 }
 
+-- Seta powerline de UMA direção (aponta p/ DIREITA, Image #11): borda esquerda reta,
+-- ponta afiada à direita. NÃO é lozângulo bidirecional.
 local function tab_shape(cr, width, height)
-  local slant = math.min(dpi(8), math.floor(height * 0.35))
+  local tip = math.min(dpi(12), math.floor(height * 0.55))
 
-  cr:move_to(slant, 0)
-  cr:line_to(width - slant, 0)
-  cr:line_to(width, height / 2)
-  cr:line_to(width - slant, height)
-  cr:line_to(slant, height)
-  cr:line_to(0, height / 2)
+  cr:move_to(0, 0)
+  cr:line_to(width - tip, 0)
+  cr:line_to(width, height / 2) -- ponta afiada (seta →)
+  cr:line_to(width - tip, height)
+  cr:line_to(0, height)
   cr:close_path()
 end
 
@@ -101,8 +102,8 @@ local list_update = function(widget, buttons, _, _, objects)
           spacing = dpi(6),
           layout = wibox.layout.fixed.horizontal
         },
-        left = dpi(8),
-        right = dpi(8),
+        left = dpi(10),
+        right = dpi(18), -- espaço p/ a ponta afiada da seta
         top = dpi(3),
         bottom = dpi(3),
         widget = wibox.container.margin
@@ -110,14 +111,17 @@ local list_update = function(widget, buttons, _, _, objects)
       bg = bg,
       fg = fg,
       shape = tab_shape,
+      shape_border_width = dpi(1),
+      shape_border_color = object.selected and p.v300 or palette.separator_fg,
       widget = wibox.container.background
     }
 
     local content = wibox.layout.fixed.horizontal()
-    content.spacing = dpi(4)
+    content.spacing = dpi(2)
     content:add(background)
 
-    if index < #objects then
+    -- separador glyph desativado: a própria seta-tab (powerline uma direção) separa
+    if false then
       content:add(wibox.widget {
         markup = string.format("<span foreground='%s'></span>", palette.separator_fg),
         align = "center",
