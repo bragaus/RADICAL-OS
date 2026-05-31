@@ -46,55 +46,40 @@ awful.screen.connect_for_each_screen(
   s.taglist = require("src.widgets.taglist")(s)
   if s == resolve_primary() then
     -- =====================================================================================
-    -- HUD DE 3 COLUNAS — estrutura da Image #6 (DESIGN_SYSTEM §5.1).
-    -- O system_monitor_chart monolítico foi APOSENTADO do centro; o dock inferior também.
+    -- BARRA SUPERIOR + DASHBOARDS ON-CLICK (DESIGN_SYSTEM §5).
+    -- Sem colunas estáticas, sem chart monolítico, sem dock: os painéis aparecem em popups
+    -- (2×) ao CLICAR nos lozenges do control_center.
     -- =====================================================================================
 
     -- ----- BARRA SUPERIOR -----
     s.tag_controls = require("src.widgets.tag_controls")(s)
     s.tag_controls._preserve_colors = true
     s.powerbutton  = require("src.widgets.power")()
-    s.status_dock  = require("src.widgets.status_dock")()
-
-    -- tags + controle de tags (canto superior-ESQUERDO)
     require("radical_wm.radical_bar")(s, { s.layoutlist, s.taglist, s.tag_controls })
-    -- power (canto superior-DIREITO)
     require("radical_wm.right_bar")(s, { s.powerbutton })
-    -- STATUS DO MEIO (lozenges Image #7) — topo-CENTRO, entre tags e power
-    if s._status_popup then s._status_popup.visible = false end
-    s._status_popup = awful.popup {
-      screen      = s,
-      widget      = s.status_dock,
-      ontop       = false,
-      bg          = "#0c0617cc", -- base@cc
-      visible     = true,
-      placement   = function(c) awful.placement.top(c, { margins = { top = dpi(8) } }) end,
-    }
 
-    -- ----- PAINÉIS (reusam coletores; todos com chrome de painel) -----
-    s.info_panel        = require("src.widgets.info_panel")()
-    s.usage_panel       = require("src.widgets.usage_panel")()
-    s.process_panel     = require("src.widgets.process_panel")()
-    s.net_graph_panel   = require("src.widgets.net_graph_panel")()
-    s.ip_panel          = require("src.widgets.ip_panel")()
-    s.connections_panel = require("src.widgets.connections_panel")()
-    s.protocols_donut   = require("src.widgets.protocols_donut")()
-    s.apps_panel        = require("src.widgets.apps_panel")()
-    s.calendar_panel    = require("src.widgets.calendar_panel")()
-    s.clock_br = require("src.widgets.world_clock") { city = "BRASIL", timezone = "America/Sao_Paulo", country = "br", width = dpi(84), segment_bg = "#130a24" }
-    s.clock_fr = require("src.widgets.world_clock") { city = "FRANCA", timezone = "Europe/Paris", country = "fr", width = dpi(84), segment_bg = "#1b1030" }
-    s.clock_jp = require("src.widgets.world_clock") { city = "JAPAO", timezone = "Asia/Tokyo", country = "jp", width = dpi(84), segment_bg = "#241640" }
-    s.clock_us = require("src.widgets.world_clock") { city = "EUA", timezone = "America/New_York", country = "us", width = dpi(84), segment_bg = "#2e1065" }
+    -- ----- PAINÉIS (2× — vivem DENTRO dos dashboards on-click) -----
+    local W = dpi(520)
+    s.info_panel        = require("src.widgets.info_panel") { w = W }
+    s.usage_panel       = require("src.widgets.usage_panel") { w = W }
+    s.process_panel     = require("src.widgets.process_panel") { w = W }
+    s.net_graph_panel   = require("src.widgets.net_graph_panel") { w = W }
+    s.ip_panel          = require("src.widgets.ip_panel") { w = W }
+    s.connections_panel = require("src.widgets.connections_panel") { w = W }
+    s.protocols_donut   = require("src.widgets.protocols_donut") { w = W }
+    s.apps_panel        = require("src.widgets.apps_panel") { w = W }
+    s.calendar_panel    = require("src.widgets.calendar_panel") { w = W }
+    s.clock_br = require("src.widgets.world_clock") { city = "BRASIL", timezone = "America/Sao_Paulo", country = "br", width = dpi(150), segment_bg = "#130a24" }
+    s.clock_fr = require("src.widgets.world_clock") { city = "FRANCA", timezone = "Europe/Paris", country = "fr", width = dpi(150), segment_bg = "#1b1030" }
+    s.clock_jp = require("src.widgets.world_clock") { city = "JAPAO", timezone = "Asia/Tokyo", country = "jp", width = dpi(150), segment_bg = "#241640" }
+    s.clock_us = require("src.widgets.world_clock") { city = "EUA", timezone = "America/New_York", country = "us", width = dpi(150), segment_bg = "#2e1065" }
 
-    -- COLUNA ESQUERDA: INFO · USAGE · PROCESS
-    require("radical_wm.side_panels")(s, { s.info_panel, s.usage_panel, s.process_panel },
-      { side = "left", top = dpi(70) })
-    -- COLUNA DO MEIO: GRAPH · IP · CONNECTIONS · PROTOCOLS · APPLICATIONS
-    require("radical_wm.side_panels")(s, { s.net_graph_panel, s.ip_panel, s.connections_panel, s.protocols_donut, s.apps_panel },
-      { side = "center", top = dpi(70) })
-    -- COLUNA DIREITA: CALENDAR · INTERNATIONAL (relógios)
-    require("radical_wm.side_panels")(s, { s.calendar_panel, s.clock_br, s.clock_fr, s.clock_jp, s.clock_us },
-      { side = "right", top = dpi(70) })
+    -- ----- CONTROL CENTER: lozenges clicáveis (topo-centro) + dashboards on-click -----
+    require("src.widgets.control_center")(s, {
+      system_panels  = { s.info_panel, s.usage_panel, s.process_panel },
+      network_panels = { s.net_graph_panel, s.ip_panel, s.connections_panel, s.protocols_donut, s.apps_panel },
+      time_panels    = { s.calendar_panel, s.clock_br, s.clock_fr, s.clock_jp, s.clock_us },
+    })
   end
 end
 )
