@@ -4,7 +4,7 @@
 
 -- Awesome Libs
 local awful = require("awful")
-local color = require("src.theme.colors")
+local p = require("src.theme.palette")
 local dpi = require("beautiful").xresources.apply_dpi
 local gears = require("gears")
 local watch = awful.widget.watch
@@ -22,7 +22,7 @@ return function(widget)
             {
               id = "icon",
               widget = wibox.widget.imagebox,
-              image = gears.color.recolor_image(icon_dir .. "gpu.svg", color["Grey900"]),
+              image = gears.color.recolor_image(icon_dir .. "gpu.svg", p.base),
               resize = false
             },
             id = "icon_layout",
@@ -47,14 +47,14 @@ return function(widget)
       right = dpi(8),
       widget = wibox.container.margin
     },
-    bg = color["Green200"],
-    fg = color["Grey900"],
+    bg = p.data3,
+    fg = p.base,
     shape = function(cr, width, height)
       gears.shape.rounded_rect(cr, width, height, 5)
     end,
     widget = wibox.container.background
   }
-  Hover_signal(gpu_usage_widget, color["Green200"], color["Grey900"])
+  Hover_signal(gpu_usage_widget, p.data3, p.base)
 
   local gpu_temp_widget = wibox.widget {
     {
@@ -64,7 +64,7 @@ return function(widget)
             {
               id = "icon",
               widget = wibox.widget.imagebox,
-              image = gears.color.recolor_image(icon_dir .. "cpu.svg", color["Grey900"]),
+              image = gears.color.recolor_image(icon_dir .. "cpu.svg", p.base),
               resize = false
             },
             id = "icon_layout",
@@ -89,8 +89,8 @@ return function(widget)
       right = dpi(8),
       widget = wibox.container.margin
     },
-    bg = color["Blue200"],
-    fg = color["Grey900"],
+    bg = p.v500,
+    fg = p.base,
     shape = function(cr, width, height)
       gears.shape.rounded_rect(cr, width, height, 5)
     end,
@@ -120,21 +120,21 @@ return function(widget)
       if temp_num then
 
         if temp_num < 50 then
-          temp_color = color["Green200"]
+          temp_color = p.ok
           temp_icon = icon_dir .. "thermometer-low.svg"
         elseif temp_num >= 50 and temp_num < 80 then
-          temp_color = color["Orange200"]
+          temp_color = p.warn
           temp_icon = icon_dir .. "thermometer.svg"
         elseif temp_num >= 80 then
-          temp_color = color["Red200"]
+          temp_color = p.crit
           temp_icon = icon_dir .. "thermometer-high.svg"
         end
       else
         temp_num = "NaN"
-        temp_color = color["Green200"]
+        temp_color = p.ok
         temp_icon = icon_dir .. "thermometer-low.svg"
       end
-      Hover_signal(gpu_temp_widget, temp_color, color["Grey900"])
+      Hover_signal(gpu_temp_widget, temp_color, p.base)
       gpu_temp_widget.container.gpu_layout.icon_margin.icon_layout.icon:set_image(temp_icon)
       gpu_temp_widget:set_bg(temp_color)
       gpu_temp_widget.container.gpu_layout.label.text = tostring(temp_num) .. "°C"

@@ -3,7 +3,7 @@
 ------------------------------
 -- Awesome Libs
 local awful = require("awful")
-local color = require("src.theme.colors")
+local p = require("src.theme.palette")
 local dpi = require("beautiful").xresources.apply_dpi
 local gears = require("gears")
 local wibox = require("wibox")
@@ -47,7 +47,7 @@ return function(s)
           layout = wibox.layout.fixed.horizontal,
           {
             id = "bt_icon",
-            image = gears.color.recolor_image(bt_icondir .. "bluetooth-on.svg", "#ff8c00"),
+            image = gears.color.recolor_image(bt_icondir .. "bluetooth-on.svg", p.v500),
             widget = wibox.widget.imagebox,
             resize = false
           },
@@ -66,8 +66,8 @@ return function(s)
       right = dpi(8),
       widget = wibox.container.margin
     },
-    bg = color["Yellow200"],
-    fg = color["#ff8c00"],
+    bg = p.panel,
+    fg = p.text_bright,
     shape = function(cr, width, height)
       gears.shape.rounded_rect(cr, width, height, 5)
     end,
@@ -96,7 +96,7 @@ return function(s)
         end
         audio_widget.container.audio_layout.label:set_text(volume .. "%")
         audio_widget.container.audio_layout.icon_margin.icon_layout.icon:set_image(
-          gears.color.recolor_image(icon .. ".svg", "#ff8c00" ))
+          gears.color.recolor_image(icon .. ".svg", p.text_bright ))
         awesome.emit_signal("get::volume", volume)
       end
     )
@@ -110,7 +110,7 @@ return function(s)
           audio_widget.container.audio_layout.label.visible = false
           audio_widget.container:set_right(0)
           audio_widget.container.audio_layout.icon_margin.icon_layout.icon:set_image(
-            gears.color.recolor_image(icondir .. "volume-mute" .. ".svg", "#ff8c00" ))
+            gears.color.recolor_image(icondir .. "volume-mute" .. ".svg", p.text_bright ))
           awesome.emit_signal("get::volume_mute", true)
         else
           audio_widget.container:set_right(10)
@@ -140,7 +140,7 @@ return function(s)
   end
 
   -- Signals
-  Hover_signal(audio_widget, color["Yellow200"], "#ff8c00" )
+  Hover_signal(audio_widget, p.v700, p.v500 )
 
   audio_widget:connect_signal(
     "button::press",

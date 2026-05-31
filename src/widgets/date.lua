@@ -4,7 +4,7 @@
 
 -- Awesome Libs
 local awful = require("awful")
-local color = require("src.theme.colors")
+local p = require("src.theme.palette")
 local dpi = require("beautiful").xresources.apply_dpi
 local gears = require("gears")
 local wibox = require("wibox")
@@ -23,7 +23,7 @@ return function(s)
           {
             {
               id = "icon",
-              image = gears.color.recolor_image(icondir .. "calendar.svg", "#ff8c00"),
+              image = gears.color.recolor_image(icondir .. "calendar.svg", p.v500),
               widget = wibox.widget.imagebox,
               resize = false
             },
@@ -49,8 +49,8 @@ return function(s)
       right = dpi(8),
       widget = wibox.container.margin
     },
-    bg = color["Teal200"],
-    fg = "#ff8c00",
+    bg = p.panel,
+    fg = p.text_bright,
     shape = function(cr, width, height)
       gears.shape.rounded_rect(cr, width, height, 5)
     end,
@@ -87,8 +87,8 @@ return function(s)
       margins = dpi(10),
       widget = wibox.container.margin
     },
-    bg = "#2b0c45dd",
-    fg = "#ff8c00",
+    bg = p.inset .. "dd",
+    fg = p.text_muted,
     shape = function(cr, width, height)
       gears.shape.rounded_rect(cr, width, height, 5)
     end,
@@ -114,13 +114,13 @@ return function(s)
         margins = dpi(10),
         widget = wibox.container.margin
       },
-      bg = "#140a24ee",
-      fg = "#ff8c00",
+      bg = p.base .. "ee",
+      fg = p.text_bright,
       shape = function(cr, width, height)
         gears.shape.rounded_rect(cr, width, height, 8)
       end,
       border_width = dpi(1),
-      border_color = "#6d28d9",
+      border_color = p.line_bright,
       widget = wibox.container.background
     }
   }
@@ -230,7 +230,7 @@ return function(s)
   }
 
   -- Signals
-  Hover_signal(date_widget, color["Teal200"], "#ff8c00")
+  Hover_signal(date_widget, p.v700, p.text_bright)
 
   date_widget:connect_signal(
     "mouse::enter",

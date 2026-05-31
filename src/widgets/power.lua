@@ -5,6 +5,7 @@
 -- Awesome Libs
 local awful = require("awful")
 local color = require("src.theme.colors")
+local p = require("src.theme.palette")
 local dpi = require("beautiful").xresources.apply_dpi
 local gears = require("gears")
 local wibox = require("wibox")
@@ -19,7 +20,7 @@ return function()
   local power_icon = wibox.widget {
     {
       {
-        image = gears.color.recolor_image(icondir .. "power.svg", "#ffffff"),
+        image = gears.color.recolor_image(icondir .. "power.svg", p.text_primary),
         resize = true,
         widget = wibox.widget.imagebox,
       },
@@ -49,8 +50,8 @@ return function()
       bottom = dpi(3),
       widget = wibox.container.margin
     },
-    bg = color.with_alpha("#1f1f1f", segment_alpha),
-    fg = "#ffffff",
+    bg = color.with_alpha(p.panel, segment_alpha),
+    fg = p.text_primary,
     shape = function(cr, width, height)
       gears.shape.rounded_rect(cr, width, height, 5)
     end,
@@ -58,14 +59,14 @@ return function()
   }
 
   power_widget._preserve_colors = true
-  power_widget._segment_bg = color.with_alpha("#1f1f1f", segment_alpha)
-  power_widget._segment_edge = color.with_alpha("#1f1f1f", segment_alpha)
+  power_widget._segment_bg = color.with_alpha(p.panel, segment_alpha)
+  power_widget._segment_edge = color.with_alpha(p.panel, segment_alpha)
   power_widget._segment_border_width = 0
   power_widget._preferred_segment_width = dpi(44)
   power_widget._preferred_segment_height = dpi(46)
 
   -- Signals
-  Hover_signal(power_widget, "#1f1f1f", "#ffffff")
+  Hover_signal(power_widget, p.crit, p.text_primary)
 
   power_widget:connect_signal(
     "button::release",

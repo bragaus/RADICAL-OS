@@ -8,9 +8,9 @@ local dpi = beautiful.xresources.apply_dpi
 local gears = require("gears")
 local gfs = require("gears.filesystem")
 local wibox = require("wibox")
+local p = require("src.theme.palette")
 require("src.core.signals")
 
-local accent = "#ff8c00"
 local launcher_gif_path = gfs.get_configuration_dir() .. "src/assets/logo.gif"
 
 -- Diretório temporário para os frames extraídos do GIF
@@ -72,8 +72,8 @@ return function(s)
       cr:set_source_surface(current_surface, 0, 0)
       cr:paint()
     else
-      -- Fallback enquanto os frames carregam: círculo escuro
-      cr:set_source_rgba(0.1, 0.1, 0.1, 1)
+      -- Fallback enquanto os frames carregam: círculo escuro (violet-black)
+      cr:set_source_rgba(0.047, 0.024, 0.090, 1)
       cr:paint()
     end
   end
@@ -208,8 +208,8 @@ return function(s)
     screen       = s,
     visible      = false,
     ontop        = true,
-    bg           = "#111111ee",
-    border_color = accent,
+    bg           = p.panel .. "f2",
+    border_color = p.line_base,
     border_width = dpi(1),
     shape        = function(cr, width, height)
       gears.shape.rounded_rect(cr, width, height, 14)
@@ -221,11 +221,11 @@ return function(s)
       {
         {
           {
-            markup = '<span foreground="' .. accent .. '"><b>Aplicativos</b></span>',
+            markup = '<span foreground="' .. p.text_heading .. '"><b>Aplicativos</b></span>',
             widget = wibox.widget.textbox
           },
           {
-            markup = '<span foreground="#a3a3a3">Programas instalados no Ubuntu</span>',
+            markup = '<span foreground="' .. p.text_muted .. '">Programas instalados no Ubuntu</span>',
             widget = wibox.widget.textbox
           },
           {
@@ -248,7 +248,7 @@ return function(s)
     local row = wibox.widget {
       {
         {
-          markup = '<span foreground="#f5f5f5">' .. gears.string.xml_escape(app_name) .. '</span>',
+          markup = '<span foreground="' .. p.text_primary .. '">' .. gears.string.xml_escape(app_name) .. '</span>',
           widget = wibox.widget.textbox
         },
         left   = dpi(10),
@@ -257,14 +257,15 @@ return function(s)
         bottom = dpi(8),
         widget = wibox.container.margin
       },
-      bg    = "#1a1a1a",
+      bg    = p.panel,
+      fg    = p.text_primary,
       shape = function(cr, width, height)
         gears.shape.rounded_rect(cr, width, height, 10)
       end,
       widget = wibox.container.background
     }
 
-    Hover_signal(row, "#1a1a1a", accent)
+    Hover_signal(row, p.v700, p.v50)
 
     row:buttons(gears.table.join(
       awful.button({}, 1, function()
@@ -279,7 +280,7 @@ return function(s)
   local function set_loading_state(message)
     app_list:reset()
     app_list:add(wibox.widget {
-      markup = '<span foreground="#a3a3a3">' .. gears.string.xml_escape(message) .. '</span>',
+      markup = '<span foreground="' .. p.text_muted .. '">' .. gears.string.xml_escape(message) .. '</span>',
       widget = wibox.widget.textbox
     })
   end

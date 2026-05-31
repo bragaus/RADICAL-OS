@@ -8,9 +8,11 @@ local dpi = require("beautiful").xresources.apply_dpi
 local gears = require("gears")
 local wibox = require("wibox")
 local gfs = require("gears.filesystem")
+local p = require("src.theme.palette")
 require("src.core.signals")
 
-local cyber_blue = "#6ec1ff"
+local glyph_color = p.text_primary
+local glyph_active = p.v400
 
 -- Returns the layoutbox widget
 return function(s)
@@ -32,7 +34,7 @@ return function(s)
       forced_width = dpi(40),
       widget = wibox.container.margin
     },
-    bg = "#4c1d95",
+    bg = p.v900,
     shape = function(cr, width, height)
       gears.shape.rounded_rect(cr, width, height, 5)
     end,
@@ -63,12 +65,12 @@ return function(s)
 
     if icon_file then
       local icon_path = gfs.get_configuration_dir() .. "src/assets/layout/" .. icon_file
-      layout_icon:set_image(gears.color.recolor_image(icon_path, cyber_blue))
+      layout_icon:set_image(gears.color.recolor_image(icon_path, glyph_color))
     end
   end
 
   -- Signals
-  Hover_signal(layout, "#21446d", cyber_blue)
+  Hover_signal(layout, p.raised, glyph_active)
 
   layout:connect_signal(
     "button::press",

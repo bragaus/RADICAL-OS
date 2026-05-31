@@ -4,7 +4,7 @@
 
 -- Awesome Libs
 local awful = require("awful")
-local color = require("src.theme.colors")
+local p = require("src.theme.palette")
 local dpi = require("beautiful").xresources.apply_dpi
 local gears = require("gears")
 local watch = awful.widget.watch
@@ -22,7 +22,7 @@ return function()
             {
               id = "icon",
               widget = wibox.widget.imagebox,
-              image = gears.color.recolor_image(icon_dir .. "ram.svg", "#ff8c00"),
+              image = gears.color.recolor_image(icon_dir .. "ram.svg", p.data2),
               resize = false
             },
             id = "icon_layout",
@@ -47,15 +47,15 @@ return function()
       right = dpi(8),
       widget = wibox.container.margin
     },
-    bg = color["Red200"],
-    fg = "#ff8c00",
+    bg = p.panel,
+    fg = p.text_bright,
     shape = function(cr, width, height)
       gears.shape.rounded_rect(cr, width, height, 5)
     end,
     widget = wibox.container.background
   }
 
-  Hover_signal(ram_widget, color["Red200"], "#ff8c00")
+  Hover_signal(ram_widget, p.panel, p.data2)
 
   watch(
     [[ bash -c "cat /proc/meminfo| grep Mem | awk '{print $2}'" ]],

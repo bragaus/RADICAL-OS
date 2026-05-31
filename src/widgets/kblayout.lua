@@ -5,6 +5,7 @@
 -- Awesome Libs
 local awful = require("awful")
 local color = require("src.theme.colors")
+local p = require("src.theme.palette")
 local dpi = require("beautiful").xresources.apply_dpi
 local gears = require("gears")
 local wibox = require("wibox")
@@ -30,7 +31,7 @@ return function(s)
               id = "icon",
               widget = wibox.widget.imagebox,
               resize = false,
-              image = gears.color.recolor_image(icondir .. "keyboard.svg", "#ff8c00")
+              image = gears.color.recolor_image(icondir .. "keyboard.svg", p.v400)
             },
             id = "icon_layout",
             widget = wibox.container.place
@@ -54,8 +55,8 @@ return function(s)
       right = dpi(8),
       widget = wibox.container.margin
     },
-    bg = color["Green200"],
-    fg = color["#ff8c00"],
+    bg = p.panel,
+    fg = p.text_muted,
     shape = function(cr, width, height)
       gears.shape.rounded_rect(cr, width, height, 5)
     end,
@@ -89,7 +90,7 @@ return function(s)
               font = user_vars.font.extrabold,
               id = "shortname"
             },
-            fg = color["Red200"],
+            fg = p.text_muted,
             widget = wibox.container.background,
             id = "background2"
           },
@@ -100,7 +101,7 @@ return function(s)
               font = user_vars.font.bold,
               id = "longname",
             },
-            fg = color["Purple200"],
+            fg = p.text_muted,
             widget = wibox.container.background,
             id = "background1"
           },
@@ -115,8 +116,8 @@ return function(s)
       shape = function(cr, width, height)
         gears.shape.rounded_rect(cr, width, height, 8)
       end,
-      bg = color["Grey800"],
-      fg = color["White"],
+      bg = p.panel,
+      fg = p.text_bright,
       widget = wibox.container.background,
       id = "background",
       keymap = keymap
@@ -131,13 +132,13 @@ return function(s)
           function(stdout)
             local layout = stdout:gsub("\n", "")
             if kb_layout_item.keymap == layout then
-              kb_layout_item.bg = color["DeepPurple200"]
-              kb_layout_item:get_children_by_id("background2")[1].fg = "#ff8c00"
-              kb_layout_item:get_children_by_id("background1")[1].fg = "#ff8c00" 
+              kb_layout_item.bg = p.panel_hi
+              kb_layout_item:get_children_by_id("background2")[1].fg = p.v400
+              kb_layout_item:get_children_by_id("background1")[1].fg = p.v400
             else
-              kb_layout_item.bg = color["Grey800"]
-              kb_layout_item:get_children_by_id("background2")[1].fg = color["Red200"]
-              kb_layout_item:get_children_by_id("background1")[1].fg = color["Purple200"]
+              kb_layout_item.bg = p.panel
+              kb_layout_item:get_children_by_id("background2")[1].fg = p.text_muted
+              kb_layout_item:get_children_by_id("background1")[1].fg = p.text_muted
             end
           end
         )
@@ -187,10 +188,10 @@ return function(s)
       gears.shape.rounded_rect(cr, width, height, 12)
     end,
     widget = wibox.container.background,
-    bg = color["Grey900"],
-    fg = color["White"],
+    bg = p.base,
+    fg = p.text_bright,
     border_width = dpi(4),
-    border_color = color["Grey800"],
+    border_color = p.line_base,
     width = dpi(100),
     max_height = dpi(600),
     visible = false,
@@ -203,7 +204,7 @@ return function(s)
     function()
       mousegrabber.run(
         function()
-          kblayout_widget.bg = color["Green200"]
+          kblayout_widget.bg = p.panel
           awesome.emit_signal("kblayout::hide:kbmenu")
           mousegrabber.stop()
           return true
@@ -259,7 +260,7 @@ return function(s)
   )
 
   -- Signals
-  Hover_signal(kblayout_widget, color["Green200"], "#ff8c00")
+  Hover_signal(kblayout_widget, p.panel, p.v500)
 
   local kblayout_keygrabber = awful.keygrabber {
     autostart = false,

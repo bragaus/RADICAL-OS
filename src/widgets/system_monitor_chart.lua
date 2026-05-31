@@ -14,6 +14,9 @@ local gfs = require("gears.filesystem")
 -- construcao de widget
 local wibox = require("wibox")
 
+-- paleta VIOLET HUD (tokens monocromaticos roxos)
+local p = require("src.theme.palette")
+
 -- converte cor hexadecimal (6 ou 8 digitos) para componentes RGBA (0.1)
 local function hex_to_rgba(hex, alpha_override)
   hex = (hex or "#ffffff"):gsub("#", "")
@@ -261,26 +264,26 @@ return function(args)
   local radius = args.radius or dpi(18)
 
   local palette = args.palette or {
-    accent = "#ff7a00",
-    cpu = "#ff9a1f",
-    mem = "#9c63ff",
-    gpu = "#62b9ff",
-    net = "#55ffd7",
-    grid = "#ff7a00",
-    text = "#fff4e8",
-    overlay = "#120d22",
-    glow = "#8d72ff",
+    accent = "#8b5cf6",
+    cpu = "#a855f7",
+    mem = "#c084fc",
+    gpu = "#7c3aed",
+    net = "#d946ef",
+    grid = "#3a1f63",
+    text = "#cbb6ff",
+    overlay = "#0c0617",
+    glow = "#b794ff",
   }
 
-  palette.accent = palette.accent or "#ff7a00"
+  palette.accent = palette.accent or "#8b5cf6"
   palette.cpu = palette.cpu or palette.accent
-  palette.mem = palette.mem or "#9c63ff"
-  palette.gpu = palette.gpu or "#62b9ff"
-  palette.net = palette.net or "#55ffd7"
-  palette.grid = palette.grid or palette.accent
-  palette.text = palette.text or "#fff4e8"
-  palette.overlay = palette.overlay or "#120d22"
-  palette.glow = palette.glow or "#8d72ff"
+  palette.mem = palette.mem or "#c084fc"
+  palette.gpu = palette.gpu or "#7c3aed"
+  palette.net = palette.net or "#d946ef"
+  palette.grid = palette.grid or "#3a1f63"
+  palette.text = palette.text or "#cbb6ff"
+  palette.overlay = palette.overlay or "#0c0617"
+  palette.glow = palette.glow or "#b794ff"
 
   local script_dir = gfs.get_configuration_dir() .. "src/scripts/"
   local config_dir = gfs.get_configuration_dir()
@@ -1275,7 +1278,7 @@ return function(args)
   end
 
   local title = wibox.widget {
-    text = "[「RadicalWM ⩜ のモニタ、ヤベェ。これ以上ない。🏴」] ☚⍢⃝☚ | ┌∩┐(◣_◢)┌∩┐ ▄︻╦芫≡══--𖦏 🅱",
+    text = "SYSTEM MONITOR",
     font = "JetBrainsMono Nerd Font, ExtraBold 14",
     align = "center",
     widget = wibox.widget.textbox,
@@ -1288,7 +1291,7 @@ return function(args)
       from = { 0, 0 },
       to = { width, 0 },
       stops = {
-        { 0, "#AA5A9C" },
+        { 0, p.line_bright },
         { 0.33, palette.accent },
         { 0.66, palette.gpu },
         { 1, palette.mem },
@@ -1304,7 +1307,7 @@ return function(args)
       margins = dpi(10),
       widget = wibox.container.margin,
     },
-    fg = palette.accent,
+    fg = p.text_heading,
     bg = with_alpha(palette.accent, 0.08),
     border_width = dpi(1),
     border_color = with_alpha(palette.accent, 0.32),
@@ -1381,9 +1384,9 @@ return function(args)
       from = { 0, 0 },
       to = { 0, height },
       stops = {
-        { 0, "#0b0817f0" },
-        { 0.55, "#090611ef" },
-        { 1, "#05040af2" },
+        { 0, p.a(p.base, 0.94) },
+        { 0.55, p.a(p.abyss, 0.94) },
+        { 1, p.a(p.void, 0.95) },
       }
     },
     fg = palette.text,
@@ -1452,7 +1455,7 @@ return function(args)
       from = { 0, 0 },
       to = { current_width, 0 },
       stops = {
-        { 0, "#AA5A9C" },
+        { 0, p.line_bright },
         { 0.33, palette.accent },
         { 0.66, palette.gpu },
         { 1, palette.mem },

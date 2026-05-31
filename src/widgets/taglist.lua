@@ -5,6 +5,7 @@
 local wibox = require("wibox")
 local awful = require("awful")
 local color = require("src.theme.colors")
+local p = require("src.theme.palette")
 local gears = require("gears")
 local dpi = require("beautiful").xresources.apply_dpi
 require("src.tools.icon_handler")
@@ -14,14 +15,14 @@ local tab_alpha = panel_transparency.enabled == false and 1 or (panel_transparen
 local hover_alpha = math.min(1, tab_alpha + 0.08)
 
 local palette = {
-  empty_bg = color.with_alpha("#0d1420", tab_alpha),
-  occupied_bg = color.with_alpha("#15263d", tab_alpha),
-  selected_bg = color.with_alpha("#2b5585", tab_alpha),
-  urgent_bg = color.with_alpha("#6f2944", tab_alpha),
-  empty_fg = "#5ba8eb",
-  occupied_fg = "#79c8ff",
-  selected_fg = "#eef8ff",
-  separator_fg = "#33577d"
+  empty_bg = color.with_alpha(p.v975, tab_alpha),
+  occupied_bg = color.with_alpha(p.v975, tab_alpha),
+  selected_bg = color.with_alpha(p.v500, tab_alpha),
+  urgent_bg = color.with_alpha(p.glow_hot, tab_alpha),
+  empty_fg = p.text_muted,
+  occupied_fg = p.text_muted,
+  selected_fg = p.v50,
+  separator_fg = p.line_dim
 }
 
 local function tab_shape(cr, width, height)
@@ -140,10 +141,10 @@ local list_update = function(widget, buttons, _, _, objects)
       old_fg = background.fg
 
       if object.selected then
-        background.bg = color.with_alpha("#35669e", hover_alpha)
+        background.bg = color.with_alpha(p.v400, hover_alpha)
         background.fg = palette.selected_fg
       else
-        background.bg = color.with_alpha("#1b3350", hover_alpha)
+        background.bg = color.with_alpha(p.v900, hover_alpha)
         background.fg = palette.selected_fg
       end
 
@@ -156,9 +157,9 @@ local list_update = function(widget, buttons, _, _, objects)
 
     tag_widget:connect_signal("button::press", function()
       if object.selected then
-        background.bg = color.with_alpha("#23466f", tab_alpha)
+        background.bg = color.with_alpha(p.v600, tab_alpha)
       else
-        background.bg = color.with_alpha("#14263d", tab_alpha)
+        background.bg = color.with_alpha(p.v975, tab_alpha)
       end
     end)
 

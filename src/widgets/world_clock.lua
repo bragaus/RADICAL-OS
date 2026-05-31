@@ -2,6 +2,7 @@ local awful = require("awful")
 local dpi = require("beautiful").xresources.apply_dpi
 local gears = require("gears")
 local wibox = require("wibox")
+local p = require("src.theme.palette")
 
 local function make_flag_widget(country)
   local width = dpi(24)
@@ -93,7 +94,7 @@ return function(args)
   local timezone = args.timezone or "America/Sao_Paulo"
   local country = args.country or "br"
   local label_width = args.width or dpi(82)
-  local text_color = args.text_color or "#ffffff"
+  local text_color = args.text_color or p.text_bright
 
   local flag = make_flag_widget(country)
   flag.forced_height = dpi(18)
@@ -129,12 +130,14 @@ return function(args)
     widget = wibox.container.margin,
   }
 
+  local segment_bg = args.segment_bg or p.panel
+
   widget._preserve_colors = true
   widget.fg = text_color
   widget._preferred_segment_width = label_width
   widget._preferred_segment_height = dpi(46)
-  widget._segment_bg = args.segment_bg
-  widget._segment_edge = args.segment_bg
+  widget._segment_bg = segment_bg
+  widget._segment_edge = segment_bg
   widget._segment_border_width = 0
 
   awful.tooltip {

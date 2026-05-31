@@ -4,6 +4,7 @@
 
 local awful = require("awful")
 local color = require("src.theme.colors")
+local p = require("src.theme.palette")
 local wibox = require("wibox")
 local dpi = require("beautiful").xresources.apply_dpi
 require("src.tools.icon_handler")
@@ -13,10 +14,10 @@ local tab_alpha = panel_transparency.enabled == false and 1 or (panel_transparen
 local hover_alpha = math.min(1, tab_alpha + 0.08)
 
 local palette = {
-  active_bg = color.with_alpha("#16304f", tab_alpha),
-  inactive_bg = color.with_alpha("#0f1826", tab_alpha),
-  active_fg = "#eef8ff",
-  inactive_fg = "#74bdf5"
+  active_bg = color.with_alpha(p.panel_hi, tab_alpha),
+  inactive_bg = color.with_alpha(p.base, tab_alpha),
+  active_fg = p.text_bright,
+  inactive_fg = p.text_muted
 }
 
 local function tab_shape(cr, width, height)
@@ -137,7 +138,7 @@ local list_update = function(widget, buttons, _, _, objects)
 
     task_widget:connect_signal("mouse::enter", function()
       old_bg = task_widget.bg
-      task_widget.bg = is_focused and color.with_alpha("#21446d", hover_alpha) or color.with_alpha("#16263b", hover_alpha)
+      task_widget.bg = is_focused and color.with_alpha(p.raised, hover_alpha) or color.with_alpha(p.inset, hover_alpha)
 
       local current_wibox = mouse.current_wibox
       if current_wibox then
@@ -147,7 +148,7 @@ local list_update = function(widget, buttons, _, _, objects)
     end)
 
     task_widget:connect_signal("button::press", function()
-      task_widget.bg = is_focused and color.with_alpha("#183556", tab_alpha) or color.with_alpha("#121f31", tab_alpha)
+      task_widget.bg = is_focused and color.with_alpha(p.v700, tab_alpha) or color.with_alpha(p.panel, tab_alpha)
     end)
 
     task_widget:connect_signal("button::release", function()

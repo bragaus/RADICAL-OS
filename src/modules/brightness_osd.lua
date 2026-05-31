@@ -4,10 +4,10 @@
 
 -- Awesome Libs
 local awful = require("awful")
-local color = require("src.theme.colors")
 local dpi = require("beautiful").xresources.apply_dpi
 local gears = require("gears")
 local wibox = require("wibox")
+local p = require("src.theme.palette")
 
 -- Icon directory path
 local icondir = awful.util.getdir("config") .. "src/assets/icons/brightness/"
@@ -30,10 +30,14 @@ return function(s)
             {
               nil,
               {
-                id = "icon",
-                forced_height = dpi(220),
-                image = icondir .. "brightness-high.svg",
-                widget = wibox.widget.imagebox
+                {
+                  id = "icon",
+                  forced_height = dpi(220),
+                  image = icondir .. "brightness-high.svg",
+                  widget = wibox.widget.imagebox
+                },
+                fg = p.text_heading,
+                widget = wibox.container.background
               },
               nil,
               expand = "none",
@@ -47,19 +51,27 @@ return function(s)
           },
           {
             {
-              id = "label",
-              text = "Brightness",
-              align = "left",
-              valign = "center",
-              widget = wibox.widget.textbox
+              {
+                id = "label",
+                text = "Brightness",
+                align = "left",
+                valign = "center",
+                widget = wibox.widget.textbox
+              },
+              fg = p.text_muted,
+              widget = wibox.container.background
             },
             nil,
             {
-              id = "value",
-              text = "0%",
-              align = "center",
-              valign = "center",
-              widget = wibox.widget.textbox
+              {
+                id = "value",
+                text = "0%",
+                align = "center",
+                valign = "center",
+                widget = wibox.widget.textbox
+              },
+              fg = p.text_bright,
+              widget = wibox.container.background
             },
             id = "label_value_layout",
             forced_height = dpi(48),
@@ -70,12 +82,12 @@ return function(s)
               id = "brightness_slider",
               bar_shape = gears.shape.rounded_rect,
               bar_height = dpi(10),
-              bar_color = color["Grey800"] .. "88",
-              bar_active_color = "#ffffff",
-              handle_color = "#ffffff",
+              bar_color = p.inset,
+              bar_active_color = p.v500,
+              handle_color = p.v500,
               handle_shape = gears.shape.circle,
               handle_width = dpi(10),
-              handle_border_color = color["White"],
+              handle_border_color = p.line_bright,
               maximum = 100,
               widget = wibox.widget.slider
             },
@@ -95,7 +107,7 @@ return function(s)
       right = dpi(24),
       widget = wibox.container.margin
     },
-    bg = color["Grey900"] .. "88",
+    bg = p.a(p.panel, 0.9),
     widget = wibox.container.background,
     ontop = true,
     visible = true,
@@ -177,7 +189,7 @@ return function(s)
   local brightness_container = awful.popup {
     widget = wibox.container.background,
     ontop = true,
-    bg = color["Grey900"] .. "00",
+    bg = p.a(p.base, 0),
     stretch = false,
     visible = false,
     screen = s,
