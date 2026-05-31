@@ -36,11 +36,11 @@ return function(s, widgets)
   }
 
   local segment_palette = {
-    { edge = "#1f8f52", fill = "#1f8f52" },
-    { edge = "#191338", fill = "#191338" },
-    { edge = "#C24347", fill = "#C24347" },
-    { edge = "#1E588D", fill = "#1E588D" },
-    { edge = "#1f1f1f", fill = "#1f1f1f" },
+    { edge = "#5b21b6", fill = "#130a24" },
+    { edge = "#5b21b6", fill = "#1b1030" },
+    { edge = "#5b21b6", fill = "#241640" },
+    { edge = "#5b21b6", fill = "#2e1065" },
+    { edge = "#5b21b6", fill = "#130a24" },
   }
 
   local function segment_bg_for(index)
@@ -76,13 +76,13 @@ return function(s, widgets)
       end
 
       if w.fg ~= nil then
-        w.fg = "#ff8c00"
+        w.fg = "#9d6ff6"
       end
 
       if w.set_image and w.get_image then
         local img = w:get_image()
         if img then
-          w:set_image(gears.color.recolor_image(img, "#ff8c00"))
+          w:set_image(gears.color.recolor_image(img, "#9d6ff6"))
         end
       end
     end
@@ -125,9 +125,9 @@ return function(s, widgets)
           font = "JetBrainsMono Nerd Font, ExtraBold 30",
           widget = wibox.widget.textbox
         },
-        fg = current_bg.edge,
+        fg = "#00000000", -- powerline arrow neutralizado (HUD plano)
         bg = "#00000000",
-        forced_width = dpi(26),
+        forced_width = dpi(2),
         widget = wibox.container.background
       },
       {
@@ -153,7 +153,7 @@ return function(s, widgets)
 
   local function prepare_widgets(widget_list)
     local layout = wibox.layout.fixed.horizontal()
-    layout.spacing = -dpi(18)
+    layout.spacing = dpi(6)
 
     local max_h = dpi(48)
 

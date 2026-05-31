@@ -230,7 +230,7 @@ naughty.connect_signal(
                             widget = wibox.container.arcchart,
                             id = "arc_chart"
                           },
-                          id = "background",
+                          id = "close_button",
                           fg = p.text_muted,
                           bg = p.panel,
                           widget = wibox.container.background
@@ -333,8 +333,10 @@ naughty.connect_signal(
       widget = wibox.container.background
     }
 
-    local close = w_template.max_size.min_size.widget_layout.arc_app_bg.arc_app_layout.arc_app_layout_2.arc_margin.const.background
-    local arc = close.arc_chart
+    -- Robust id lookup (the violet re-skin added an accent_strip wrapper that shifts
+    -- the dotted id chain). get_children_by_id resolves regardless of nesting.
+    local close = w_template:get_children_by_id("close_button")[1]
+    local arc = w_template:get_children_by_id("arc_chart")[1]
 
     local timeout = n.timeout
     local remove_time = timeout
