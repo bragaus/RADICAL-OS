@@ -53,5 +53,13 @@ return gears.table.join(
       end
     end,
     { description = "(un)hide", group = "Client" }
+  ),
+  awful.key(
+    { modkey, "Control" },
+    "t",
+    function(c)
+      awesome.emit_signal("client::transparency:toggle", c)
+    end,
+    { description = "Toggle client transparency", group = "Client" }
   )
 )

@@ -5,19 +5,61 @@ local beautiful = require("beautiful")
 local gears = require("gears")
 local wibox = require("wibox")
 
-screen.connect_signal(
-  "added",
-  function()
-    awesome.restart()
-  end
-)
+local function client_transparency_config()
+  return (user_vars.transparency and user_vars.transparency.clients) or {}
+end
 
-screen.connect_signal(
-  "removed",
-  function()
-    awesome.restart()
+local function resolve_default_client_opacity(c)
+  local transparency = client_transparency_config()
+  if transparency.enabled == false then
+    return 1
   end
-)
+
+  local class_defaults = transparency.class_defaults or {}
+  if c.class and class_defaults[c.class] ~= nil then
+    return class_defaults[c.class]
+  end
+
+  if c.instance and class_defaults[c.instance] ~= nil then
+    return class_defaults[c.instance]
+  end
+
+  return transparency.default_opacity or 1
+end
+
+local function apply_default_client_opacity(c)
+  c._opacity_default = resolve_default_client_opacity(c)
+
+  if not c._opacity_toggle_active then
+    c.opacity = c._opacity_default
+  end
+end
+
+-- Restart on screen change AFTER startup settles. Guards against
+-- xrandr-in-autostart triggering an infinite restart loop on boot.
+local screen_change_settle_timer = nil
+local startup_settled = false
+
+gears.timer.start_new(8, function()
+  startup_settled = true
+  return false
+end)
+
+local function schedule_restart_on_screen_change()
+  if not startup_settled then
+    return
+  end
+  if screen_change_settle_timer then
+    screen_change_settle_timer:stop()
+  end
+  screen_change_settle_timer = gears.timer.start_new(2, function()
+    awesome.restart()
+    return false
+  end)
+end
+
+screen.connect_signal("added", schedule_restart_on_screen_change)
+screen.connect_signal("removed", schedule_restart_on_screen_change)
 
 client.connect_signal(
   "manage",
@@ -28,12 +70,35 @@ client.connect_signal(
     c.shape = function(cr, width, height)
       if c.fullscreen or c.maximized then
         gears.shape.rectangle(cr, width, height)
-      else
-        gears.shape.rounded_rect(cr, width, height, 10)
-      end
+    else
+      gears.shape.rounded_rect(cr, width, height, 10)
     end
   end
+
+    apply_default_client_opacity(c)
+  end
 )
+
+client.connect_signal("property::class", apply_default_client_opacity)
+client.connect_signal("property::instance", apply_default_client_opacity)
+
+awesome.connect_signal("client::transparency:toggle", function(c)
+  local target = c or client.focus
+  if not target then
+    return
+  end
+
+  local transparency = client_transparency_config()
+  if transparency.enabled == false then
+    return
+  end
+
+  local default_opacity = target._opacity_default or resolve_default_client_opacity(target)
+  local toggle_opacity = transparency.toggle_opacity or 0.86
+
+  target._opacity_toggle_active = not target._opacity_toggle_active
+  target.opacity = target._opacity_toggle_active and toggle_opacity or default_opacity
+end)
 
 client.connect_signal(
   'unmanage',

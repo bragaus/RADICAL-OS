@@ -100,7 +100,12 @@ end
 
 -- rodar comandos do terminal
 local function run_command(command)
-  local process = io.popen(command) -- abre um processo que executa comandos no shell
+  -- Bound every synchronous shell call: this runs inside the main-loop timer
+  -- (call_now = true), so a hung helper (bluetoothctl with no controller,
+  -- nvidia-smi, sensors) would freeze the whole WM -> black screen, dead D-Bus.
+  -- `timeout` caps wall time; `</dev/null` stops interactive REPLs (bluetoothctl)
+  -- from blocking forever waiting on stdin.
+  local process = io.popen("timeout -k 1 2 " .. command .. " </dev/null") -- abre um processo que executa comandos no shell
   if not process then -- verifica se a variavel esta vazia
     return nil
   end
@@ -111,14 +116,11 @@ local function run_command(command)
 end
 
 local function detect_default_iface()
-  local iface = "wlo1" --trim(run_command([[sh -c "ip route show default 2>/dev/null | awk '/default/ {print $5; exit}'"]]))
-  --if iface ~= "" then
-    return iface
-  --end
-
-  --return trim(run_command([[sh -c "ls /sys/class/net 2>/dev/null | grep -v '^lo$' | head -n1"]]))
+  local iface = "eno1"
+  return iface
 end
 
+-- add temperature of cpu and gpu
 local function detect_battery_path()
   local path = "/sys/class/power_supply/BAT0" --trim(run_command([[sh -c "ls -d /sys/class/power_supply/BAT* 2>/dev/null | head -n1"]]))
   --if path == "" then
@@ -214,30 +216,39 @@ local function draw_surface_cover(cr, surface, width, height, alpha)
   cr:restore()
 end
 
-local function format_bytes_per_sec(value)
-  local units = { "B/S", "KIB/S", "MIB/S", "GIB/S" }
-  local scaled = tonumber(value) or 0
-  local unit_index = 1
-
-  while scaled >= 1024 and unit_index < #units do
-    scaled = scaled / 1024
-    unit_index = unit_index + 1
+local function draw_surface_contain(cr, surface, width, height, alpha, padding)
+  if not surface then
+    return
   end
 
-  if unit_index == 1 then
-    return string.format("%d %s", math.floor(scaled + 0.5), units[unit_index])
+  local image_width = surface:get_width()
+  local image_height = surface:get_height()
+
+  if image_width <= 0 or image_height <= 0 then
+    return
   end
 
-  return string.format("%.1f %s", scaled, units[unit_index])
-end
+  local inset = padding or 0
+  local available_width = math.max(1, width - inset * 2)
+  local available_height = math.max(1, height - inset * 2)
+  local scale = math.min(available_width / image_width, available_height / image_height)
+  local draw_width = image_width * scale
+  local draw_height = image_height * scale
+  local offset_x = (width - draw_width) / 2
+  local offset_y = (height - draw_height) / 2
 
-local function slanted_rect(cr, width, height, slant)
-  slant = math.min(slant or dpi(14), width * 0.22)
-  cr:move_to(slant, 0)
-  cr:line_to(width, 0)
-  cr:line_to(width - slant, height)
-  cr:line_to(0, height)
-  cr:close_path()
+  cr:save()
+  cr:translate(offset_x, offset_y)
+  cr:scale(scale, scale)
+  cr:set_source_surface(surface, 0, 0)
+
+  if alpha and alpha < 1 then
+    cr:paint_with_alpha(alpha)
+  else
+    cr:paint()
+  end
+
+  cr:restore()
 end
 
 return function(args)
@@ -290,6 +301,8 @@ return function(args)
     mem = {},
     gpu = {},
     net = {},
+    wifi = {},
+    audio = {},
   }
 
   for i = 1, samples do
@@ -297,16 +310,19 @@ return function(args)
     history.mem[i] = 0
     history.gpu[i] = 0
     history.net[i] = 0
+    history.wifi[i] = 0
+    history.audio[i] = 0
   end
 
   local state = {
     cpu = 0,
+    cpu_temp = nil,
     mem = 0,
     gpu = 0,
+    gpu_temp = nil,
     net = 0,
     net_rate = 0,
     wifi = nil,
-    battery = nil,
     audio = 0,
     muted = false,
     bt_name = "OFFLINE",
@@ -322,6 +338,7 @@ return function(args)
   local gpu_mode = nil
   local battery_path = detect_battery_path()
   local tick = 0
+  local redraw_targets = {}
 
   local function push(target, value)
     table.remove(target, 1)
@@ -460,6 +477,42 @@ return function(args)
     return tonumber(read_first_line(battery_path .. "/capacity"))
   end
 
+  local function sample_cpu_temp()
+    local raw_value = trim(run_command([[sh -c "sensors 2>/dev/null | awk '/Package id 0:|Tctl:|Tdie:/ { print; exit }'"]]))
+    local value = tonumber((raw_value or ""):match("([%+%-]?%d+%.?%d*)"))
+
+    if value then
+      return value
+    end
+
+    raw_value = trim(run_command([[sh -c 'for f in /sys/class/thermal/thermal_zone*/temp; do [ -r "$f" ] && cat "$f" && break; done']]))
+    value = tonumber(raw_value)
+
+    if value and value > 1000 then
+      value = value / 1000
+    end
+
+    return value
+  end
+
+  local function sample_gpu_temp()
+    local raw_value = trim(run_command([[sh -c "nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader,nounits 2>/dev/null | head -n1"]]))
+    local value = tonumber(raw_value)
+
+    if value then
+      return value
+    end
+
+    raw_value = trim(run_command([[sh -c 'for f in /sys/class/drm/card*/device/hwmon/hwmon*/temp1_input; do [ -r "$f" ] && cat "$f" && break; done']]))
+    value = tonumber(raw_value)
+
+    if value and value > 1000 then
+      value = value / 1000
+    end
+
+    return value
+  end
+
   local function sample_audio()
     local volume = trim(run_command(vol_script .. " volume 2>/dev/null"))
     local mute = trim(run_command(vol_script .. " mute 2>/dev/null"))
@@ -487,30 +540,53 @@ return function(args)
     return layout:upper()
   end
 
+  local function clamp_dimension(value, minimum, maximum)
+    return math.max(minimum, math.min(maximum, value))
+  end
+
   local function constrain(widget, forced_width, forced_height)
     if not forced_width and not forced_height then
       return widget
     end
 
-    return wibox.widget {
+    local constraint = wibox.widget {
       widget,
       forced_width = forced_width,
       forced_height = forced_height,
       strategy = "exact",
       widget = wibox.container.constraint,
     }
+
+    return constraint
+  end
+
+  local function register_redraw_target(widget)
+    table.insert(redraw_targets, widget)
+    return widget
+  end
+
+  local function format_percent(value)
+    return string.format("%02d%%", math.floor(clamp(tonumber(value) or 0, 0, 100) + 0.5))
+  end
+
+  local function format_temperature(value)
+    if not value then
+      return "N/D"
+    end
+
+    return string.format("%d°C", math.floor(value + 0.5))
   end
 
   local function create_info_row(label_text, initial_value, accent)
     local label = wibox.widget {
       text = label_text,
-      font = "JetBrainsMono Nerd Font, bold 11",
+      font = "JetBrainsMono Nerd Font, bold 10",
       widget = wibox.widget.textbox,
     }
 
     local value = wibox.widget {
       text = initial_value or "--",
-      font = "JetBrainsMono Nerd Font, ExtraBold 12",
+      font = "JetBrainsMono Nerd Font, ExtraBold 11",
       align = "right",
       widget = wibox.widget.textbox,
     }
@@ -530,8 +606,8 @@ return function(args)
         },
         left = dpi(8),
         right = dpi(8),
-        top = dpi(5),
-        bottom = dpi(5),
+        top = dpi(3),
+        bottom = dpi(3),
         widget = wibox.container.margin,
       },
       bg = with_alpha(accent, 0.09),
@@ -605,8 +681,15 @@ return function(args)
     local tint = options.tint or palette.glow
     local glow_alpha = options.glow_alpha or 0.14
     local tint_alpha = options.tint_alpha or 0.12
+    local band_alpha = options.band_alpha
     local corner = options.radius or dpi(8)
+    local image_mode = options.image_mode or "cover"
+    local image_padding = options.image_padding or dpi(8)
     local widget = wibox.widget.base.make_widget()
+
+    if band_alpha == nil then
+      band_alpha = image_mode == "contain" and 0.03 or 0.10
+    end
 
     function widget:fit(_, available_width, available_height)
       return available_width, available_height
@@ -625,7 +708,11 @@ return function(args)
       cr:paint()
 
       if image_surface then
-        draw_surface_cover(cr, image_surface, w, h, 0.95)
+        if image_mode == "contain" then
+          draw_surface_contain(cr, image_surface, w, h, 0.95, image_padding)
+        else
+          draw_surface_cover(cr, image_surface, w, h, 0.95)
+        end
       end
 
       cr:rectangle(0, 0, w, h)
@@ -633,7 +720,7 @@ return function(args)
       cr:fill()
 
       cr:rectangle(0, h * 0.7, w, h * 0.3)
-      cr:set_source_rgba(accent_r, accent_g, accent_b, 0.10)
+      cr:set_source_rgba(accent_r, accent_g, accent_b, band_alpha)
       cr:fill()
 
       if glow_surface then
@@ -676,6 +763,38 @@ return function(args)
   local function create_monitor_section(title_text, image_path, options)
     options = options or {}
 
+    local image_widget = options.image_widget or create_monitor_canvas(image_path, {
+      accent = options.accent,
+      tint = options.tint,
+      glow_alpha = options.glow_alpha,
+      tint_alpha = options.tint_alpha,
+      band_alpha = options.band_alpha,
+      radius = dpi(8),
+      image_mode = options.image_mode,
+      image_padding = options.image_padding,
+    })
+
+    local content = {
+      spacing = options.content_spacing or dpi(8),
+      layout = wibox.layout.fixed.vertical,
+    }
+
+    if options.top_widget then
+      table.insert(content, options.top_widget)
+    end
+
+    local image_box = constrain(
+      image_widget,
+      nil,
+      options.image_height or dpi(180)
+    )
+
+    table.insert(content, image_box)
+
+    if options.bottom_widget then
+      table.insert(content, options.bottom_widget)
+    end
+
     local footer = nil
     if options.footer then
       footer = wibox.widget {
@@ -685,96 +804,309 @@ return function(args)
       }
     end
 
-    local content = {
-      constrain(
-        create_monitor_canvas(image_path, {
-          accent = options.accent,
-          tint = options.tint,
-          glow_alpha = options.glow_alpha,
-          tint_alpha = options.tint_alpha,
-          radius = dpi(8),
-        }),
-        nil,
-        options.image_height or dpi(180)
-      ),
-      spacing = dpi(6),
-      layout = wibox.layout.fixed.vertical,
-    }
-
     if footer then
       table.insert(content, footer)
     end
 
-    return create_section_frame(title_text, content, options.accent or palette.accent, {
+    local section = create_section_frame(title_text, content, options.accent or palette.accent, {
       bg_alpha = options.bg_alpha or 0.72,
       margins = options.margins or dpi(10),
     })
+
+    return section, {
+      image_box = image_box,
+    }
+  end
+
+  local function create_history_trace_graph(values, accent, options)
+    options = options or {}
+
+    local widget = wibox.widget.base.make_widget()
+    local graph_height = options.height or dpi(34)
+    local max_points = options.max_points or 24
+    local corner = options.radius or dpi(8)
+    local bg_alpha = options.bg_alpha or 0.96
+    local border_alpha = options.border_alpha or 0.18
+    local fill_alpha = options.fill_alpha or 0.24
+    local glow_alpha = options.glow_alpha or 0.18
+    local line_alpha = options.line_alpha or 0.95
+    local line_width = options.line_width or dpi(1.6)
+    local glow_width = options.glow_width or dpi(4)
+    local grid_alpha = options.grid_alpha or 0.16
+    local vertical_grid_alpha = options.vertical_grid_alpha or 0.05
+
+    function widget:fit(_, available_width, _)
+      return available_width, graph_height
+    end
+
+    function widget:set_graph_height(new_height)
+      graph_height = clamp_dimension(new_height or graph_height, dpi(16), dpi(240))
+      self:emit_signal("widget::layout_changed")
+      self:emit_signal("widget::redraw_needed")
+    end
+
+    function widget:draw(_, cr, w, h)
+      local r, g, b = hex_to_rgba(accent)
+      local grid_r, grid_g, grid_b = hex_to_rgba(palette.grid)
+      local inset = dpi(5)
+      local plot_x = inset
+      local plot_y = inset
+      local plot_w = math.max(1, w - inset * 2)
+      local plot_h = math.max(1, h - inset * 2)
+      local count = math.min(#values, max_points)
+      local start_index = math.max(1, #values - count + 1)
+      local compact_values = {}
+
+      for index = start_index, #values do
+        table.insert(compact_values, values[index])
+      end
+
+      local function compact_points_for(series)
+        local points = {}
+        local step = plot_w / math.max(#series - 1, 1)
+
+        for index, value in ipairs(series) do
+          points[index] = {
+            x = plot_x + (index - 1) * step,
+            y = plot_y + plot_h - (plot_h * (clamp(value, 0, 100) / 100)),
+          }
+        end
+
+        return points
+      end
+
+      local function trace_compact_line(points)
+        if #points == 0 then
+          return
+        end
+
+        cr:move_to(points[1].x, points[1].y)
+
+        for index = 2, #points do
+          local previous = points[index - 1]
+          local current = points[index]
+          local mid_x = (previous.x + current.x) / 2
+          cr:curve_to(mid_x, previous.y, mid_x, current.y, current.x, current.y)
+        end
+      end
+
+      gears.shape.rounded_rect(cr, w, h, corner)
+      cr:set_source_rgba(0.03, 0.03, 0.08, bg_alpha)
+      cr:fill()
+
+      gears.shape.rounded_rect(cr, w, h, corner)
+      cr:set_source_rgba(r, g, b, border_alpha)
+      cr:set_line_width(dpi(1))
+      cr:stroke()
+
+      for line = 0, 2 do
+        local y = plot_y + (plot_h / 2) * line
+        cr:set_source_rgba(grid_r, grid_g, grid_b, line == 2 and grid_alpha * 0.65 or grid_alpha)
+        cr:set_line_width(1)
+        cr:move_to(plot_x, y)
+        cr:line_to(plot_x + plot_w, y)
+        cr:stroke()
+      end
+
+      for line = 0, 4 do
+        local x = plot_x + (plot_w / 4) * line
+        cr:set_source_rgba(r, g, b, line % 2 == 0 and vertical_grid_alpha or vertical_grid_alpha * 0.6)
+        cr:set_line_width(1)
+        cr:move_to(x, plot_y)
+        cr:line_to(x, plot_y + plot_h)
+        cr:stroke()
+      end
+
+      if #compact_values >= 2 then
+        local points = compact_points_for(compact_values)
+        local first = points[1]
+        local last = points[#points]
+
+        cr:new_path()
+        cr:move_to(plot_x, plot_y + plot_h)
+        cr:line_to(first.x, first.y)
+        trace_compact_line(points)
+        cr:line_to(last.x, plot_y + plot_h)
+        cr:close_path()
+        cr:set_source_rgba(r, g, b, fill_alpha)
+        cr:fill_preserve()
+
+        cr:set_source_rgba(r, g, b, glow_alpha)
+        cr:set_line_width(glow_width)
+        cr:stroke_preserve()
+
+        cr:new_path()
+        trace_compact_line(points)
+        cr:set_source_rgba(r, g, b, line_alpha)
+        cr:set_line_width(line_width)
+        cr:stroke()
+      end
+    end
+
+    return register_redraw_target(widget)
+  end
+
+  local function create_hardware_section(title_text, image_path, options)
+    options = options or {}
+
+    local metric_row, metric_value = create_info_row(
+      options.metric_label or "LOAD",
+      options.initial_value or "00%",
+      options.accent or palette.accent
+    )
+
+    local graph = create_history_trace_graph(options.history or {}, options.accent or palette.accent, {
+      height = options.graph_height or dpi(38),
+      max_points = options.max_points,
+      radius = options.graph_radius or dpi(6),
+      bg_alpha = options.graph_bg_alpha or 0.88,
+      border_alpha = options.graph_border_alpha or 0.28,
+      fill_alpha = options.graph_fill_alpha or 0.22,
+      glow_alpha = options.graph_glow_alpha or 0.18,
+      line_alpha = options.graph_line_alpha or 0.94,
+      line_width = options.graph_line_width or dpi(1.5),
+      glow_width = options.graph_glow_width or dpi(4),
+      grid_alpha = options.graph_grid_alpha or 0.12,
+      vertical_grid_alpha = options.graph_vertical_grid_alpha or 0.04,
+    })
+
+    local image_canvas = create_monitor_canvas(image_path, {
+      accent = options.accent,
+      tint = options.tint,
+      glow_alpha = options.glow_alpha,
+      tint_alpha = options.tint_alpha,
+      band_alpha = options.band_alpha,
+      radius = dpi(8),
+      image_mode = "contain",
+      image_padding = options.image_padding or dpi(4),
+    })
+
+    local image_stack = wibox.widget {
+      image_canvas,
+      {
+        {
+          graph,
+          left = dpi(8),
+          right = dpi(8),
+          bottom = dpi(8),
+          widget = wibox.container.margin,
+        },
+        valign = "bottom",
+        halign = "fill",
+        widget = wibox.container.place,
+      },
+      layout = wibox.layout.stack,
+    }
+
+    local section, section_refs = create_monitor_section(title_text, image_path, {
+      accent = options.accent,
+      tint = options.tint,
+      glow_alpha = options.glow_alpha,
+      tint_alpha = options.tint_alpha,
+      image_height = options.image_height,
+      bg_alpha = options.bg_alpha,
+      margins = options.margins,
+      top_widget = metric_row,
+      image_widget = image_stack,
+      image_mode = "contain",
+      image_padding = options.image_padding or dpi(4),
+      content_spacing = options.content_spacing or dpi(4),
+      band_alpha = options.band_alpha,
+    })
+
+    return section, metric_value, {
+      graph = graph,
+      image_box = section_refs.image_box,
+    }
   end
 
   local function archive_image(index)
     return archive_images[index] or main_image_path
   end
 
-  local subject_row, _ = create_info_row("SUBJECT", "RADICAL-LAIN", palette.accent)
-  local signal_row, signal_value = create_info_row("STATE", "WIRED SYNC", palette.mem)
-  local cpu_row, cpu_value = create_info_row("CPU LOAD", "00%", palette.cpu)
-  local mem_row, mem_value = create_info_row("MEM BANK", "00%", palette.mem)
-  local gpu_row, gpu_value = create_info_row("GPU CORE", "00%", palette.gpu)
-  local net_row, net_value = create_info_row("NET FLOW", "0 B/S", palette.net)
-  local wifi_row, wifi_value = create_info_row("WIFI NOISE", "OFFLINE", palette.net)
-  local battery_row, battery_value = create_info_row("BATTERY", "N/D", palette.cpu)
-  local audio_row, audio_value = create_info_row("AUDIO BUS", "00%", palette.mem)
-  local kb_row, kb_value = create_info_row("KEYMAP", "US", palette.gpu)
-  local bt_row, bt_value = create_info_row("BT NODE", "OFFLINE", palette.gpu)
-  local bus_row, bus_value = create_info_row("WIRED BUS", "LINK OPEN", palette.accent)
+  local net_card, net_value, net_refs = create_hardware_section("PRIMARY FEED // NET FLOW", main_image_path, {
+    accent = palette.net,
+    tint = palette.gpu,
+    glow_alpha = 0.08,
+    tint_alpha = 0.03,
+    metric_label = "NET FLOW",
+    history = history.net,
+    image_height = dpi(306),
+    graph_height = dpi(40),
+    margins = dpi(8),
+    image_padding = dpi(2),
+    band_alpha = 0.02,
+  })
 
-  local dossier_note = wibox.widget {
-    markup = "<span foreground='" .. palette.accent .. "'><b>NOTES</b></span>  <span foreground='#ffffffbb'>sleeping protocol // static halo // wired resonance stable</span>",
-    font = "JetBrainsMono Nerd Font, bold 10",
-    widget = wibox.widget.textbox,
-  }
+  local mem_card, mem_value, mem_refs = create_hardware_section("ARCHIVE 01 // MEM BANK", archive_image(1), {
+    accent = palette.mem,
+    tint = palette.mem,
+    glow_alpha = 0.06,
+    tint_alpha = 0.03,
+    metric_label = "MEM BANK",
+    history = history.mem,
+    image_height = dpi(306),
+    graph_height = dpi(40),
+    margins = dpi(8),
+    image_padding = dpi(2),
+    band_alpha = 0.02,
+  })
 
-  local left_rows = wibox.widget {
-    subject_row,
-    signal_row,
-    cpu_row,
-    mem_row,
-    gpu_row,
-    spacing = dpi(8),
-    layout = wibox.layout.fixed.vertical,
-  }
+  local gpu_card, gpu_value, gpu_refs = create_hardware_section("ARCHIVE 02 // GPU CORE", archive_image(2), {
+    accent = palette.gpu,
+    tint = palette.gpu,
+    glow_alpha = 0.06,
+    tint_alpha = 0.03,
+    metric_label = "GPU TEMP",
+    history = history.gpu,
+    image_height = dpi(306),
+    graph_height = dpi(40),
+    margins = dpi(8),
+    image_padding = dpi(2),
+    band_alpha = 0.02,
+  })
 
-  local right_rows = wibox.widget {
-    net_row,
-    wifi_row,
-    battery_row,
-    audio_row,
-    kb_row,
-    spacing = dpi(8),
-    layout = wibox.layout.fixed.vertical,
-  }
+  local cpu_card, cpu_value, cpu_refs = create_hardware_section("SUBJECT DX-LN // LAIN CPU", archive_image(3), {
+    accent = palette.cpu,
+    tint = palette.accent,
+    glow_alpha = 0.08,
+    tint_alpha = 0.03,
+    metric_label = "CPU TEMP",
+    history = history.cpu,
+    image_height = dpi(306),
+    graph_height = dpi(40),
+    margins = dpi(8),
+    image_padding = dpi(2),
+    band_alpha = 0.02,
+  })
 
-  local data_panel = create_section_frame(
-    "SUBJECT DX-LN // WIRED MONITOR",
-    {
-      {
-        left_rows,
-        right_rows,
-        spacing = dpi(10),
-        layout = wibox.layout.flex.horizontal,
-      },
-      bt_row,
-      bus_row,
-      dossier_note,
-      spacing = dpi(8),
-      layout = wibox.layout.fixed.vertical,
-    },
-    palette.accent,
-    {
-      bg_alpha = 0.70,
-      margins = dpi(10),
-    }
-  )
+  local wifi_card, wifi_value = create_hardware_section("FIELD 03 // WIFI NOISE", archive_image(3), {
+    accent = palette.net,
+    tint = palette.net,
+    glow_alpha = 0.06,
+    tint_alpha = 0.03,
+    metric_label = "WIFI NOISE",
+    history = history.wifi,
+    image_height = dpi(96),
+    graph_height = dpi(24),
+    margins = dpi(8),
+    image_padding = dpi(2),
+    band_alpha = 0.02,
+  })
+
+  local audio_card, audio_value = create_hardware_section("FIELD 04 // AUDIO BUS", archive_image(4), {
+    accent = palette.cpu,
+    tint = palette.cpu,
+    glow_alpha = 0.06,
+    tint_alpha = 0.03,
+    metric_label = "AUDIO BUS",
+    history = history.audio,
+    image_height = dpi(96),
+    graph_height = dpi(24),
+    margins = dpi(8),
+    image_padding = dpi(2),
+    band_alpha = 0.02,
+  })
 
   local threat_segments = {}
   local threat_strip = wibox.layout.fixed.horizontal()
@@ -800,7 +1132,7 @@ return function(args)
     widget = wibox.widget.textbox,
   }
 
-  local graph_widget = wibox.widget.base.make_widget()
+  local graph_widget = register_redraw_target(wibox.widget.base.make_widget())
 
   local function points_for(values, x, y, w, h)
     local points = {}
@@ -866,6 +1198,22 @@ return function(args)
 
   function graph_widget:fit(_, available_width, _)
     return available_width, dpi(170)
+  end
+
+  function graph_widget:set_graph_height(new_height)
+    self._graph_height = clamp_dimension(new_height or self._graph_height or dpi(170), dpi(120), dpi(320))
+    self:emit_signal("widget::layout_changed")
+    self:emit_signal("widget::redraw_needed")
+  end
+
+  local original_graph_fit = graph_widget.fit
+
+  function graph_widget:fit(context, available_width, available_height)
+    if self._graph_height then
+      return available_width, self._graph_height
+    end
+
+    return original_graph_fit(self, context, available_width, available_height)
   end
 
   function graph_widget:draw(_, cr, w, h)
@@ -966,102 +1314,54 @@ return function(args)
     widget = wibox.container.background,
   }
 
-  local top_main_width = math.floor(width * 0.34)
-  local top_aux_width = math.floor(width * 0.21)
-  local top_data_width = math.max(dpi(350), width - top_main_width - top_aux_width - dpi(86))
-  local bottom_side_width = math.floor(width * 0.16)
-  local telemetry_width = math.max(dpi(360), width - bottom_side_width * 2 - dpi(86))
+  local top_left_width = math.floor(width * 0.24)
+  local top_mid_width = math.floor(width * 0.17)
+  local top_mid2_width = math.floor(width * 0.17)
+  local top_right_width = math.max(dpi(330), width - top_left_width - top_mid_width - top_mid2_width - dpi(100))
+  local bottom_trace_width = width - dpi(36)
+
+  local net_slot = constrain(net_card, top_left_width, nil)
+  local mem_slot = constrain(mem_card, top_mid_width, nil)
+  local gpu_slot = constrain(gpu_card, top_mid2_width, nil)
+  local cpu_slot = constrain(cpu_card, top_right_width, nil)
 
   local top_row = wibox.widget {
-    constrain(
-      create_monitor_section("PRIMARY FEED // LAIN", main_image_path, {
-        accent = palette.accent,
-        tint = palette.gpu,
-        glow_alpha = 0.18,
-        tint_alpha = 0.10,
-        image_height = dpi(332),
-        footer = "observer locked // eyes up to the wired",
-      }),
-      top_main_width,
-      nil
-    ),
-    constrain(
-      {
-        create_monitor_section("ARCHIVE 01", archive_image(1), {
-          accent = palette.mem,
-          tint = palette.mem,
-          glow_alpha = 0.14,
-          image_height = dpi(154),
-          footer = "ghost cache // residual silhouette",
-        }),
-        create_monitor_section("ARCHIVE 02", archive_image(2), {
-          accent = palette.gpu,
-          tint = palette.gpu,
-          glow_alpha = 0.16,
-          image_height = dpi(154),
-          footer = "signal echo // passive scan",
-        }),
-        spacing = dpi(14),
-        layout = wibox.layout.fixed.vertical,
-      },
-      top_aux_width,
-      nil
-    ),
-    constrain(data_panel, top_data_width, nil),
+    net_slot,
+    mem_slot,
+    gpu_slot,
+    cpu_slot,
     spacing = dpi(14),
     layout = wibox.layout.fixed.horizontal,
   }
 
-  local bottom_row = wibox.widget {
-    constrain(
-      create_monitor_section("FIELD 03", archive_image(3), {
-        accent = palette.net,
-        tint = palette.net,
-        glow_alpha = 0.16,
-        image_height = dpi(144),
-        footer = "ambient packet rain",
-      }),
-      bottom_side_width,
-      nil
-    ),
-    constrain(
-      create_section_frame(
-        "THREAT LEVEL // WIRED TRACE",
+  local bottom_graph_slot = constrain(graph_widget, nil, dpi(186))
+
+  local bottom_row = constrain(
+    create_section_frame(
+      "THREAT LEVEL // WIRED TRACE",
+      {
+        bottom_graph_slot,
         {
-          constrain(graph_widget, nil, dpi(186)),
-          {
-            threat_strip,
-            nil,
-            threat_value,
-            expand = "inside",
-            layout = wibox.layout.align.horizontal,
-          },
-          spacing = dpi(10),
-          layout = wibox.layout.fixed.vertical,
+          threat_strip,
+          nil,
+          threat_value,
+          expand = "inside",
+          layout = wibox.layout.align.horizontal,
         },
-        palette.accent,
-        {
-          bg_alpha = 0.66,
-          margins = dpi(10),
-        }
-      ),
-      telemetry_width,
-      nil
+        spacing = dpi(10),
+        layout = wibox.layout.fixed.vertical,
+      },
+      palette.accent,
+      {
+        bg_alpha = 0.66,
+        margins = dpi(10),
+      }
     ),
-    constrain(
-      create_monitor_section("FIELD 04", archive_image(4), {
-        accent = palette.cpu,
-        tint = palette.cpu,
-        glow_alpha = 0.17,
-        image_height = dpi(144),
-        footer = "thermal phantom bloom",
-      }),
-      bottom_side_width,
-      nil
-    ),
-    spacing = dpi(14),
-    layout = wibox.layout.fixed.horizontal,
-  }
+    bottom_trace_width,
+    nil
+  )
+
+  local panel_transparency = (user_vars.transparency and user_vars.transparency.panels) or {}
 
   local panel = wibox.widget {
     {
@@ -1107,39 +1407,23 @@ return function(args)
       threat_label = "WIRED SYNC"
     end
 
-    cpu_value.text = string.format("%02d%%", math.floor(state.cpu + 0.5))
-    mem_value.text = string.format("%02d%%", math.floor(state.mem + 0.5))
-    gpu_value.text = string.format("%02d%%", math.floor(state.gpu + 0.5))
-    net_value.text = string.format("%02d%% :: %s", math.floor(state.net + 0.5), format_bytes_per_sec(state.net_rate))
-    signal_value.text = threat_label
+    cpu_value.text = format_temperature(state.cpu_temp)
+    mem_value.text = format_percent(state.mem)
+    gpu_value.text = format_temperature(state.gpu_temp)
+    net_value.text = format_percent(state.net)
     threat_value.text = threat_label
 
     if state.wifi then
-      wifi_value.text = string.format("%02d%%", math.floor(state.wifi + 0.5))
+      wifi_value.text = format_percent(state.wifi)
     else
       wifi_value.text = "OFFLINE"
-    end
-
-    if state.battery then
-      battery_value.text = string.format("%02d%%", math.floor(state.battery + 0.5))
-    else
-      battery_value.text = "N/D"
     end
 
     if state.muted then
       audio_value.text = "MUTED"
     else
-      audio_value.text = string.format("%02d%%", math.floor(state.audio + 0.5))
+      audio_value.text = format_percent(state.audio)
     end
-
-    kb_value.text = state.keyboard
-    bt_value.text = shorten(state.bt_name, 22)
-    bus_value.text = string.format(
-      "BT %s // WIFI %s // AUDIO %s",
-      shorten(state.bt_name, 10),
-      state.wifi and string.format("%02d%%", math.floor(state.wifi + 0.5)) or "OFF",
-      state.muted and "MUTED" or string.format("%02d%%", math.floor(state.audio + 0.5))
-    )
 
     local active_segments = math.max(1, math.floor((threat_load / 100) * #threat_segments + 0.5))
     for index, segment in ipairs(threat_segments) do
@@ -1158,15 +1442,77 @@ return function(args)
     end
   end
 
+  local top_card_refs = { net_refs, mem_refs, gpu_refs, cpu_refs }
+  local minimum_panel_width = dpi(760)
+  local minimum_panel_height = dpi(460)
+
+  local function update_header_gradient(current_width)
+    header_line.bg = gears.color {
+      type = "linear",
+      from = { 0, 0 },
+      to = { current_width, 0 },
+      stops = {
+        { 0, "#AA5A9C" },
+        { 0.33, palette.accent },
+        { 0.66, palette.gpu },
+        { 1, palette.mem },
+      }
+    }
+  end
+
+  local function relayout_panel(current_width, current_height)
+    width = clamp_dimension(current_width or width, minimum_panel_width, dpi(4096))
+    height = clamp_dimension(current_height or height, minimum_panel_height, dpi(4096))
+
+    panel._preferred_segment_width = width
+    panel._preferred_segment_height = height
+
+    local row_spacing = dpi(14) * 3
+    local row_width = math.max(dpi(640), width - dpi(36))
+    local card_budget = math.max(dpi(520), row_width - row_spacing)
+    local image_height = clamp_dimension(math.floor(height * 0.42), dpi(180), dpi(360))
+    local overlay_graph_height = clamp_dimension(math.floor(height * 0.055), dpi(28), dpi(64))
+    local threat_graph_height = clamp_dimension(math.floor(height * 0.25), dpi(136), dpi(280))
+
+    top_left_width = math.floor(card_budget * 0.24)
+    top_mid_width = math.floor(card_budget * 0.17)
+    top_mid2_width = math.floor(card_budget * 0.17)
+    top_right_width = math.max(dpi(240), card_budget - top_left_width - top_mid_width - top_mid2_width)
+    bottom_trace_width = row_width
+
+    net_slot.forced_width = top_left_width
+    mem_slot.forced_width = top_mid_width
+    gpu_slot.forced_width = top_mid2_width
+    cpu_slot.forced_width = top_right_width
+    bottom_row.forced_width = bottom_trace_width
+    bottom_graph_slot.forced_height = threat_graph_height
+    graph_widget:set_graph_height(threat_graph_height)
+
+    for _, refs in ipairs(top_card_refs) do
+      refs.image_box.forced_height = image_height
+      refs.graph:set_graph_height(overlay_graph_height)
+    end
+
+    update_header_gradient(width)
+    panel:emit_signal("widget::layout_changed")
+    panel:emit_signal("widget::redraw_needed")
+  end
+
   panel._preserve_colors = true
   panel._preferred_segment_width = width
   panel._preferred_segment_height = height
+  panel._minimum_segment_width = minimum_panel_width
+  panel._minimum_segment_height = minimum_panel_height
   panel._always_visible = true
   panel._popup_ontop = false
-  panel._popup_type = "desktop"
-  panel._popup_opacity = 0.8
+  panel._popup_type = "utility"
+  panel._popup_opacity = panel_transparency.enabled == false and 1 or (panel_transparency.chart or 0.8)
   panel._reserve_space = false
-  panel._input_passthrough = true
+  panel._input_passthrough = false
+  panel._allow_modkey_drag = true
+  panel._allow_modkey_resize = true
+  panel._popup_state_key = "system_monitor_chart"
+  panel._handle_popup_resize = relayout_panel
 
   panel._timer = gears.timer {
     timeout = interval,
@@ -1182,14 +1528,10 @@ return function(args)
       state.net = clamp(net_percent, 0, 100)
       state.net_rate = net_rate or 0
 
-      push(history.cpu, state.cpu)
-      push(history.mem, state.mem)
-      push(history.gpu, state.gpu)
-      push(history.net, state.net)
-
       if tick == 1 or tick % 3 == 0 then
         state.wifi = sample_wifi()
-        state.battery = sample_battery()
+        state.cpu_temp = sample_cpu_temp()
+        state.gpu_temp = sample_gpu_temp()
         state.audio, state.muted = sample_audio()
         state.keyboard = sample_keyboard()
       end
@@ -1198,11 +1540,21 @@ return function(args)
         state.bt_name = sample_bt_name()
       end
 
+      push(history.cpu, state.cpu)
+      push(history.mem, state.mem)
+      push(history.gpu, state.gpu)
+      push(history.net, state.net)
+      push(history.wifi, state.wifi or 0)
+      push(history.audio, state.muted and 0 or state.audio)
+
       update_texts()
-      graph_widget:emit_signal("widget::redraw_needed")
+      for _, widget in ipairs(redraw_targets) do
+        widget:emit_signal("widget::redraw_needed")
+      end
     end,
   }
 
+  relayout_panel(width, height)
   update_texts()
   return panel
 end
