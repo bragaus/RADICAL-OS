@@ -58,7 +58,7 @@ user_vars = {
   modkey = "Mod4",
 
   -- place your wallpaper at this path with this name, you could also try to change the path
-  wallpaper = home .. "/Imagens/lain.jpg",
+  wallpaper = "/usr/local/share/awesome/themes/default/background.png", -- wallpaper clássico do AwesomeWM
 
   -- Naming scheme for the powermenu, userhost = "user@hostname", fullname = "Firstname Surname", something else ...
   namestyle = "userhost",

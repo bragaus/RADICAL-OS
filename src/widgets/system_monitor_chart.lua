@@ -1041,12 +1041,24 @@ return function(args)
   -- painel termico dedicado (CPU/GPU TEMP), SEM foto: fundo violeta liso + grafico
   -- mantem o mesmo formato de refs (image_box, graph) do create_hardware_section
   -- para continuar compativel com o loop de relayout (top_card_refs).
-  local function create_thermal_section(title_text, options)
+  local function create_thermal_section(title_text, image_path, options)
     options = options or {}
 
     local accent = options.accent or palette.gpu
     local cpu_accent = options.cpu_accent or palette.cpu
     local gpu_accent = options.gpu_accent or palette.gpu
+
+    -- foto de fundo (ex.: 2.jpg, menina arma rosa EM PE) atras dos dados termicos
+    local image_canvas = create_monitor_canvas(image_path, {
+      accent = accent,
+      tint = accent,
+      glow_alpha = 0.06,
+      tint_alpha = 0.04,
+      band_alpha = 0.16,
+      radius = dpi(8),
+      image_mode = "contain",
+      image_padding = dpi(4),
+    })
 
     local cpu_row, cpu_temp_value = create_info_row("CPU TEMP", "--   --%", cpu_accent)
     local gpu_row, gpu_temp_value = create_info_row("GPU TEMP", "--   --%", gpu_accent)
@@ -1098,7 +1110,8 @@ return function(args)
     -- "image_box": area visual violeta lisa (sem create_monitor_canvas / sem foto)
     -- segura o grafico empilhado; mantida como container.constraint para o relayout
     -- poder ajustar forced_height como nos demais cards.
-    local thermal_visual = wibox.widget {
+    -- conteudo termico (rows em cima, grafico embaixo) sobre camada escura translucida
+    local thermal_content = wibox.widget {
       {
         {
           rows,
@@ -1115,13 +1128,18 @@ return function(args)
         margins = dpi(8),
         widget = wibox.container.margin,
       },
-      bg = with_alpha(accent, 0.10),
-      border_width = dpi(1),
-      border_color = with_alpha(accent, 0.55),
+      bg = with_alpha(palette.overlay, 0.42), -- escurece a foto p/ legibilidade dos numeros
       shape = function(cr, w, h)
         gears.shape.rounded_rect(cr, w, h, dpi(8))
       end,
       widget = wibox.container.background,
+    }
+
+    -- foto (2.jpg) ao fundo + conteudo termico por cima
+    local thermal_visual = wibox.widget {
+      image_canvas,
+      thermal_content,
+      layout = wibox.layout.stack,
     }
 
     local image_box = constrain(thermal_visual, nil, options.image_height or dpi(180))
@@ -1176,7 +1194,7 @@ return function(args)
   })
 
   -- GPU CORE agora e um painel TERMICO dedicado (CPU TEMP + GPU TEMP), sem foto.
-  local gpu_card, cpu_temp_value, gpu_temp_value, gpu_refs = create_thermal_section("ARCHIVE 02 // THERMAL CORE", {
+  local gpu_card, cpu_temp_value, gpu_temp_value, gpu_refs = create_thermal_section("ARCHIVE 02 // THERMAL CORE", archive_image(2), {
     accent = palette.gpu,
     cpu_accent = palette.cpu,
     gpu_accent = palette.gpu,
@@ -1658,6 +1676,23 @@ return function(args)
 
       if tick == 1 or tick % 5 == 0 then
         state.bt_name = sample_bt_name()
+      end
+
+      -- Priming: na 1a amostra preenche TODO o historico com o valor atual, p/ o grafico
+      -- nao mostrar um degrau vertical (0 -> valor real) nos primeiros segundos (bug MEM).
+      if tick == 1 then
+        local function fill(arr, val)
+          val = clamp(val or 0, 0, 100)
+          for i = 1, #arr do arr[i] = val end
+        end
+        fill(history.cpu, state.cpu)
+        fill(history.mem, state.mem)
+        fill(history.gpu, state.gpu)
+        fill(history.net, state.net)
+        fill(history.wifi, state.wifi or 0)
+        fill(history.audio, state.muted and 0 or state.audio)
+        fill(history.cpu_temp, state.cpu_temp or 0)
+        fill(history.gpu_temp, state.gpu_temp or 0)
       end
 
       push(history.cpu, state.cpu)

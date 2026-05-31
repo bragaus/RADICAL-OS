@@ -31,6 +31,33 @@ local function shorten(addr)
   return addr:sub(1, head) .. "…" .. addr:sub(#addr - tail + 1)
 end
 
+-- Parseia "host:port" em host e port. Suporta IPv6 entre colchetes:
+--   "[2607:6bc0::10]:443" -> host="2607:6bc0::10", port="443"
+--   "192.168.0.1:67"      -> host="192.168.0.1",  port="67"
+-- Sem porta detectável -> port = nil.
+local function parse_addr(addr)
+  addr = tostring(addr or "")
+  if addr == "" or addr == "*" then
+    return nil, nil
+  end
+  -- IPv6 entre colchetes: [host]:port  ou  [host]
+  local h, port = addr:match("^%[(.-)%]:(%d+)$")
+  if h then
+    return h, port
+  end
+  h = addr:match("^%[(.-)%]$")
+  if h then
+    return h, nil
+  end
+  -- IPv4/hostname: separa no ÚLTIMO ':' (host não contém ':').
+  local host, p2 = addr:match("^(.-):(%d+)$")
+  if host and not host:find(":") then
+    return host, p2
+  end
+  -- Sem porta — devolve o endereço cru como host.
+  return addr, nil
+end
+
 -- Cor do estado segundo §7.4.8.
 local function state_color(state)
   local s = tostring(state or ""):upper()
@@ -71,7 +98,7 @@ return function(args)
       widget = wibox.widget.textbox,
     }
 
-    local row = wibox.widget {
+    local inner = wibox.widget {
       {
         proto,
         fg = p.text_muted,
@@ -88,14 +115,48 @@ return function(args)
         widget = wibox.container.margin,
       },
       state,
-      forced_height = dpi(18),
       expand = "inside",
       layout = wibox.layout.align.horizontal,
+    }
+
+    -- Container clicável: hover (hand1) + left-click dispara nmap na conexão.
+    local row = wibox.widget {
+      inner,
+      forced_height = dpi(18),
+      bg = "#00000000",
+      widget = wibox.container.background,
     }
 
     row._proto = proto
     row._peer = peer
     row._state = state
+    row._host = nil
+    row._port = nil
+
+    -- Realce em hover apenas quando a linha tem um peer real (host setado).
+    Hover_signal(row, p.panel_hi, nil)
+
+    row:buttons(awful.util.table.join(
+      awful.button({}, 1, function()
+        local host = row._host
+        if not host or host == "" then
+          return -- ignora linhas vazias / sem peer
+        end
+        local term = (user_vars and user_vars.terminal) or "alacritty"
+        local cmd
+        if row._port and row._port ~= "" then
+          cmd = "nmap -Pn -sV -sC -p " .. row._port .. " " .. host
+            .. "; echo; read -n1 -p '[enter]'"
+        else
+          cmd = "nmap -Pn -sV " .. host
+            .. "; echo; read -n1 -p '[enter]'"
+        end
+        awful.spawn.with_shell(
+          term .. " -e sh -c " .. string.format("%q", cmd)
+        )
+      end)
+    ))
+
     return row
   end
 
@@ -160,12 +221,18 @@ return function(args)
         state_color(state),
         tostring(state or ""):upper()
       )
+      -- Guarda host/port do peer para o clique (nmap).
+      local host, port = parse_addr(peer)
+      row._host = host
+      row._port = port
       row.visible = true
     else
       -- Limpa linhas não usadas.
       row._proto:set_text("")
       row._peer:set_text("")
       row._state:set_text("")
+      row._host = nil
+      row._port = nil
       row.visible = false
     end
   end
