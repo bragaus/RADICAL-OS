@@ -1,10 +1,11 @@
 ------------------------------------------------------------------------------------------
--- This is the main themeing file, here are most colors changed                         --
--- If you want to change individual widget colors you will need to edit them seperately --
+-- Main theming file — VIOLET HUD EDITION                                                --
+-- Color tokens live in src/theme/palette.lua; this wires them into beautiful/Theme.     --
+-- Hierarquia por luminosidade/alpha (roxo monocromático). Acento primário = v500.       --
 ------------------------------------------------------------------------------------------
 
 -- Awesome Libs
-local color = require("src.theme.colors")
+local p = require("src.theme.palette")
 local dpi = require("beautiful.xresources").apply_dpi
 local gears = require("gears")
 local awful = require("awful")
@@ -14,63 +15,70 @@ local icondir = awful.util.getdir("config") .. "src/assets/icons/titlebar/"
 
 Theme.font = user_vars.font.bold
 
-Theme.bg_normal = color["Grey900"]
-Theme.bg_focus = color["Grey900"]
-Theme.bg_urgent = color["RedA200"]
-Theme.bg_minimize = color["White"]
-Theme.bg_systray = color["White"]
+-- Base surfaces (violet-blacks)
+Theme.bg_normal   = p.base
+Theme.bg_focus    = p.panel_hi
+Theme.bg_urgent   = p.glow_hot
+Theme.bg_minimize = p.v950
+Theme.bg_systray  = p.panel
 
-Theme.fg_normal = color["White"]
-Theme.fg_focus = color["White"]
-Theme.fg_urgent = color["White"]
-Theme.fg_minimize = color["White"]
+Theme.fg_normal   = p.text_primary
+Theme.fg_focus    = p.text_bright
+Theme.fg_urgent   = p.v50
+Theme.fg_minimize = p.text_muted
 
-Theme.useless_gap = dpi(5) -- Change this to 0 if you dont like window gaps
-Theme.border_width = dpi(11) -- Change this to 0 if you dont like borders
-Theme.border_normal = color["Grey800"]
---Theme.border_focus = color["Red"] -- Doesnt work, no idea why; workaround is in signals.lua
-Theme.border_marked = color["Red400"]
+Theme.useless_gap   = dpi(6)  -- Change this to 0 if you dont like window gaps
+Theme.border_width  = dpi(2)  -- referência tem borda FINA (era dpi(11))
+Theme.border_normal = p.v950
+-- Theme.border_focus aplicado via signals.lua (workaround) -> p.glow_core
+Theme.border_marked = p.glow_hot
 
---Theme.menu_submenu_icon = Theme_path .. "assets.ArchLogo.png"
-Theme.menu_height = dpi(40)
-Theme.menu_width = dpi(200)
-Theme.menu_bg_normal = color["Grey900"]
-Theme.menu_bg_focus = color["Grey800"]
-Theme.menu_fg_focus = color["White"]
-Theme.menu_border_color = color["Grey800"]
-Theme.menu_border_width = dpi(0)
+-- Menus (§7.5 do DESIGN_SYSTEM)
+Theme.menu_height       = dpi(26)
+Theme.menu_width        = dpi(220)
+Theme.menu_bg_normal    = p.panel .. "f2"
+Theme.menu_bg_focus     = p.v700
+Theme.menu_fg_normal    = p.text_primary
+Theme.menu_fg_focus     = p.v50
+Theme.menu_border_color  = p.line_base
+Theme.menu_border_width = dpi(1)
 Theme.menu_shape = function(cr, width, heigth)
-  gears.shape.rounded_rect(cr, width, heigth, 5)
+  gears.shape.rounded_rect(cr, width, heigth, dpi(3))
 end
 
-Theme.taglist_fg_focus = color["Grey900"]
-Theme.taglist_bg_focus = color["White"]
+-- Taglist
+Theme.taglist_fg_focus = p.v50
+Theme.taglist_bg_focus = p.v500
 
-Theme.tooltip_border_color = color["Grey800"]
-Theme.tooltip_bg = color["Grey900"]
-Theme.tooltip_fg = color["YellowA200"]
-Theme.tooltip_border_width = dpi(4)
-Theme.tooltip_gaps = dpi(15)
+-- Tooltip
+Theme.tooltip_border_color = p.line_base
+Theme.tooltip_bg           = p.panel .. "f2"
+Theme.tooltip_fg           = p.text_bright
+Theme.tooltip_border_width = dpi(1)
+Theme.tooltip_gaps         = dpi(10)
 Theme.tooltip_shape = function(cr, width, heigth)
-  gears.shape.rounded_rect(cr, width, heigth, 5)
+  gears.shape.rounded_rect(cr, width, heigth, dpi(4))
 end
 
-Theme.notification_spacing = dpi(20)
+Theme.notification_spacing = dpi(12)
 
+-- Titlebar button icons (mantidos; recolor é feito no módulo titlebar)
 Theme.titlebar_close_button_normal = icondir .. "close.svg"
 Theme.titlebar_maximized_button_normal = icondir .. "maximize.svg"
 Theme.titlebar_minimize_button_normal = icondir .. "minimize.svg"
 Theme.titlebar_maximized_button_active = icondir .. "maximize.svg"
 Theme.titlebar_maximized_button_inactive = icondir .. "maximize.svg"
 
-Theme.bg_systray = color["BlueGrey800"]
-Theme.systray_icon_spacing = dpi(10)
+Theme.systray_icon_spacing = dpi(6)
 
-Theme.hotkeys_bg = color["Grey900"]
-Theme.hotkeys_fg = color["White"]
-Theme.hotkeys_border_width = 0
+-- Hotkeys popup
+Theme.hotkeys_bg = p.panel .. "f2"
+Theme.hotkeys_fg = p.text_primary
+Theme.hotkeys_border_width = dpi(1)
+Theme.hotkeys_border_color = p.line_base
+Theme.hotkeys_modifiers_fg = p.text_muted
 Theme.hotkeys_shape = function(cr, width, height)
-  gears.shape.rounded_rect(cr, width, height, 10)
+  gears.shape.rounded_rect(cr, width, height, dpi(4))
 end
 Theme.hotkeys_description_font = user_vars.font.bold
 

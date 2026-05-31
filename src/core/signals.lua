@@ -4,6 +4,7 @@ local awful = require("awful")
 local beautiful = require("beautiful")
 local gears = require("gears")
 local wibox = require("wibox")
+local palette = require("src.theme.palette")
 
 local function client_transparency_config()
   return (user_vars.transparency and user_vars.transparency.clients) or {}
@@ -163,7 +164,7 @@ client.connect_signal(
   "focus",
   function(c)
     c.border_width = beautiful.border_width
-    c.border_color = "#9C27B0"
+    c.border_color = palette.glow_core
   end
 )
 
