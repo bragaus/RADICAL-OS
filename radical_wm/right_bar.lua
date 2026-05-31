@@ -2,12 +2,17 @@
 -- This is the statusbar, every widget, module and so on is combined to all the stuff you see on the screen --
 --------------------------------------------------------------------------------------------------------------
 local awful = require("awful")
+local color = require("src.theme.colors")
 local dpi = require("beautiful").xresources.apply_dpi
 local gears = require("gears")
 local wibox = require("wibox")
 
 return function(s, widgets)
   widgets = widgets or {}
+  local panel_transparency = (user_vars.transparency and user_vars.transparency.panels) or {}
+  local segment_alpha = panel_transparency.enabled == false and 1 or (panel_transparency.segment or 0.90)
+  local segment_edge_alpha = panel_transparency.enabled == false and 1 or (panel_transparency.segment_edge or 0.96)
+  local segment_border_alpha = panel_transparency.enabled == false and 1 or (panel_transparency.segment_border or segment_edge_alpha)
 
   -- Se quiser que seja só o gráfico, deixe assim:
   -- widgets = { cyber_chart }
@@ -44,12 +49,15 @@ return function(s, widgets)
 
   local function segment_style_for(widget, index)
     local fallback = segment_bg_for(index)
+    local edge = widget._segment_edge or widget._segment_bg or fallback.edge
+    local fill = widget._segment_bg or fallback.fill
+    local border_color = widget._segment_border_color or edge
 
     return {
-      edge = widget._segment_edge or widget._segment_bg or fallback.edge,
-      fill = widget._segment_bg or fallback.fill,
+      edge = color.with_alpha(edge, segment_edge_alpha),
+      fill = color.with_alpha(fill, segment_alpha),
       border_width = widget._segment_border_width,
-      border_color = widget._segment_border_color,
+      border_color = color.with_alpha(border_color, segment_border_alpha),
     }
   end
 

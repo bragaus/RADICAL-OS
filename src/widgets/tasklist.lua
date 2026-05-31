@@ -2,209 +2,200 @@
 -- This is the tasklist widget --
 ---------------------------------
 
--- Awesome Libs
-local awful = require('awful')
-local wibox = require('wibox')
-local dpi = require('beautiful').xresources.apply_dpi
-local gears = require('gears')
-local color = require('src.theme.colors')
+local awful = require("awful")
+local color = require("src.theme.colors")
+local wibox = require("wibox")
+local dpi = require("beautiful").xresources.apply_dpi
+require("src.tools.icon_handler")
 
-local list_update = function(widget, buttons, label, data, objects)
-	widget:reset()
-	for _, object in ipairs(objects) do
-		local task_widget = wibox.widget {
-			{
-				{
-					{
-						{
-							nil,
-							{
-								id = "icon",
-								resize = true,
-								widget = wibox.widget.imagebox
-							},
-							nil,
-							layout = wibox.layout.align.horizontal,
-							id = "layout_icon"
-						},
-						forced_width = dpi(33),
-						margins = dpi(3),
-						widget = wibox.container.margin,
-						id = "margin"
-					},
-					{
-						text = "",
-						align = "center",
-						valign = "center",
-						visible = true,
-						widget = wibox.widget.textbox,
-						id = "title"
-					},
-					layout = wibox.layout.fixed.horizontal,
-					id = "layout_it"
-				},
-				right = dpi(5),
-				left = dpi(5),
-				widget = wibox.container.margin,
-				id = "container"
-			},
-			bg = color["White"],
-			fg = color["Grey900"],
-			shape = function(cr, width, height)
-				gears.shape.rounded_rect(cr, width, height, 5)
-			end,
-			widget = wibox.container.background
-		}
+local panel_transparency = (user_vars.transparency and user_vars.transparency.panels) or {}
+local tab_alpha = panel_transparency.enabled == false and 1 or (panel_transparency.tab or 0.88)
+local hover_alpha = math.min(1, tab_alpha + 0.08)
 
-		local task_tool_tip = awful.tooltip {
-			objects = { task_widget },
-			mode = "inside",
-			preferred_alignments = "middle",
-			preferred_positions = "bottom",
-			margins = dpi(10),
-			gaps = 0,
-			delay_show = 1
-		}
+local palette = {
+  active_bg = color.with_alpha("#16304f", tab_alpha),
+  inactive_bg = color.with_alpha("#0f1826", tab_alpha),
+  active_fg = "#eef8ff",
+  inactive_fg = "#74bdf5"
+}
 
-		local function create_buttons(buttons, object)
-			if buttons then
-				local btns = {}
-				for _, b in ipairs(buttons) do
-					local btn = awful.button {
-						modifiers = b.modifiers,
-						button = b.button,
-						on_press = function()
-							b:emit_signal('press', object)
-						end,
-						on_release = function()
-							b:emit_signal('release', object)
-						end
-					}
-					btns[#btns + 1] = btn
-				end
-				return btns
-			end
-		end
+local function tab_shape(cr, width, height)
+  local slant = math.min(dpi(8), math.floor(height * 0.35))
 
-		task_widget:buttons(create_buttons(buttons, object))
+  cr:move_to(slant, 0)
+  cr:line_to(width - slant, 0)
+  cr:line_to(width, height / 2)
+  cr:line_to(width - slant, height)
+  cr:line_to(slant, height)
+  cr:line_to(0, height / 2)
+  cr:close_path()
+end
 
-		local text, _ = label(object, task_widget.container.layout_it.title)
-		if object == client.focus then
-			if text == nil or text == '' then
-				task_widget.container.layout_it.title:set_margins(0)
-			else
-				local text_full = text:match('>(.-)<')
-				if text_full then
-					if object.class == nil then
-						text = object.name
-					else
-						text = object.class:sub(1, 20)
-					end
-					task_tool_tip:set_text(text_full)
-					task_tool_tip:add_to_object(task_widget)
-				else
-					task_tool_tip:remove_from_object(task_widget)
-				end
-			end
-			task_widget:set_bg(color["White"])
-			task_widget:set_fg(color["Grey900"])
-			task_widget.container.layout_it.title:set_text(text)
-		else
-			task_widget:set_bg("#3A475C")
-			task_widget.container.layout_it.title:set_text('')
-		end
-		task_widget.container.layout_it.margin.layout_icon.icon:set_image(Get_icon(user_vars.icon_theme, object))
-		widget:add(task_widget)
-		widget:set_spacing(dpi(6))
+local function shorten_text(text, max_len)
+  if not text or text == "" then
+    return "Sem titulo"
+  end
 
-		--#region Hover_signal
-		local old_wibox, old_cursor, old_bg
-		task_widget:connect_signal(
-			"mouse::enter",
-			function()
-				old_bg = task_widget.bg
-				if object == client.focus then
-					task_widget.bg = '#dddddddd'
-				else
-					task_widget.bg = '#3A475Cdd'
-				end
-				local w = mouse.current_wibox
-				if w then
-					old_cursor, old_wibox = w.cursor, w
-					w.cursor = "hand1"
-				end
-			end
-		)
+  if #text <= max_len then
+    return text
+  end
 
-		task_widget:connect_signal(
-			"button::press",
-			function()
-				if object == client.focus then
-					task_widget.bg = "#ffffffaa"
-				else
-					task_widget.bg = '#3A475Caa'
-				end
-			end
-		)
+  return text:sub(1, max_len - 3) .. "..."
+end
 
-		task_widget:connect_signal(
-			"button::release",
-			function()
-				if object == client.focus then
-					task_widget.bg = "#ffffffdd"
-				else
-					task_widget.bg = '#3A475Cdd'
-				end
-			end
-		)
+local function create_buttons(buttons, object)
+  if not buttons then
+    return nil
+  end
 
-		task_widget:connect_signal(
-			"mouse::leave",
-			function()
-				task_widget.bg = old_bg
-				if old_wibox then
-					old_wibox.cursor = old_cursor
-					old_wibox = nil
-				end
-			end
-		)
-		--#endregion
+  local btns = {}
 
-	end
-	return widget
+  for _, b in ipairs(buttons) do
+    btns[#btns + 1] = awful.button {
+      modifiers = b.modifiers,
+      button = b.button,
+      on_press = function()
+        b:emit_signal("press", object)
+      end,
+      on_release = function()
+        b:emit_signal("release", object)
+      end
+    }
+  end
+
+  return btns
+end
+
+local list_update = function(widget, buttons, _, _, objects)
+  widget:reset()
+  widget:set_spacing(dpi(4))
+
+  for _, object in ipairs(objects) do
+    local is_focused = object == client.focus
+    local bg = is_focused and palette.active_bg or palette.inactive_bg
+    local fg = is_focused and palette.active_fg or palette.inactive_fg
+
+    local icon = wibox.widget {
+      resize = true,
+      widget = wibox.widget.imagebox
+    }
+
+    local title = wibox.widget {
+      text = is_focused and shorten_text(object.name or object.class, 42) or "",
+      align = "left",
+      valign = "center",
+      widget = wibox.widget.textbox
+    }
+
+    local body = wibox.widget {
+      {
+        {
+          {
+            icon,
+            id = "icon_place",
+            widget = wibox.container.place
+          },
+          forced_width = is_focused and dpi(28) or dpi(22),
+          margins = dpi(3),
+          widget = wibox.container.margin
+        },
+        title,
+        spacing = dpi(4),
+        layout = wibox.layout.fixed.horizontal
+      },
+      left = is_focused and dpi(6) or dpi(4),
+      right = is_focused and dpi(10) or dpi(4),
+      top = dpi(3),
+      bottom = dpi(3),
+      widget = wibox.container.margin
+    }
+
+    local task_widget = wibox.widget {
+      body,
+      bg = bg,
+      fg = fg,
+      shape = tab_shape,
+      widget = wibox.container.background
+    }
+
+    task_widget:buttons(create_buttons(buttons, object))
+    icon:set_image(Get_icon(user_vars.icon_theme, object))
+
+    local task_tool_tip = awful.tooltip {
+      objects = { task_widget },
+      mode = "inside",
+      preferred_alignments = "middle",
+      preferred_positions = "bottom",
+      margins = dpi(10),
+      gaps = 0,
+      delay_show = 1
+    }
+
+    task_tool_tip:set_text(object.name or object.class or "Sem titulo")
+
+    local old_wibox, old_cursor, old_bg
+
+    task_widget:connect_signal("mouse::enter", function()
+      old_bg = task_widget.bg
+      task_widget.bg = is_focused and color.with_alpha("#21446d", hover_alpha) or color.with_alpha("#16263b", hover_alpha)
+
+      local current_wibox = mouse.current_wibox
+      if current_wibox then
+        old_cursor, old_wibox = current_wibox.cursor, current_wibox
+        current_wibox.cursor = "hand1"
+      end
+    end)
+
+    task_widget:connect_signal("button::press", function()
+      task_widget.bg = is_focused and color.with_alpha("#183556", tab_alpha) or color.with_alpha("#121f31", tab_alpha)
+    end)
+
+    task_widget:connect_signal("button::release", function()
+      task_widget.bg = bg
+    end)
+
+    task_widget:connect_signal("mouse::leave", function()
+      task_widget.bg = old_bg or bg
+
+      if old_wibox then
+        old_wibox.cursor = old_cursor
+        old_wibox = nil
+      end
+    end)
+
+    widget:add(task_widget)
+  end
+
+  return widget
 end
 
 return function(s)
-	return awful.widget.tasklist(
-		s,
-		awful.widget.tasklist.filter.currenttags,
-		awful.util.table.join(
-			awful.button(
-				{},
-				1,
-				function(c)
-					if c == client.focus then
-						c.minimized = true
-					else
-						c.minimized = false
-						if not c:isvisible() and c.first_tag then
-							c.first_tag:view_only()
-						end
-						c:emit_signal('request::activate')
-						c:raise()
-					end
-				end
-			),
-			awful.button(
-				{},
-				3,
-				function(c)
-					c:kill()
-				end
-			)
-		),
-		{},
-		list_update,
-		wibox.layout.fixed.horizontal()
-	)
+  local tasklist = awful.widget.tasklist(
+    s,
+    awful.widget.tasklist.filter.currenttags,
+    awful.util.table.join(
+      awful.button({}, 1, function(c)
+        if c == client.focus then
+          c.minimized = true
+        else
+          c.minimized = false
+          if not c:isvisible() and c.first_tag then
+            c.first_tag:view_only()
+          end
+          c:emit_signal("request::activate")
+          c:raise()
+        end
+      end),
+      awful.button({}, 3, function(c)
+        c:kill()
+      end)
+    ),
+    {},
+    list_update,
+    wibox.layout.fixed.horizontal()
+  )
+
+  tasklist._preserve_colors = true
+
+  return tasklist
 end

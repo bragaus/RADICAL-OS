@@ -8,33 +8,54 @@ local wibox = require("wibox")
 local M = {}
 
 local gif_path = gfs.get_configuration_dir() .. "src/assets/logo.gif"
-local frames_dir = "/tmp/awesome_plano_gif_frames/"
-
-local gif_surfaces = {}
-local loading = false
-local loaded = false
-local waiting_widgets = {}
-local load_timer = nil
+local frames_root = "/tmp/awesome_plano_gif_frames_v4"
+local caches = {}
 
 local DEFAULT_RADIUS = dpi(14)
-local DEFAULT_FALLBACK_BG = "#111111"
+local DEFAULT_FALLBACK_BG = "#00000000"
 
-local function notify_waiters()
-  for _, widget in ipairs(waiting_widgets) do
-    widget:emit_signal("widget::redraw_needed")
-  end
-  waiting_widgets = {}
+local function normalize_size(target_size)
+  local size = tonumber(target_size) or dpi(400)
+  return math.max(16, math.floor(size))
 end
 
-local function load_surfaces_async(paths)
-  local index = 1
+local function get_cache(target_size)
+  local size = normalize_size(target_size)
 
-  if load_timer then
-    load_timer:stop()
-    load_timer = nil
+  if caches[size] then
+    return caches[size], size
   end
 
-  load_timer = gears.timer {
+  local cache = {
+    frames_dir = string.format("%s/%d/", frames_root, size),
+    gif_surfaces = {},
+    loading = false,
+    loaded = false,
+    waiting_widgets = {},
+    load_timer = nil,
+  }
+
+  caches[size] = cache
+  return cache, size
+end
+
+local function notify_waiters(cache)
+  for _, widget in ipairs(cache.waiting_widgets) do
+    widget:emit_signal("widget::redraw_needed")
+  end
+  cache.waiting_widgets = {}
+end
+
+local function load_surfaces_async(cache, paths)
+  local index = 1
+  local notified_first_frame = false
+
+  if cache.load_timer then
+    cache.load_timer:stop()
+    cache.load_timer = nil
+  end
+
+  cache.load_timer = gears.timer {
     timeout = 0.001,
     autostart = true,
     call_now = false,
@@ -42,28 +63,35 @@ local function load_surfaces_async(paths)
       if index <= #paths then
         local surf = gears.surface.load_uncached(paths[index])
         if surf then
-          gif_surfaces[#gif_surfaces + 1] = surf
+          cache.gif_surfaces[#cache.gif_surfaces + 1] = surf
+
+          if not notified_first_frame then
+            notified_first_frame = true
+            notify_waiters(cache)
+          end
         end
         index = index + 1
       else
-        load_timer:stop()
-        load_timer = nil
-        loading = false
-        loaded = #gif_surfaces > 0
-        notify_waiters()
+        cache.load_timer:stop()
+        cache.load_timer = nil
+        cache.loading = false
+        cache.loaded = #cache.gif_surfaces > 0
+        notify_waiters(cache)
       end
     end
   }
 end
 
 local function load_gif_frames(target_size)
-  if loading or loaded then
-    return
+  local cache, size = get_cache(target_size)
+
+  if cache.loading or cache.loaded then
+    return cache, size
   end
 
-  loading = true
+  cache.loading = true
 
-  local check_cmd = string.format("ls %s*.png 2>/dev/null | wc -l", frames_dir)
+  local check_cmd = string.format("ls %s*.png 2>/dev/null | wc -l", cache.frames_dir)
 
   awful.spawn.easy_async_with_shell(check_cmd, function(stdout)
     local cached = tonumber(stdout:match("%d+")) or 0
@@ -71,16 +99,14 @@ local function load_gif_frames(target_size)
     if cached > 0 then
       local paths = {}
       for i = 0, cached - 1 do
-        paths[i + 1] = string.format("%sframe_%04d.png", frames_dir, i)
+        paths[i + 1] = string.format("%sframe_%04d.png", cache.frames_dir, i)
       end
-      load_surfaces_async(paths)
+      load_surfaces_async(cache, paths)
     else
-      local size = tonumber(target_size) or dpi(400)
-
-      local extract_cmd = string.format(
-        "mkdir -p %s && convert -coalesce -resize %dx%d^ %q %sframe_%%04d.png 2>/dev/null; ls %s*.png 2>/dev/null | wc -l",
-        frames_dir, size, size, gif_path, frames_dir, frames_dir
-      )
+        local extract_cmd = string.format(
+          "mkdir -p %s && convert %q -coalesce -alpha set -background none -fuzz 8%% -trim +repage -resize %dx%d -gravity center -extent %dx%d %sframe_%%04d.png 2>/dev/null; ls %s*.png 2>/dev/null | wc -l",
+          cache.frames_dir, gif_path, size, size, size, size, cache.frames_dir, cache.frames_dir
+        )
 
       awful.spawn.easy_async_with_shell(extract_cmd, function(out)
         local count = tonumber(out:match("%d+")) or 0
@@ -88,21 +114,23 @@ local function load_gif_frames(target_size)
         if count > 0 then
           local paths = {}
           for i = 0, count - 1 do
-            paths[i + 1] = string.format("%sframe_%04d.png", frames_dir, i)
+            paths[i + 1] = string.format("%sframe_%04d.png", cache.frames_dir, i)
           end
-          load_surfaces_async(paths)
+          load_surfaces_async(cache, paths)
         else
           local surf = gears.surface.load_uncached(gif_path)
           if surf then
-            gif_surfaces = { surf }
-            loaded = true
+            cache.gif_surfaces = { surf }
+            cache.loaded = true
           end
-          loading = false
-          notify_waiters()
+          cache.loading = false
+          notify_waiters(cache)
         end
       end)
     end
   end)
+
+  return cache, size
 end
 
 function M.preload(target_size)
@@ -115,6 +143,9 @@ function M.new(args)
   local radius = args.radius or DEFAULT_RADIUS
   local fallback_bg = args.fallback_bg or DEFAULT_FALLBACK_BG
   local anim_interval = args.anim_interval or 0.06
+  local content_scale = args.content_scale or 1
+  local shape = args.shape
+  local cache, preload_size = get_cache(args.preload_size or dpi(400))
 
   local current_surface = nil
   local current_frame = 1
@@ -122,42 +153,23 @@ function M.new(args)
 
   local widget = wibox.widget.base.make_widget()
 
-  local function start_animation()
-    if frame_timer or #gif_surfaces == 0 then
-      return
-    end
-
-    frame_timer = gears.timer {
-      timeout = anim_interval,
-      autostart = true,
-      call_now = true,
-      callback = function()
-        if #gif_surfaces == 0 then
-          return
-        end
-
-        current_surface = gif_surfaces[current_frame]
-        current_frame = (current_frame % #gif_surfaces) + 1
-        widget:emit_signal("widget::redraw_needed")
-      end
-    }
-
-    widget._gif_timer = frame_timer
-  end
-
   function widget:fit(_, width, height)
     return width, height
   end
 
   function widget:draw(_, cr, width, height)
-    gears.shape.rounded_rect(cr, width, height, radius)
+    if shape then
+      shape(cr, width, height)
+    else
+      gears.shape.rounded_rect(cr, width, height, radius)
+    end
+
     cr:clip()
 
     if current_surface then
       local iw = current_surface:get_width()
       local ih = current_surface:get_height()
-
-      local scale = math.max(width / iw, height / ih)
+      local scale = math.max(width / iw, height / ih) * content_scale
       local ox = (width - iw * scale) / 2
       local oy = (height - ih * scale) / 2
 
@@ -174,12 +186,35 @@ function M.new(args)
     end
   end
 
-  if loaded and #gif_surfaces > 0 then
-    current_surface = gif_surfaces[1]
+  local function start_animation()
+    if frame_timer or #cache.gif_surfaces == 0 then
+      return
+    end
+
+    frame_timer = gears.timer {
+      timeout = anim_interval,
+      autostart = true,
+      call_now = true,
+      callback = function()
+        if #cache.gif_surfaces == 0 then
+          return
+        end
+
+        current_surface = cache.gif_surfaces[current_frame]
+        current_frame = (current_frame % #cache.gif_surfaces) + 1
+        widget:emit_signal("widget::redraw_needed")
+      end
+    }
+
+    widget._gif_timer = frame_timer
+  end
+
+  if cache.loaded and #cache.gif_surfaces > 0 then
+    current_surface = cache.gif_surfaces[1]
     start_animation()
   else
-    table.insert(waiting_widgets, widget)
-    load_gif_frames(args.preload_size or dpi(400))
+    table.insert(cache.waiting_widgets, widget)
+    cache = load_gif_frames(preload_size) or cache
 
     local wait_timer
     wait_timer = gears.timer {
@@ -187,12 +222,12 @@ function M.new(args)
       autostart = true,
       call_now = false,
       callback = function()
-        if loaded and #gif_surfaces > 0 then
-          current_surface = gif_surfaces[1]
+        if #cache.gif_surfaces > 0 then
+          current_surface = cache.gif_surfaces[1]
           start_animation()
           widget:emit_signal("widget::redraw_needed")
           wait_timer:stop()
-        elseif not loading then
+        elseif not cache.loading then
           wait_timer:stop()
         end
       end

@@ -11,6 +11,9 @@ local wibox = require("wibox")
 return function(s, widgets_top, widgets_bottom)
   widgets_top = widgets_top or {}
   widgets_bottom = widgets_bottom or {}
+  local has_bottom_widgets = #widgets_bottom > 0
+  local panel_transparency = (user_vars.transparency and user_vars.transparency.panels) or {}
+  local segment_alpha = panel_transparency.enabled == false and 1 or (panel_transparency.segment or 0.90)
   local top_left = awful.popup {
     screen = s,
     widget = wibox.container.background,
@@ -28,40 +31,62 @@ return function(s, widgets_top, widgets_bottom)
     end
   }
 
-  local top_first = awful.popup {
-    screen = s,
-    widget = wibox.container.background,
-    ontop = false,
-    bg = "#00000000",
-    visible = true,
-    maximum_width = dpi(980),
-    placement = function(c)
-      awful.placement.top_left(c, {
-        margins = { top = dpi(70), left = dpi(10) }
-      })
-    end,
-    shape = function(cr, width, height)
-      gears.shape.rounded_rect(cr, width, height, dpi(4))
+  if s._radical_bar_top_left and s._radical_bar_top_left ~= top_left then
+    s._radical_bar_top_left.visible = false
+  end
+
+  s._radical_bar_top_left = top_left
+
+  local top_first = nil
+
+  if has_bottom_widgets then
+    top_first = awful.popup {
+      screen = s,
+      widget = wibox.container.background,
+      ontop = false,
+      bg = "#00000000",
+      visible = true,
+      maximum_width = dpi(980),
+      placement = function(c)
+        awful.placement.top_left(c, {
+          margins = { top = dpi(70), left = dpi(10) }
+        })
+      end,
+      shape = function(cr, width, height)
+        gears.shape.rounded_rect(cr, width, height, dpi(4))
+      end
+    }
+
+    if s._radical_bar_top_first and s._radical_bar_top_first ~= top_first then
+      s._radical_bar_top_first.visible = false
     end
-  }
+
+    s._radical_bar_top_first = top_first
+  elseif s._radical_bar_top_first then
+    s._radical_bar_top_first.visible = false
+    s._radical_bar_top_first = nil
+  end
 
   top_left:struts {
     top = 55
   }
 
-  top_first:struts {
-    top = 100
-  }
+  if top_first then
+    top_first:struts {
+      top = 100
+    }
+  end
 
+  local accent_color = "#6ec1ff"
   local segment_palette = {
-    "#2b0c45",
-    "#4c1d95",
-    "#5b21b6",
-    "#6d28d9"
+    "#101722",
+    "#13233a",
+    "#193152",
+    "#21426d"
   }
 
   local function segment_bg_for(index)
-    return segment_palette[((index - 1) % #segment_palette) + 1]
+    return color.with_alpha(segment_palette[((index - 1) % #segment_palette) + 1], segment_alpha)
   end
 
   local function normalize_widget_colors(widget)
@@ -79,13 +104,13 @@ return function(s, widgets_top, widgets_bottom)
       end
 
       if w.fg ~= nil then
-        w.fg = "#ff8c00"
+        w.fg = accent_color
       end
 
       if w.set_image and w.get_image then
         local img = w:get_image()
         if img then
-          w:set_image(gears.color.recolor_image(img, "#ff8c00"))
+          w:set_image(gears.color.recolor_image(img, accent_color))
         end
       end
     end
@@ -161,8 +186,10 @@ return function(s, widgets_top, widgets_bottom)
     layout = wibox.layout.fixed.horizontal
   }
 
-  top_first:setup {
-    prepare_widgets(widgets_bottom),
-    layout = wibox.layout.fixed.horizontal
-  }
+  if top_first then
+    top_first:setup {
+      prepare_widgets(widgets_bottom),
+      layout = wibox.layout.fixed.horizontal
+    }
+  end
 end

@@ -148,6 +148,8 @@ return function(widget, clock_mode)
       local user, nice, system, idle, iowait, irq, softirq, steal, guest, guest_nice =
       stdout:match("(%d+)%s(%d+)%s(%d+)%s(%d+)%s(%d+)%s(%d+)%s(%d+)%s(%d+)%s(%d+)%s(%d+)%s")
 
+      if not (user and nice and system and idle and iowait and irq and softirq and steal) then return end
+
       local total = user + nice + system + idle + iowait + irq + softirq + steal
 
       local diff_idle = idle - idle_prev
@@ -171,6 +173,7 @@ return function(widget, clock_mode)
       local temp_color
 
       local temp_num = tonumber(stdout:match("%d+"))
+      if not temp_num then return end
       if temp_num < 50 then
         temp_color = color["Green200"]
         temp_icon = icon_dir .. "thermometer-low.svg"

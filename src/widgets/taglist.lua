@@ -2,220 +2,222 @@
 -- This is the taglist widget --
 --------------------------------
 
--- Awesome Libs
 local wibox = require("wibox")
 local awful = require("awful")
+local color = require("src.theme.colors")
 local gears = require("gears")
 local dpi = require("beautiful").xresources.apply_dpi
-local color = require("src.theme.colors")
 require("src.tools.icon_handler")
 
-local list_update = function(widget, buttons, label, data, objects)
+local panel_transparency = (user_vars.transparency and user_vars.transparency.panels) or {}
+local tab_alpha = panel_transparency.enabled == false and 1 or (panel_transparency.tab or 0.88)
+local hover_alpha = math.min(1, tab_alpha + 0.08)
+
+local palette = {
+  empty_bg = color.with_alpha("#0d1420", tab_alpha),
+  occupied_bg = color.with_alpha("#15263d", tab_alpha),
+  selected_bg = color.with_alpha("#2b5585", tab_alpha),
+  urgent_bg = color.with_alpha("#6f2944", tab_alpha),
+  empty_fg = "#5ba8eb",
+  occupied_fg = "#79c8ff",
+  selected_fg = "#eef8ff",
+  separator_fg = "#33577d"
+}
+
+local function tab_shape(cr, width, height)
+  local slant = math.min(dpi(8), math.floor(height * 0.35))
+
+  cr:move_to(slant, 0)
+  cr:line_to(width - slant, 0)
+  cr:line_to(width, height / 2)
+  cr:line_to(width - slant, height)
+  cr:line_to(slant, height)
+  cr:line_to(0, height / 2)
+  cr:close_path()
+end
+
+local function tag_state(tag)
+  if tag.urgent then
+    return palette.urgent_bg, palette.selected_fg
+  end
+
+  if tag.selected then
+    return palette.selected_bg, palette.selected_fg
+  end
+
+  if #tag:clients() > 0 then
+    return palette.occupied_bg, palette.occupied_fg
+  end
+
+  return palette.empty_bg, palette.empty_fg
+end
+
+local function create_buttons(buttons, object)
+  if not buttons then
+    return nil
+  end
+
+  local btns = {}
+
+  for _, b in ipairs(buttons) do
+    btns[#btns + 1] = awful.button {
+      modifiers = b.modifiers,
+      button = b.button,
+      on_press = function()
+        b:emit_signal("press", object)
+      end,
+      on_release = function()
+        b:emit_signal("release", object)
+      end
+    }
+  end
+
+  return btns
+end
+
+local list_update = function(widget, buttons, _, _, objects)
   widget:reset()
+  widget:set_spacing(dpi(4))
 
-  for _, object in ipairs(objects) do
+  for index, object in ipairs(objects) do
+    local bg, fg = tag_state(object)
 
-    local tag_widget = wibox.widget {
+    local background = wibox.widget {
       {
         {
           {
-            text = "",
+            markup = string.format("<span weight='bold'>%s</span>", tostring(object.index)),
             align = "center",
             valign = "center",
-            visible = true,
-            font = user_vars.font.extrabold,
---            forced_width = dpi(25),
-            id = "label",
             widget = wibox.widget.textbox
           },
-          id = "margin",
-          left = dpi(5),
-          right = dpi(5),
-          widget = wibox.container.margin
+          {
+            text = object.name or tostring(object.index),
+            align = "center",
+            valign = "center",
+            widget = wibox.widget.textbox
+          },
+          spacing = dpi(6),
+          layout = wibox.layout.fixed.horizontal
         },
-        id = "container",
-        layout = wibox.layout.fixed.horizontal
+        left = dpi(8),
+        right = dpi(8),
+        top = dpi(3),
+        bottom = dpi(3),
+        widget = wibox.container.margin
       },
-      --fg = color["White"],
-      fg = color["Purple50"],
-      shape = function(cr, width, height)
-        gears.shape.rounded_rect(cr, width, height, 5)
-      end,
+      bg = bg,
+      fg = fg,
+      shape = tab_shape,
       widget = wibox.container.background
     }
 
-    local function create_buttons(buttons, object)
-      if buttons then
-        local btns = {}
-        for _, b in ipairs(buttons) do
-          local btn = awful.button {
-            modifiers = b.modifiers,
-            button = b.button,
-            on_press = function()
-              b:emit_signal('press', object)
-            end,
-            on_release = function()
-              b:emit_signal('release', object)
-            end
-          }
-          btns[#btns + 1] = btn
-        end
-        return btns
-      end
+    local content = wibox.layout.fixed.horizontal()
+    content.spacing = dpi(4)
+    content:add(background)
+
+    if index < #objects then
+      content:add(wibox.widget {
+        markup = string.format("<span foreground='%s'></span>", palette.separator_fg),
+        align = "center",
+        valign = "center",
+        widget = wibox.widget.textbox
+      })
     end
+
+    local tag_widget = wibox.widget {
+      content,
+      bg = "#00000000",
+      widget = wibox.container.background
+    }
 
     tag_widget:buttons(create_buttons(buttons, object))
 
-    tag_widget.container.margin.label:set_text(object.name or tostring(object.index))
-    if object.urgent == true then
-      tag_widget:set_bg(color["#7a1ea1"])
-      tag_widget:set_fg(color["Purple50"])
-    elseif object == awful.screen.focused().selected_tag then
-      tag_widget:set_bg(color["#8b5cf6"])
-      tag_widget:set_fg(color["Purple50"])
-    else
-      tag_widget:set_bg("#2b0c45")
-    end
+    local old_wibox, old_cursor, old_bg, old_fg
 
-    --[[ Set the icon for each client
-    for _, client in ipairs(object:clients()) do
-      tag_widget.container.margin:set_right(0)
-      local icon = wibox.widget {
-        {
-          id = "icon_container",
-          {
-            id = "icon",
-            resize = true,
-            widget = wibox.widget.imagebox
-          },
-          widget = wibox.container.place
-        },
-        forced_width = dpi(33),
-        margins = dpi(6),
-        widget = wibox.container.margin
-      }
-      icon.icon_container.icon:set_image(Get_icon(user_vars.icon_theme, client))
-      tag_widget.container:setup({
-        icon,
-        strategy = "exact",
-        layout = wibox.container.constraint,
-      })
-    end--]]
+    tag_widget:connect_signal("mouse::enter", function()
+      old_bg = background.bg
+      old_fg = background.fg
 
-    --#region Hover_signal
-    local old_wibox, old_cursor, old_bg
-    tag_widget:connect_signal(
-      "mouse::enter",
-      function()
-        old_bg = tag_widget.bg
-        if object == awful.screen.focused().selected_tag then
-          tag_widget.bg = '#9b6bffdd'
-        else
-          tag_widget.bg = '#3f1680dd'
-        end
-        local w = mouse.current_wibox
-        if w then
-          old_cursor, old_wibox = w.cursor, w
-          w.cursor = "hand1"
-        end
+      if object.selected then
+        background.bg = color.with_alpha("#35669e", hover_alpha)
+        background.fg = palette.selected_fg
+      else
+        background.bg = color.with_alpha("#1b3350", hover_alpha)
+        background.fg = palette.selected_fg
       end
-    )
 
-    tag_widget:connect_signal(
-      "button::press",
-      function()
-        if object == awful.screen.focused().selected_tag then
-          tag_widget.bg = '#7b44f0dd'
-        else
-          tag_widget.bg = '#3f1680dd'
-        end
+      local current_wibox = mouse.current_wibox
+      if current_wibox then
+        old_cursor, old_wibox = current_wibox.cursor, current_wibox
+        current_wibox.cursor = "hand1"
       end
-    )
+    end)
 
-    tag_widget:connect_signal(
-      "button::release",
-      function()
-        if object == awful.screen.focused().selected_tag then
-          tag_widget.bg = '#9b6bffdd'
-        else
-          tag_widget.bg = '#3f1680dd'
-        end
+    tag_widget:connect_signal("button::press", function()
+      if object.selected then
+        background.bg = color.with_alpha("#23466f", tab_alpha)
+      else
+        background.bg = color.with_alpha("#14263d", tab_alpha)
       end
-    )
+    end)
 
-    tag_widget:connect_signal(
-      "mouse::leave",
-      function()
-        tag_widget.bg = old_bg
-        if old_wibox then
-          old_wibox.cursor = old_cursor
-          old_wibox = nil
-        end
+    tag_widget:connect_signal("button::release", function()
+      local new_bg, new_fg = tag_state(object)
+      background.bg = new_bg
+      background.fg = new_fg
+    end)
+
+    tag_widget:connect_signal("mouse::leave", function()
+      background.bg = old_bg or bg
+      background.fg = old_fg or fg
+
+      if old_wibox then
+        old_wibox.cursor = old_cursor
+        old_wibox = nil
       end
-    )
-    --#endregion
+    end)
 
     widget:add(tag_widget)
-    widget:set_spacing(dpi(6))
   end
 end
 
 return function(s)
-  return awful.widget.taglist(
+  local taglist = awful.widget.taglist(
     s,
-    awful.widget.taglist.filter.noempty,
+    awful.widget.taglist.filter.all,
     gears.table.join(
-      awful.button(
-        {},
-        1,
-        function(t)
-          t:view_only()
+      awful.button({}, 1, function(t)
+        t:view_only()
+      end),
+      awful.button({ modkey }, 1, function(t)
+        if client.focus then
+          client.focus:move_to_tag(t)
         end
-      ),
-      awful.button(
-        { modkey },
-        1,
-        function(t)
-          if client.focus then
-            client.focus:move_to_tag(t)
-          end
+      end),
+      awful.button({}, 3, function(t)
+        if client.focus then
+          client.focus:toggle_tag(t)
         end
-      ),
-      awful.button(
-        {},
-        3,
-        function(t)
-          if client.focus then
-            client.focus:toggle_tag(t)
-          end
+      end),
+      awful.button({ modkey }, 3, function(t)
+        if client.focus then
+          client.focus:toggle_tag(t)
         end
-      ),
-      awful.button(
-        { modkey },
-        3,
-        function(t)
-          if client.focus then
-            client.focus:toggle_tag(t)
-          end
-        end
-      ),
-      awful.button(
-        {},
-        4,
-        function(t)
-          awful.tag.viewnext(t.screen)
-        end
-      ),
-      awful.button(
-        {},
-        5,
-        function(t)
-          awful.tag.viewprev(t.screen)
-        end
-      )
+      end),
+      awful.button({}, 4, function(t)
+        awful.tag.viewnext(t.screen)
+      end),
+      awful.button({}, 5, function(t)
+        awful.tag.viewprev(t.screen)
+      end)
     ),
     {},
     list_update,
     wibox.layout.fixed.horizontal()
   )
+
+  taglist._preserve_colors = true
+
+  return taglist
 end

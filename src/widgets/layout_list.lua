@@ -10,7 +10,7 @@ local wibox = require("wibox")
 local gfs = require("gears.filesystem")
 require("src.core.signals")
 
-local cyber_orange = "#ff8c00"
+local cyber_blue = "#6ec1ff"
 
 -- Returns the layoutbox widget
 return function(s)
@@ -63,12 +63,12 @@ return function(s)
 
     if icon_file then
       local icon_path = gfs.get_configuration_dir() .. "src/assets/layout/" .. icon_file
-      layout_icon:set_image(gears.color.recolor_image(icon_path, cyber_orange))
+      layout_icon:set_image(gears.color.recolor_image(icon_path, cyber_blue))
     end
   end
 
   -- Signals
-  Hover_signal(layout, "#6d28d9", cyber_orange)
+  Hover_signal(layout, "#21446d", cyber_blue)
 
   layout:connect_signal(
     "button::press",
@@ -91,4 +91,3 @@ return function(s)
 
   return layout
 end
-

@@ -2,7 +2,7 @@
 -- This is a table with almost all Material colors --
 -----------------------------------------------------
 
-return {
+local colors = {
   ['White'] = '#ffffffdd',
   ['Black'] = '#000000',
 
@@ -209,3 +209,23 @@ return {
   ['BlueGrey800'] = '#37474F',
   ['BlueGrey900'] = '#263238'
 }
+
+local function clamp(value, minimum, maximum)
+  return math.max(minimum, math.min(maximum, value))
+end
+
+function colors.with_alpha(value, alpha)
+  if type(value) ~= "string" then
+    return value
+  end
+
+  local hex = value:match("^#(%x%x%x%x%x%x)$") or value:match("^#(%x%x%x%x%x%x)%x%x$")
+  if not hex then
+    return value
+  end
+
+  local bounded_alpha = clamp(alpha or 1, 0, 1)
+  return string.format("#%s%02x", hex, math.floor(bounded_alpha * 255 + 0.5))
+end
+
+return colors

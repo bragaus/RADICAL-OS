@@ -235,38 +235,32 @@ return gears.table.join(
     {},
     "XF86MonBrightnessUp",
     function(c)
-      --awful.spawn("xbacklight -time 100 -inc 10%+")
+      -- Software brightness via xrandr (no HW backlight on this desktop). See src/scripts/brightness.sh.
       awful.spawn.easy_async_with_shell(
-        "pkexec xfpm-power-backlight-helper --get-brightness",
+        BRIGHTNESS_SCRIPT .. " inc " .. tostring(BACKLIGHT_SEPS),
         function(stdout)
-          awful.spawn.easy_async_with_shell("pkexec xfpm-power-backlight-helper --set-brightness " .. tostring(tonumber(stdout) + BACKLIGHT_SEPS), function(stdou2)
-
-          end)
           awesome.emit_signal("module::brightness_osd:show", true)
           awesome.emit_signal("module::brightness_slider:update")
           awesome.emit_signal("widget::brightness_osd:rerun")
         end
       )
     end,
-    { description = "Raise backlight brightness", group = "System" }
+    { description = "Raise screen brightness", group = "System" }
   ),
   awful.key(
     {},
     "XF86MonBrightnessDown",
     function(c)
       awful.spawn.easy_async_with_shell(
-        "pkexec xfpm-power-backlight-helper --get-brightness",
+        BRIGHTNESS_SCRIPT .. " dec " .. tostring(BACKLIGHT_SEPS),
         function(stdout)
-          awful.spawn.easy_async_with_shell("pkexec xfpm-power-backlight-helper --set-brightness " .. tostring(tonumber(stdout) - BACKLIGHT_SEPS), function(stdout2)
-
-          end)
           awesome.emit_signal("module::brightness_osd:show", true)
           awesome.emit_signal("module::brightness_slider:update")
           awesome.emit_signal("widget::brightness_osd:rerun")
         end
       )
     end,
-    { description = "Lower backlight brightness", group = "System" }
+    { description = "Lower screen brightness", group = "System" }
   ),
   awful.key(
     {},

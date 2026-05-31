@@ -32,13 +32,14 @@ user_vars = {
 
   -- Write the terminal command to start anything here
   autostart = {
-    "picom --config ~/.config/picom.conf",
-    "alacritty"
+    "sh " .. home .. "/.config/awesome/src/scripts/display_setup.sh",
+    "picom --config " .. home .. "/.config/picom.conf"
   },
 
-  -- Type 'ip a' and check your wlan and ethernet name
+  -- Type 'ip a' and check your wlan and ethernet name.
+  -- This machine has no WiFi adapter, only wired 'eno1'. Empty wlan = skip wireless checks.
   network = {
-    wlan = "wlo1",
+    wlan = "",
     ethernet = "eno1"
   },
 
@@ -57,7 +58,7 @@ user_vars = {
   modkey = "Mod4",
 
   -- place your wallpaper at this path with this name, you could also try to change the path
-  wallpaper = home .. "/Imagens/vialacta.jpg",
+  wallpaper = home .. "/Imagens/lain.jpg",
 
   -- Naming scheme for the powermenu, userhost = "user@hostname", fullname = "Firstname Surname", something else ...
   namestyle = "userhost",
@@ -73,6 +74,33 @@ user_vars = {
 
   -- If you use the dock here is how you control its size
   dock_icon_size = dpi(100),
+
+  -- Transparency and blur settings.
+  transparency = {
+    panels = {
+      enabled = true,
+      segment = 0.90,
+      segment_edge = 0.96,
+      segment_border = 0.96,
+      dock = 0.86,
+      dock_button = 0.92,
+      tab = 0.88,
+      overlay = 0.55,
+      chart = 0.80,
+    },
+    clients = {
+      enabled = true,
+      default_opacity = 1,
+      toggle_opacity = 0.86,
+      class_defaults = {
+        -- Alacritty = 0.90,
+      },
+    },
+    blur = {
+      enabled = true,
+      strength = 7,
+    },
+  },
 
   -- Add your programs exactly like in this example.
   -- First entry has to be how you would start the program in the terminal (just try it if you dont know yahoo it)

@@ -4,6 +4,7 @@
 
 -- Awesome Libs
 local awful = require("awful")
+local color = require("src.theme.colors")
 local dpi = require("beautiful").xresources.apply_dpi
 local gears = require("gears")
 local wibox = require("wibox")
@@ -13,6 +14,8 @@ require("src.core.signals")
 local icondir = awful.util.getdir("config") .. "src/assets/icons/power/"
 
 return function()
+  local panel_transparency = (user_vars.transparency and user_vars.transparency.panels) or {}
+  local segment_alpha = panel_transparency.enabled == false and 1 or (panel_transparency.segment or 0.90)
   local power_icon = wibox.widget {
     {
       {
@@ -46,7 +49,7 @@ return function()
       bottom = dpi(3),
       widget = wibox.container.margin
     },
-    bg = "#1f1f1f",
+    bg = color.with_alpha("#1f1f1f", segment_alpha),
     fg = "#ffffff",
     shape = function(cr, width, height)
       gears.shape.rounded_rect(cr, width, height, 5)
@@ -55,8 +58,8 @@ return function()
   }
 
   power_widget._preserve_colors = true
-  power_widget._segment_bg = "#1f1f1f"
-  power_widget._segment_edge = "#1f1f1f"
+  power_widget._segment_bg = color.with_alpha("#1f1f1f", segment_alpha)
+  power_widget._segment_edge = color.with_alpha("#1f1f1f", segment_alpha)
   power_widget._segment_border_width = 0
   power_widget._preferred_segment_width = dpi(44)
   power_widget._preferred_segment_height = dpi(46)

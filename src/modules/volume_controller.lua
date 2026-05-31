@@ -19,12 +19,15 @@ return function(s)
 
   -- Function to create source/sink devices
   local function create_device(name, node, sink)
+    -- sink == true -> output device (purple accent); false -> input/mic (blue accent)
+    local accent = sink and color["Purple200"] or color["Blue200"]
+    local device_icon = sink and "headphones.svg" or "microphone.svg"
     local device = wibox.widget {
       {
         {
           {
             {
-              image = "",
+              image = gears.color.recolor_image(icondir .. device_icon, accent),
               id = "icon",
               resize = false,
               widget = wibox.widget.imagebox
@@ -318,23 +321,6 @@ return function(s)
       awful.spawn.easy_async_with_shell(
         [[ pactl get-default-source ]],
         function(stdout)
-          local node_active = stdout:gsub("\n", "")
-          if node == node_active then
-            bg = color["Blue200"]
-            fg = color["Grey900"]
-            device.background:set_bg(color["Blue200"])
-            device.background:set_fg(color["Grey900"])
-          else
-            fg = color["Blue200"]
-            bg = color["Grey700"]
-            device.background:set_fg(color["Blue200"])
-            device.background:set_bg(color["Grey700"])
-          end
-        end
-      )
-      awful.spawn.easy_async_with_shell(
-        [[ pactl get-default-source ]],
-        function(stdout)
           if stdout:gsub("\n", "") ~= "" then
             local node_active = stdout:gsub("\n", "")
             if node == node_active then
@@ -353,7 +339,7 @@ return function(s)
               [[LC_ALL=C pactl info | perl -n -e'/Default Source: (.+)\s/ && print $1']],
               function(stdout2)
                 if stdout2:gsub("\n", "") ~= "" then
-                  local node_active = stdout:gsub("\n", "")
+                  local node_active = stdout2:gsub("\n", "")
                   if node == node_active then
                     bg = color["Blue200"]
                     fg = color["Grey900"]
@@ -781,13 +767,13 @@ return function(s)
     awful.spawn.easy_async_with_shell(
       "./.config/awesome/src/scripts/mic.sh volume",
       function(stdout)
-        local volume = stdout:gsub("%%", ""):gsub("\n", "")
-        volume_controller:get_children_by_id("mic_volume_margin")[1].mic_volume.slider_margin.slider:set_value(tonumber(volume))
+        local volume = tonumber((stdout:gsub("%%", ""):gsub("\n", ""))) or 0
+        volume_controller:get_children_by_id("mic_volume_margin")[1].mic_volume.slider_margin.slider:set_value(volume)
         if volume > 0 then
-          volume_controller:get_children_by_id("mic_volume_margin")[1].icon:set_image(gears.color.recolor_image(icondir
+          volume_controller:get_children_by_id("mic_volume_margin")[1].mic_volume.icon:set_image(gears.color.recolor_image(icondir
             .. "microphone.svg", color["LightBlue200"]))
         else
-          volume_controller:get_children_by_id("mic_volume_margin")[1].icon:set_image(gears.color.recolor_image(icondir
+          volume_controller:get_children_by_id("mic_volume_margin")[1].mic_volume.icon:set_image(gears.color.recolor_image(icondir
             .. "microphone-off.svg", color["LightBlue200"]))
         end
       end
@@ -802,8 +788,8 @@ return function(s)
       "./.config/awesome/src/scripts/mic.sh mute",
       function(stdout)
         if stdout:match("yes") then
-          volume_controller:get_children_by_id("mic_volume_margin")[1].mic_volume.slider_margin.slider:set_value(tonumber(0))
-          volume_controller:get_children_by_id("mic_volume_margin")[1].icon:set_image(gears.color.recolor_image(icondir
+          volume_controller:get_children_by_id("mic_volume_margin")[1].mic_volume.slider_margin.slider:set_value(0)
+          volume_controller:get_children_by_id("mic_volume_margin")[1].mic_volume.icon:set_image(gears.color.recolor_image(icondir
             .. "microphone-off.svg", color["LightBlue200"]))
         else
           get_mic_volume()

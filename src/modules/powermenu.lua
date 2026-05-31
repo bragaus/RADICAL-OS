@@ -14,6 +14,8 @@ require("src.core.signals")
 local icondir = awful.util.getdir("config") .. "src/assets/icons/powermenu/"
 
 return function(s)
+  local panel_transparency = (user_vars.transparency and user_vars.transparency.panels) or {}
+  local overlay_alpha = panel_transparency.enabled == false and 1 or (panel_transparency.overlay or 0.55)
 
   -- Profile picture imagebox
   local profile_picture = wibox.widget {
@@ -42,8 +44,9 @@ return function(s)
     awful.spawn.easy_async_with_shell(
       "./.config/awesome/src/scripts/pfp.sh 'userPfp'",
       function(stdout)
-        if stdout then
-          profile_picture:set_image(stdout:gsub("\n", ""))
+        local pfp = stdout and stdout:gsub("\n", "") or ""
+        if pfp ~= "" then
+          profile_picture:set_image(pfp)
         else
           profile_picture:set_image(icondir .. "defaultpfp.svg")
         end
@@ -230,7 +233,7 @@ return function(s)
     type = "splash",
     visible = false,
     ontop = true,
-    bg = "#21212188",
+    bg = color.with_alpha("#212121", overlay_alpha),
     height = s.geometry.height,
     width = s.geometry.width,
     x = s.geometry.x,
