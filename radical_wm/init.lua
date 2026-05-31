@@ -76,6 +76,18 @@ awful.screen.connect_for_each_screen(
     require("radical_wm.center_bar")(s, { s.cyber_chart })
     require("radical_wm.right_bar")(s, { s.clock_br, s.clock_fr, s.clock_jp, s.clock_us, s.powerbutton })
     require("radical_wm.dock")(s, user_vars.dock_programs)
+
+    -- VIOLET HUD §5: coluna lateral esquerda de painéis de dado
+    s.process_panel     = require("src.widgets.process_panel")()
+    s.connections_panel = require("src.widgets.connections_panel")()
+    s.calendar_panel    = require("src.widgets.calendar_panel")()
+    s.protocols_donut   = require("src.widgets.protocols_donut")()
+    require("radical_wm.side_panels")(s, {
+      s.calendar_panel,
+      s.process_panel,
+      s.protocols_donut,
+      s.connections_panel,
+    }, { side = "left", top = dpi(70) })
   end
 end
 )
