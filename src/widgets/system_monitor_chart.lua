@@ -306,6 +306,8 @@ return function(args)
     net = {},
     wifi = {},
     audio = {},
+    cpu_temp = {},
+    gpu_temp = {},
   }
 
   for i = 1, samples do
@@ -315,6 +317,8 @@ return function(args)
     history.net[i] = 0
     history.wifi[i] = 0
     history.audio[i] = 0
+    history.cpu_temp[i] = 0
+    history.gpu_temp[i] = 0
   end
 
   local state = {
@@ -578,6 +582,17 @@ return function(args)
     end
 
     return string.format("%d°C", math.floor(value + 0.5))
+  end
+
+  -- formata "62°C   62%" (% = clamp(temp,0,100), ~100°C == 100%)
+  local function format_temperature_with_percent(value)
+    if not value then
+      return "--   --%"
+    end
+
+    local celsius = math.floor(value + 0.5)
+    local percent = math.floor(clamp(value, 0, 100) + 0.5)
+    return string.format("%d°C   %02d%%", celsius, percent)
   end
 
   local function create_info_row(label_text, initial_value, accent)
@@ -1023,6 +1038,111 @@ return function(args)
     }
   end
 
+  -- painel termico dedicado (CPU/GPU TEMP), SEM foto: fundo violeta liso + grafico
+  -- mantem o mesmo formato de refs (image_box, graph) do create_hardware_section
+  -- para continuar compativel com o loop de relayout (top_card_refs).
+  local function create_thermal_section(title_text, options)
+    options = options or {}
+
+    local accent = options.accent or palette.gpu
+    local cpu_accent = options.cpu_accent or palette.cpu
+    local gpu_accent = options.gpu_accent or palette.gpu
+
+    local cpu_row, cpu_temp_value = create_info_row("CPU TEMP", "--   --%", cpu_accent)
+    local gpu_row, gpu_temp_value = create_info_row("GPU TEMP", "--   --%", gpu_accent)
+
+    local rows = wibox.widget {
+      cpu_row,
+      gpu_row,
+      spacing = dpi(6),
+      layout = wibox.layout.fixed.vertical,
+    }
+
+    -- grafico empilhado: linha de CPU-temp (fundo proprio) + GPU-temp por cima (fundo transparente)
+    local cpu_temp_graph = create_history_trace_graph(history.cpu_temp, cpu_accent, {
+      height = options.graph_height or dpi(40),
+      max_points = options.max_points,
+      radius = dpi(6),
+      bg_alpha = 0.88,
+      border_alpha = 0.28,
+      fill_alpha = 0.18,
+      glow_alpha = 0.16,
+      line_alpha = 0.94,
+      line_width = dpi(1.5),
+      glow_width = dpi(4),
+      grid_alpha = 0.12,
+      vertical_grid_alpha = 0.04,
+    })
+
+    local gpu_temp_graph = create_history_trace_graph(history.gpu_temp, gpu_accent, {
+      height = options.graph_height or dpi(40),
+      max_points = options.max_points,
+      radius = dpi(6),
+      bg_alpha = 0,
+      border_alpha = 0,
+      fill_alpha = 0.10,
+      glow_alpha = 0.14,
+      line_alpha = 0.92,
+      line_width = dpi(1.5),
+      glow_width = dpi(4),
+      grid_alpha = 0,
+      vertical_grid_alpha = 0,
+    })
+
+    local graph_stack = wibox.widget {
+      cpu_temp_graph,
+      gpu_temp_graph,
+      layout = wibox.layout.stack,
+    }
+
+    -- "image_box": area visual violeta lisa (sem create_monitor_canvas / sem foto)
+    -- segura o grafico empilhado; mantida como container.constraint para o relayout
+    -- poder ajustar forced_height como nos demais cards.
+    local thermal_visual = wibox.widget {
+      {
+        {
+          rows,
+          nil,
+          {
+            graph_stack,
+            valign = "bottom",
+            halign = "fill",
+            widget = wibox.container.place,
+          },
+          expand = "inside",
+          layout = wibox.layout.align.vertical,
+        },
+        margins = dpi(8),
+        widget = wibox.container.margin,
+      },
+      bg = with_alpha(accent, 0.10),
+      border_width = dpi(1),
+      border_color = with_alpha(accent, 0.55),
+      shape = function(cr, w, h)
+        gears.shape.rounded_rect(cr, w, h, dpi(8))
+      end,
+      widget = wibox.container.background,
+    }
+
+    local image_box = constrain(thermal_visual, nil, options.image_height or dpi(180))
+
+    local body = {
+      image_box,
+      spacing = options.content_spacing or dpi(4),
+      layout = wibox.layout.fixed.vertical,
+    }
+
+    local section = create_section_frame(title_text, body, accent, {
+      bg_alpha = options.bg_alpha or 0.72,
+      margins = options.margins or dpi(10),
+    })
+
+    return section, cpu_temp_value, gpu_temp_value, {
+      graph = cpu_temp_graph,
+      image_box = image_box,
+    }
+  end
+
   local function archive_image(index)
     return archive_images[index] or main_image_path
   end
@@ -1055,21 +1175,17 @@ return function(args)
     band_alpha = 0.02,
   })
 
-  local gpu_card, gpu_value, gpu_refs = create_hardware_section("ARCHIVE 02 // GPU CORE", archive_image(2), {
+  -- GPU CORE agora e um painel TERMICO dedicado (CPU TEMP + GPU TEMP), sem foto.
+  local gpu_card, cpu_temp_value, gpu_temp_value, gpu_refs = create_thermal_section("ARCHIVE 02 // THERMAL CORE", {
     accent = palette.gpu,
-    tint = palette.gpu,
-    glow_alpha = 0.06,
-    tint_alpha = 0.03,
-    metric_label = "GPU TEMP",
-    history = history.gpu,
+    cpu_accent = palette.cpu,
+    gpu_accent = palette.gpu,
     image_height = dpi(306),
     graph_height = dpi(40),
     margins = dpi(8),
-    image_padding = dpi(2),
-    band_alpha = 0.02,
   })
 
-  local cpu_card, cpu_value, cpu_refs = create_hardware_section("SUBJECT DX-LN // LAIN CPU", archive_image(3), {
+  local cpu_card, cpu_value, cpu_refs = create_hardware_section("SUBJECT DX-LN // LAIN CPU", main_image_path, {
     accent = palette.cpu,
     tint = palette.accent,
     glow_alpha = 0.08,
@@ -1083,7 +1199,7 @@ return function(args)
     band_alpha = 0.02,
   })
 
-  local wifi_card, wifi_value = create_hardware_section("FIELD 03 // WIFI NOISE", archive_image(3), {
+  local wifi_card, wifi_value = create_hardware_section("FIELD 03 // WIFI NOISE", archive_image(1), {
     accent = palette.net,
     tint = palette.net,
     glow_alpha = 0.06,
@@ -1412,7 +1528,8 @@ return function(args)
 
     cpu_value.text = format_temperature(state.cpu_temp)
     mem_value.text = format_percent(state.mem)
-    gpu_value.text = format_temperature(state.gpu_temp)
+    cpu_temp_value.text = format_temperature_with_percent(state.cpu_temp)
+    gpu_temp_value.text = format_temperature_with_percent(state.gpu_temp)
     net_value.text = format_percent(state.net)
     threat_value.text = threat_label
 
@@ -1549,6 +1666,8 @@ return function(args)
       push(history.net, state.net)
       push(history.wifi, state.wifi or 0)
       push(history.audio, state.muted and 0 or state.audio)
+      push(history.cpu_temp, state.cpu_temp or 0)
+      push(history.gpu_temp, state.gpu_temp or 0)
 
       update_texts()
       for _, widget in ipairs(redraw_targets) do
