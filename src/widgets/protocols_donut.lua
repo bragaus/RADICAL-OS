@@ -159,5 +159,5 @@ return function(args)
     callback  = refresh,
   }
 
-  return panel({ title = "PROTOCOLS", body = body, accent = p.v500, w = dpi(300) })
+  return panel({ title = "PROTOCOLS", body = body, accent = p.v500, w = args.w or dpi(300) })
 end

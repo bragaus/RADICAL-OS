@@ -351,68 +351,51 @@ font = {
 
 ---
 
-## 5. Layout & composição — **HUD de 3 colunas (estrutura da Image #6)**
+## 5. Layout & composição — **barra superior + DASHBOARDS ON-CLICK (Image #6/#8/#12)**
 
-> **ALVO CIRÚRGICO = Image #6.** É um HUD de desktop denso com **três colunas verticais de
-> painéis** (esquerda / meio / direita), cada painel com o chrome de §7.1, deixando o centro
-> útil para o terminal/apps por baixo. **NÃO** existe um "chart" monolítico gigante com fotos —
-> o `system_monitor_chart.lua` monolítico é **APOSENTADO** da composição e substituído por
-> painéis pequenos individuais (reusando seus coletores). O **status de processos / conexões /
-> kill fica nas colunas do meio-esquerda**, não amontoado num canto.
+> **MODELO DE INTERAÇÃO (ATUALIZADO — substitui o grid de 3 colunas estáticas).**
+> **NÃO** há colunas de painéis ocupando a tela o tempo todo. A única coisa sempre visível é
+> uma **barra superior fina** com widgets clicáveis. Cada grupo de painéis de dado **só aparece
+> num popup (dropdown) quando o usuário CLICA** no widget correspondente da barra, e some ao
+> clicar de novo / abrir outro. Os popups são **GRANDES (≈2× o tamanho dos painéis antigos)** e
+> ancorados logo abaixo da barra. Sem `system_monitor_chart` monolítico, sem dock, sem colunas estáticas.
 
-### 5.1 Mapa exato da Image #6 (o que cada coluna contém, de cima p/ baixo)
+### 5.1 Barra superior (única coisa sempre visível)
 
-```
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│ BARRA SUPERIOR (fina, full-width):                                                 │
-│   [ STATUS DO MEIO — lozenges 〈cpu%〉〈mem%〉〈net ↑↓〉〈vol%〉 ]  [ HH:MM  Mês DD ]   │
-│                                              … [ tags ▸ ] [ + - ‹ › ]              │
-├───────────────┬────────────────────────────────┬───────────────────────────────┤
-│ COLUNA ESQ.   │ COLUNA MEIO                     │ COLUNA DIR.                    │
-│ ┌───────────┐ │ ┌────────────────────────────┐ │ ┌───────────────────────────┐ │
-│ │ INFO      │ │ │ GRAPH  (↑ Upload / ↓ Down) │ │ │ CALENDAR  (mês atual +    │ │
-│ │  cpu model│ │ ├────────────────────────────┤ │ │            próximo mês)   │ │
-│ ├───────────┤ │ │ IP    IPv4 / IPv6          │ │ ├───────────────────────────┤ │
-│ │ USAGE     │ │ ├────────────────────────────┤ │ │ INTERNATIONAL             │ │
-│ │  eq + cores│ │ │ CONNECTIONS  (↻, clicável) │ │ │  Europe/America/Japan     │ │
-│ │  C1..C4    │ │ ├────────────────────────────┤ │ │  (relógios por zona)      │ │
-│ ├───────────┤ │ │ PROTOCOLS  (rosca/pizza)   │ │ ├───────────────────────────┤ │
-│ │ PROCESS   │ │ ├────────────────────────────┤ │ │ (STATE / extra opcional)  │ │
-│ │  rows+Kill│ │ │ APPLICATIONS (rows + Kill) │ │ │                           │ │
-│ └───────────┘ │ └────────────────────────────┘ │ └───────────────────────────┘ │
-└───────────────┴────────────────────────────────┴───────────────────────────────┘
-```
+Da esquerda p/ a direita:
+- **Tags** — abas com **seta afiada de UMA direção** (Image #11; ver §7.2) + cluster `+ − ‹ ›` (`tag_controls`).
+- **STATUS DO MEIO** — lozenges **clicáveis** (§7.2.1): `〈 cpu% 〉〈 mem% 〉〈 gpu% 〉〈 net ↑↓ 〉〈 vol% 〉`
+  + **relógio** `HH:MM  Mês DD`. É o miolo da barra.
+- **Power** à direita.
 
-**Conteúdo de cada painel (idêntico à Image #6):**
+### 5.2 Dashboards on-click (dropdown popups, ≈2×) — Image #6
 
-- **COLUNA ESQUERDA**
-  - **INFO** — modelo da CPU em 1–2 linhas (`/proc/cpuinfo` "model name") + opcional kernel/uptime. Rótulo em `text_muted`, valor `text_bright`.
-  - **USAGE** — um **EQ/waveform** de uso geral de CPU no topo (sparkline §7.4.10) + uma **tabela de cores** `[núcleo] [GHz] [Temp] [Used%] [I/O]` (C1..Cn), cabeçalho `text_muted`, valores `text_bright`. Use `/proc/stat` por núcleo + `/proc/cpuinfo` MHz + `sensors`/sysfs p/ temp.
-  - **PROCESS** — top-N por CPU com **botão Kill por linha** (§7.4.7): `CPU%  NOME           [Kill]`. Header com `↻` (refresh).
-- **COLUNA DO MEIO**
-  - **GRAPH** — dois mini line-graphs: `↑ Upload` e `↓ Download` (taxa de rede, §7.4.3), rótulo `text_muted`.
-  - **IP** — `IPv4  <addr>` / `IPv6  <addr>` (de `ip -o addr` ou `hostname -I`), rótulo `text_muted` / valor `text_bright`.
-  - **CONNECTIONS** — lista de conexões com `↻`; cada linha **clicável → nmap** (§7.4.8).
-  - **PROTOCOLS** — rosca/pizza das conexões por serviço/estado (§7.4.4) + legenda.
-  - **APPLICATIONS** — apps abertos (clientes) com **botão Kill** por linha (igual PROCESS, mas mata o cliente: `c:kill()`).
-- **COLUNA DIREITA**
-  - **CALENDAR** — mês atual **+ próximo mês** empilhados (§7.4.5).
-  - **INTERNATIONAL** — relógios por zona agrupados (`Europe:` UTC/CET, `America:` EST/PST, `Japan:` JST…), hora `text_bright` (§7.4.6). Reusa `world_clock.lua`.
-  - **(STATE / extra)** — opcional (bateria, satélite, etc.).
+Clicar num widget da barra **abre/fecha** um `awful.popup` (ontop) com os painéis daquele grupo,
+ancorado abaixo da barra. **Só um aberto por vez** (abrir um fecha os outros); clicar de novo fecha.
 
-### 5.2 Como compor (técnico)
+| Clique em (widget da barra) | Abre o popup |
+|---|---|
+| **CPU / MEM / GPU** (lozenge) | **SYSTEM** → INFO + USAGE (tabela de núcleos GHz/Temp/Used%) + PROCESS (com Kill) |
+| **NET** (lozenge) | **NETWORK** → GRAPH (↑/↓) + IP + CONNECTIONS (clique→nmap) + PROTOCOLS + APPLICATIONS (Kill) |
+| **VOL** (lozenge) | controlador de volume (`volume_controller`, já existe) |
+| **relógio / data** | **TIME** (Image #12) → CALENDAR (mês atual **+ próximo**) + INTERNATIONAL (fusos Europe/America/Japan) + SATELLITE |
 
-- **Três colunas = três `awful.popup` verticais** (`src/widgets/side_panels.lua`, parametrizado
-  por `side`/`x`): esquerda ancorada `top_left`, direita `top_right`, **meio** centralizado
-  (`awful.placement.top` com offset, ou x calculado = centro − largura/2). Cada coluna empilha
-  seus painéis com `wibox.layout.fixed.vertical`, `spacing = dpi(8)`, largura `dpi(260)`.
-- **Barra superior** fina (`height ≈ dpi(26)`), fundo `base .. "cc"`: tags+`tag_controls` à
-  esquerda, **status lozenges (§7.2.1) ao centro**, relógio+systray à direita.
-- **APOSENTAR** o `system_monitor_chart.lua` monolítico da composição (não chamar `center_bar`
-  com ele). Reaproveitar seus **coletores** (`sample_cpu/mem/gpu/net/temp`) nos painéis novos
-  (INFO/USAGE/GRAPH), de preferência num módulo de sampler compartilhado, sempre **async**.
-- **Reserva de espaço:** colunas usam `:struts{}` (left/right) p/ janelas não ficarem por baixo.
-- **Margens externas** `dpi(8)`; **gap entre painéis** `dpi(8)`. Por-tela: primária = HUD completo.
+- Painéis dentro dos popups têm largura **≈`dpi(520)`** (2× os `dpi(260)` antigos) — o usuário
+  reclamou que estavam pequenos demais.
+- Cada painel (§7.4) é instanciado **uma vez** (widget tem pai único) e vive em **um** popup.
+
+### 5.3 Técnico
+
+- **Barra superior:** tags (`radical_bar`, top-left) · **`control_center.lua`** (popup fino top-center
+  com os lozenges clicáveis) · power (top-right).
+- **`src/widgets/control_center.lua`** constrói a fita de lozenges clicáveis (com amostragem async
+  de cpu/mem/gpu/net/vol) **e** os popups de dashboard, e faz o toggle. Recebe de `init.lua` os
+  painéis já criados, agrupados por dashboard (system / network / time).
+- **Popups:** `awful.popup { ontop = true, visible = false, ... }`; toggle no `button::press` do
+  lozenge; `placement` abaixo da barra (`awful.placement.top`, margin ~`dpi(40)`); ao abrir um,
+  esconder os demais. Opcional: fechar ao focar um cliente.
+- **APOSENTADOS** da composição: `side_panels` estático, `system_monitor_chart` monolítico, `dock`.
+  Reaproveite os **coletores** nos painéis (sempre **async**).
 
 ---
 
@@ -474,8 +457,9 @@ ex. `src/tools/panel.lua`, com a assinatura `panel({ title=, body=, accent=, w=,
 ### 7.2 Barra superior (wibar)
 
 - **Fundo:** `base .. "cc"`, altura `dpi(26)`, baseline 1px `line_base` embaixo.
-- **Esquerda — Taglist (idêntico à Image #2):** cada tag é uma **aba inclinada** (`tab_shape`:
-  hexágono achatado com vértices laterais apontados) contendo `[índice] [ícone-da-tag] LABEL`
+- **Esquerda — Taglist (idêntico à Image #11):** cada tag é uma **aba em forma de SETA AFIADA
+  de UMA direção** (`tab_shape`: borda esquerda RETA, ponta afiada à DIREITA → ; **NÃO** um
+  lozângulo/hexágono com pontas dos dois lados — erro recorrente) contendo `[índice] [ícone] LABEL`
   em CAIXA-ALTA, e as abas são ligadas por **setas afiadas** (separador powerline `` em
   `line_dim`). Fonte `bold 10`. Cada tag pode exibir um **ícone** à esquerda do número
   (como na Image #2: Term/Internet/Files/Develop…).
@@ -539,6 +523,9 @@ Os stats, na ordem da Image #7:
 - Arquivo: `src/widgets/status_dock.lua`. **Amostragem sempre assíncrona** (nunca `io.popen`/sync).
 - **Posição:** miolo da barra superior; nunca à direita junto dos relógios mundiais. Se o centro
   estiver ocupado por outra coisa, essa outra coisa cede o centro — o status do meio tem prioridade.
+- **CLICÁVEIS (dashboards on-click, §5.2):** cada lozenge é um botão. Clique abre/fecha o popup
+  do grupo: CPU/MEM/GPU → SYSTEM, NET → NETWORK, VOL → controlador de volume, relógio → TIME
+  (calendário+fusos, Image #12). Só um popup aberto por vez; cursor `hand1` no hover.
 
 ### 7.3 Barra inferior / colunas laterais
 
