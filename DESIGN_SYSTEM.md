@@ -351,39 +351,68 @@ font = {
 
 ---
 
-## 5. Layout & composição (grid de painéis)
+## 5. Layout & composição — **HUD de 3 colunas (estrutura da Image #6)**
 
-A referência empilha painéis nas **bordas** e deixa o **centro livre** para janelas (tiling).
-Alvo de composição (substitui dockbars/dock atuais):
+> **ALVO CIRÚRGICO = Image #6.** É um HUD de desktop denso com **três colunas verticais de
+> painéis** (esquerda / meio / direita), cada painel com o chrome de §7.1, deixando o centro
+> útil para o terminal/apps por baixo. **NÃO** existe um "chart" monolítico gigante com fotos —
+> o `system_monitor_chart.lua` monolítico é **APOSENTADO** da composição e substituído por
+> painéis pequenos individuais (reusando seus coletores). O **status de processos / conexões /
+> kill fica nas colunas do meio-esquerda**, não amontoado num canto.
+
+### 5.1 Mapa exato da Image #6 (o que cada coluna contém, de cima p/ baixo)
 
 ```
-┌───────────────────────────────────────────────────────────────────────────┐
-│ TOPO:  [tags]   [tasklist / título da janela]              [systray][relógio]│
-├──────────────┬─────────────────────────────────────────────┬──────────────┤
-│ COLUNA ESQ.  │                                             │ COLUNA DIR.   │
-│  ┌─────────┐ │                                             │ ┌──────────┐  │
-│  │ INFO    │ │              ÁREA DE JANELAS                │ │ PROCESS  │  │
-│  ├─────────┤ │              (terminais/apps,               │ ├──────────┤  │
-│  │ USAGE   │ │               tiling, centro)               │ │ PROTOCOLS│  │
-│  ├─────────┤ │                                             │ │ (rosca)  │  │
-│  │ GRAPH   │ │                                             │ ├──────────┤  │
-│  ├─────────┤ │                                             │ │ INTERNAT.│  │
-│  │ CALENDAR│ │                                             │ ├──────────┤  │
-│  └─────────┘ │                                             │ │ STATE    │  │
-│              │                                             │ └──────────┘  │
-├──────────────┴─────────────────────────────────────────────┴──────────────┤
-│ BASE:  [layoutbox] [status / now-playing]                  [CONNECTIONS]    │
-└───────────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│ BARRA SUPERIOR (fina, full-width):                                                 │
+│   [ STATUS DO MEIO — lozenges 〈cpu%〉〈mem%〉〈net ↑↓〉〈vol%〉 ]  [ HH:MM  Mês DD ]   │
+│                                              … [ tags ▸ ] [ + - ‹ › ]              │
+├───────────────┬────────────────────────────────┬───────────────────────────────┤
+│ COLUNA ESQ.   │ COLUNA MEIO                     │ COLUNA DIR.                    │
+│ ┌───────────┐ │ ┌────────────────────────────┐ │ ┌───────────────────────────┐ │
+│ │ INFO      │ │ │ GRAPH  (↑ Upload / ↓ Down) │ │ │ CALENDAR  (mês atual +    │ │
+│ │  cpu model│ │ ├────────────────────────────┤ │ │            próximo mês)   │ │
+│ ├───────────┤ │ │ IP    IPv4 / IPv6          │ │ ├───────────────────────────┤ │
+│ │ USAGE     │ │ ├────────────────────────────┤ │ │ INTERNATIONAL             │ │
+│ │  eq + cores│ │ │ CONNECTIONS  (↻, clicável) │ │ │  Europe/America/Japan     │ │
+│ │  C1..C4    │ │ ├────────────────────────────┤ │ │  (relógios por zona)      │ │
+│ ├───────────┤ │ │ PROTOCOLS  (rosca/pizza)   │ │ ├───────────────────────────┤ │
+│ │ PROCESS   │ │ ├────────────────────────────┤ │ │ (STATE / extra opcional)  │ │
+│ │  rows+Kill│ │ │ APPLICATIONS (rows + Kill) │ │ │                           │ │
+│ └───────────┘ │ └────────────────────────────┘ │ └───────────────────────────┘ │
+└───────────────┴────────────────────────────────┴───────────────────────────────┘
 ```
 
-- **Colunas laterais:** `awful.popup` ancorado (`placement = top_left`/`top_right`) com
-  `wibox.layout.fixed.vertical` empilhando painéis com `spacing = dpi(8)`.
-- **Barra superior/inferior:** `awful.wibar` finas (`height ≈ dpi(26)`), fundo
-  `base .. "cc"`, com baseline `line_base` de 1px.
-- **Margens externas:** `dpi(8)` da borda da tela; **gap entre painéis:** `dpi(8)`.
-- **Reserva de espaço:** painéis de borda usam `:struts{}` para janelas não ficarem por baixo.
-- **Por tela:** mantenha o padrão de `radical_wm/init.lua` (screen 1 minimal, screen 2
-  completo), mas com os novos painéis.
+**Conteúdo de cada painel (idêntico à Image #6):**
+
+- **COLUNA ESQUERDA**
+  - **INFO** — modelo da CPU em 1–2 linhas (`/proc/cpuinfo` "model name") + opcional kernel/uptime. Rótulo em `text_muted`, valor `text_bright`.
+  - **USAGE** — um **EQ/waveform** de uso geral de CPU no topo (sparkline §7.4.10) + uma **tabela de cores** `[núcleo] [GHz] [Temp] [Used%] [I/O]` (C1..Cn), cabeçalho `text_muted`, valores `text_bright`. Use `/proc/stat` por núcleo + `/proc/cpuinfo` MHz + `sensors`/sysfs p/ temp.
+  - **PROCESS** — top-N por CPU com **botão Kill por linha** (§7.4.7): `CPU%  NOME           [Kill]`. Header com `↻` (refresh).
+- **COLUNA DO MEIO**
+  - **GRAPH** — dois mini line-graphs: `↑ Upload` e `↓ Download` (taxa de rede, §7.4.3), rótulo `text_muted`.
+  - **IP** — `IPv4  <addr>` / `IPv6  <addr>` (de `ip -o addr` ou `hostname -I`), rótulo `text_muted` / valor `text_bright`.
+  - **CONNECTIONS** — lista de conexões com `↻`; cada linha **clicável → nmap** (§7.4.8).
+  - **PROTOCOLS** — rosca/pizza das conexões por serviço/estado (§7.4.4) + legenda.
+  - **APPLICATIONS** — apps abertos (clientes) com **botão Kill** por linha (igual PROCESS, mas mata o cliente: `c:kill()`).
+- **COLUNA DIREITA**
+  - **CALENDAR** — mês atual **+ próximo mês** empilhados (§7.4.5).
+  - **INTERNATIONAL** — relógios por zona agrupados (`Europe:` UTC/CET, `America:` EST/PST, `Japan:` JST…), hora `text_bright` (§7.4.6). Reusa `world_clock.lua`.
+  - **(STATE / extra)** — opcional (bateria, satélite, etc.).
+
+### 5.2 Como compor (técnico)
+
+- **Três colunas = três `awful.popup` verticais** (`src/widgets/side_panels.lua`, parametrizado
+  por `side`/`x`): esquerda ancorada `top_left`, direita `top_right`, **meio** centralizado
+  (`awful.placement.top` com offset, ou x calculado = centro − largura/2). Cada coluna empilha
+  seus painéis com `wibox.layout.fixed.vertical`, `spacing = dpi(8)`, largura `dpi(260)`.
+- **Barra superior** fina (`height ≈ dpi(26)`), fundo `base .. "cc"`: tags+`tag_controls` à
+  esquerda, **status lozenges (§7.2.1) ao centro**, relógio+systray à direita.
+- **APOSENTAR** o `system_monitor_chart.lua` monolítico da composição (não chamar `center_bar`
+  com ele). Reaproveitar seus **coletores** (`sample_cpu/mem/gpu/net/temp`) nos painéis novos
+  (INFO/USAGE/GRAPH), de preferência num módulo de sampler compartilhado, sempre **async**.
+- **Reserva de espaço:** colunas usam `:struts{}` (left/right) p/ janelas não ficarem por baixo.
+- **Margens externas** `dpi(8)`; **gap entre painéis** `dpi(8)`. Por-tela: primária = HUD completo.
 
 ---
 
@@ -473,15 +502,43 @@ ex. `src/tools/panel.lua`, com a assinatura `panel({ title=, body=, accent=, w=,
   - `` / `` **mover** a tag atual p/ a esquerda/direita entre as áreas (`awful.tag.move`)
   Glyphs em `text_muted`, hover `v400`, cursor `hand1`. (Equivale ao grupo `+ - ⊕ ▣` do canto
   direito da barra de tags da Image #2.)
-- **Centro — STATUS DOCK (entre as tags e os relógios):** uma faixa horizontal compacta
-  (`src/widgets/status_dock.lua`, altura ~`dpi(22)`) com estatísticas do sistema, como a
-  tira-de-status do topo da referência (Image #4). Segmentos, cada um `glyph/rótulo + valor`:
-  `CPU  NN%` · `MEM  NN%` · `NET  ↑/↓ KB/s` · `VOL  NN%` — glyph/rótulo `text_muted`, valor
-  `text_bright`, separados por `` fino em `line_dim`. **Amostragem assíncrona** (`/proc/stat`
-  com delta entre ticks, `/proc/meminfo`, `/proc/net/dev` com delta, `pactl`). Ocupa o **miolo**
-  da barra superior, posicionado **entre** a taglist (esquerda) e os relógios/systray (direita).
+- **Centro — STATUS DO MEIO (lozenges, idêntico à Image #7):** ver **§7.2.1**. Uma fita de
+  **cápsulas com ponta de seta côncava** `〈 valor 〉`, cada uma com um stat do sistema
+  (CPU/MEM/NET/VOL) + relógio à direita, ocupando o **miolo** da barra superior, **entre** a
+  taglist (esquerda) e o relógio/systray (direita). Arquivo `src/widgets/status_dock.lua`.
 - **Direita:** systray (`bg_systray = panel`, `systray_icon_spacing = dpi(6)`), mini-relógio
   `%H:%M` em `text_bright`, e indicadores compactos (layoutbox, kb layout) em `text_muted`.
+
+### 7.2.1 STATUS DO MEIO — lozenges de estatística (Image #7) — *o "status do meio"*
+
+A fita central da barra superior (a que está apontada na **Image #7**) é uma sequência de
+**lozenges (pílulas) com cápsulas de seta côncava** — o estilo clássico "blind/arrow" do
+AwesomeWM. Cada lozenge mostra UM stat; o conjunto fica **entre as tags e o relógio**.
+
+Anatomia de UMA lozenge `〈  NN% 〉`:
+- **Forma:** retângulo arredondado/hexagonal com as duas pontas em **seta côncava** (chevron
+  apontando p/ DENTRO da pílula). Implementar com `shape` custom (`cr:move_to/line_to`) — um
+  hexágono achatado tipo `tab_shape` do taglist; alternativa simples = `rounded_rect` raio
+  `radius_chip` ladeado por cápsulas `‹` `›` em `line_dim`.
+- **Fundo:** `panel .. "cc"`; **borda:** 1px `line_base`; altura `dpi(20)`, padding-x `dpi(8)`.
+- **Conteúdo:** glyph/ícone `text_muted` + valor `text_bright`, monoespaçado, número à direita.
+- **Fita contínua:** as lozenges encostam (gap pequeno `dpi(2)`) formando a tira da Image #7.
+
+Os stats, na ordem da Image #7:
+
+| Lozenge | Glyph | Valor | Fonte (assíncrona) |
+|---|---|---|---|
+| **CPU** | `` | `NN%` | `/proc/stat` (delta busy/idle entre ticks) |
+| **MEM** | `` | `NN%` | `/proc/meminfo` (`1 − MemAvailable/MemTotal`) |
+| **NET** | `` `` | `↑NN ↓NN` (KB/s) | `/proc/net/dev` (delta rx/tx entre ticks) |
+| **VOL** | `` | `NN%` | `pactl get-sink-volume @DEFAULT_SINK@` |
+
+- À direita do grupo (na barra, fora das lozenges): **relógio** `HH:MM` + **data** `Mês DD`
+  em `text_bright`/`text_muted` (como o `01:42  Jan 02` da Image #7).
+- Alerta opcional: valor ≥ 90% → `glow_hot`; caso contrário sempre violeta.
+- Arquivo: `src/widgets/status_dock.lua`. **Amostragem sempre assíncrona** (nunca `io.popen`/sync).
+- **Posição:** miolo da barra superior; nunca à direita junto dos relógios mundiais. Se o centro
+  estiver ocupado por outra coisa, essa outra coisa cede o centro — o status do meio tem prioridade.
 
 ### 7.3 Barra inferior / colunas laterais
 

@@ -1,14 +1,18 @@
 ------------------------------------------------------------------------------------------
--- src/widgets/status_dock.lua — Tira HORIZONTAL de stats para o TOPO (VIOLET HUD)         --
+-- src/widgets/status_dock.lua — Fita de LOZENGES de stats para o TOPO (VIOLET HUD)        --
 --                                                                                        --
--- Uma única linha compacta de segmentos de sistema, pensada para o centro da barra       --
--- superior (entre tags e relógios). Inspirada na "top strip" da referência.              --
+-- Reestilizado para o "status do meio" da Image #7 (DESIGN_SYSTEM §7.2.1): uma fita de   --
+-- LOZENGES (pílulas hexagonais com ponta de seta côncava, tipo tab_shape do taglist)     --
+-- ocupando o miolo da barra superior, ENTRE as tags e o relógio mundial.                 --
 --                                                                                        --
---   CPU  NN%  ·  MEM  NN%  ·  NET  ↑/↓ KB/s  ·  VOL  NN%                                  --
+--   〈 CPU NN% 〉 〈 MEM NN% 〉 〈 NET ↑NN ↓NN 〉 〈 VOL NN% 〉    HH:MM  Mês DD            --
 --                                                                                        --
--- Cada segmento = glyph (text_muted) + valor (text_bright), mono 10, separados por um    --
--- divisor fino "·" em line_dim. Fundo transparente — NÃO é embrulhado em panel.lua,      --
--- pois vive numa barra superior fina (~dpi(22) de altura).                               --
+-- Cada lozenge = shape hexágono achatado, bg panel@cc, borda 1px line_base, altura       --
+-- dpi(20), padding-x dpi(8), contendo glyph (text_muted) + valor (text_bright). Valor    --
+-- >= 90 -> glow_hot. À direita das pílulas, relógio HH:MM + data "Mês DD" (text_bright /  --
+-- text_muted), atualizado via os.date no próprio timer.                                  --
+--                                                                                        --
+-- NÃO é embrulhado em panel.lua — é um widget de barra superior fina (exceção da regra).  --
 --                                                                                        --
 -- Amostragem ASSÍNCRONA via awful.spawn.easy_async_with_shell em gears.timer (2s,        --
 -- call_now). NUNCA io.popen/os.execute em timer — congela o WM (deadlock conhecido).     --
@@ -23,31 +27,46 @@ local p = require("src.theme.palette")
 
 local MONO   = "JetBrainsMono Nerd Font 10"
 local HEIGHT = dpi(22)
+local PILL_H = dpi(20)
 
--- Glyphs Nerd Font para cada segmento.
+-- Glyphs Nerd Font para cada lozenge.
 local GLYPH_CPU = ""
 local GLYPH_MEM = ""
 local GLYPH_NET = ""
 local GLYPH_VOL = ""
 
--- Formata uma taxa em bytes/s para um rótulo curto (B/KB/MB por segundo).
+-- Forma de lozenge: hexágono achatado (pontas de seta côncava), igual ao tab_shape
+-- do taglist. As pontas laterais apontam para fora, dando o efeito de cápsula.
+local function lozenge_shape(cr, width, height)
+  local slant = math.min(dpi(7), math.floor(height * 0.4))
+
+  cr:move_to(slant, 0)
+  cr:line_to(width - slant, 0)
+  cr:line_to(width, height / 2)
+  cr:line_to(width - slant, height)
+  cr:line_to(slant, height)
+  cr:line_to(0, height / 2)
+  cr:close_path()
+end
+
+-- Formata uma taxa em bytes/s para um rótulo curto em KB/s (NN).
 local function fmt_rate(bps)
   bps = tonumber(bps) or 0
   if bps < 0 then bps = 0 end
   if bps >= 1048576 then
-    return string.format("%.1fM", bps / 1048576)
-  elseif bps >= 1024 then
-    return string.format("%.0fK", bps / 1024)
+    return string.format("%.0fM", bps / 1048576)
   else
-    return string.format("%.0fB", bps)
+    return string.format("%.0f", bps / 1024)
   end
 end
 
 return function(args)
   args = args or {}
 
-  -- Cria um par glyph+valor. Retorna {widget, set(value)}.
-  local function make_segment(glyph, glyph_color)
+  -- Cria uma lozenge (pílula hexagonal) com glyph + valor.
+  -- Retorna o widget; o textbox de valor fica acessível em ._value e o background
+  -- de fg do valor em ._value_bg (para alternar glow_hot em alerta).
+  local function make_lozenge(glyph)
     local glyph_box = wibox.widget {
       text   = glyph,
       font   = MONO,
@@ -60,53 +79,85 @@ return function(args)
       valign = "center",
       widget = wibox.widget.textbox,
     }
-    local seg = wibox.widget {
-      {
-        glyph_box,
-        fg     = glyph_color or p.text_muted,
-        widget = wibox.container.background,
-      },
-      {
-        value_box,
-        fg     = p.text_bright,
-        widget = wibox.container.background,
-      },
-      spacing = dpi(5),
-      layout  = wibox.layout.fixed.horizontal,
-    }
-    seg._value = value_box
-    return seg
-  end
-
-  -- Divisor fino "·" entre segmentos.
-  local function make_divider()
-    return wibox.widget {
-      {
-        text   = "·",
-        font   = MONO,
-        valign = "center",
-        align  = "center",
-        widget = wibox.widget.textbox,
-      },
-      fg     = p.line_dim,
+    local value_bg = wibox.widget {
+      value_box,
+      fg     = p.text_bright,
       widget = wibox.container.background,
     }
+
+    local pill = wibox.widget {
+      {
+        {
+          { glyph_box, fg = p.text_muted, widget = wibox.container.background },
+          value_bg,
+          spacing = dpi(5),
+          layout  = wibox.layout.fixed.horizontal,
+        },
+        left   = dpi(8),
+        right  = dpi(8),
+        widget = wibox.container.margin,
+      },
+      bg                 = p.a(p.panel, 0.8),
+      shape              = lozenge_shape,
+      shape_border_width = dpi(1),
+      shape_border_color = p.line_base,
+      forced_height      = PILL_H,
+      widget             = wibox.container.background,
+    }
+
+    pill._value    = value_box
+    pill._value_bg = value_bg
+    return pill
   end
 
-  local seg_cpu = make_segment(GLYPH_CPU, p.text_muted)
-  local seg_mem = make_segment(GLYPH_MEM, p.text_muted)
-  local seg_net = make_segment(GLYPH_NET, p.text_muted)
-  local seg_vol = make_segment(GLYPH_VOL, p.text_muted)
+  -- Pinta o valor: glow_hot se >= 90, senão text_bright.
+  local function set_value(pill, text, pct_for_alert)
+    pill._value:set_text(text)
+    if pct_for_alert and pct_for_alert >= 90 then
+      pill._value_bg.fg = p.glow_hot
+    else
+      pill._value_bg.fg = p.text_bright
+    end
+  end
+
+  local pill_cpu = make_lozenge(GLYPH_CPU)
+  local pill_mem = make_lozenge(GLYPH_MEM)
+  local pill_net = make_lozenge(GLYPH_NET)
+  local pill_vol = make_lozenge(GLYPH_VOL)
+
+  -- Relógio HH:MM + data "Mês DD" à direita das pílulas.
+  local clock_time = wibox.widget {
+    text   = "--:--",
+    font   = MONO,
+    valign = "center",
+    widget = wibox.widget.textbox,
+  }
+  local clock_date = wibox.widget {
+    text   = "---",
+    font   = MONO,
+    valign = "center",
+    widget = wibox.widget.textbox,
+  }
+  local clock = wibox.widget {
+    { clock_time, fg = p.text_bright, widget = wibox.container.background },
+    { clock_date, fg = p.text_muted,  widget = wibox.container.background },
+    spacing = dpi(6),
+    layout  = wibox.layout.fixed.horizontal,
+  }
+
+  local pills = wibox.widget {
+    pill_cpu,
+    pill_mem,
+    pill_net,
+    pill_vol,
+    spacing = dpi(2),
+    layout  = wibox.layout.fixed.horizontal,
+  }
 
   local row = wibox.widget {
-    seg_cpu,
-    make_divider(),
-    seg_mem,
-    make_divider(),
-    seg_net,
-    make_divider(),
-    seg_vol,
-    spacing = dpi(10),
+    pills,
+    clock,
+    spacing = dpi(12),
     layout  = wibox.layout.fixed.horizontal,
   }
 
@@ -158,7 +209,8 @@ return function(args)
         prev_cpu_total, prev_cpu_idle = total, idle
 
         if pct < 0 then pct = 0 elseif pct > 100 then pct = 100 end
-        seg_cpu._value:set_text(string.format("%d%%", math.floor(pct + 0.5)))
+        local rounded = math.floor(pct + 0.5)
+        set_value(pill_cpu, string.format("%d%%", rounded), rounded)
       end
     )
   end
@@ -179,7 +231,8 @@ return function(args)
         if used < 0 then used = 0 end
         local pct = used / total * 100
         if pct < 0 then pct = 0 elseif pct > 100 then pct = 100 end
-        seg_mem._value:set_text(string.format("%d%%", math.floor(pct + 0.5)))
+        local rounded = math.floor(pct + 0.5)
+        set_value(pill_mem, string.format("%d%%", rounded), rounded)
       end
     )
   end
@@ -223,7 +276,7 @@ return function(args)
         end
         prev_net_rx, prev_net_tx, prev_net_time = rx_sum, tx_sum, now
 
-        seg_net._value:set_text(string.format("↑%s ↓%s", fmt_rate(up_rate), fmt_rate(down_rate)))
+        set_value(pill_net, string.format("↑%s ↓%s", fmt_rate(up_rate), fmt_rate(down_rate)))
       end
     )
   end
@@ -239,9 +292,17 @@ return function(args)
         local vol = tonumber(stdout:match("(%d+)%%"))
         if not vol then return end
         if vol < 0 then vol = 0 end
-        seg_vol._value:set_text(string.format("%d%%", vol))
+        set_value(pill_vol, string.format("%d%%", vol), vol)
       end
     )
+  end
+
+  --------------------------------------------------------------------------------
+  -- CLOCK — os.date no próprio timer (síncrono, mas barato; não chama shell).
+  --------------------------------------------------------------------------------
+  local function update_clock()
+    clock_time:set_text(os.date("%H:%M"))
+    clock_date:set_text(os.date("%b %d"))
   end
 
   gears.timer {
@@ -253,6 +314,7 @@ return function(args)
       update_mem()
       update_net()
       update_vol()
+      update_clock()
     end,
   }
 

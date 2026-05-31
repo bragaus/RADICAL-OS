@@ -11,7 +11,7 @@ local wibox = require("wibox")
 -- side_panels(s, widgets, opts)
 --   s       : screen
 --   widgets : { panel_widget, ... }  (ordem de cima p/ baixo)
---   opts    : { side = "left"|"right" (default "left"), top = dpi, margin = dpi }
+--   opts    : { side = "left"|"center"|"right" (default "left"), top = dpi, margin = dpi }
 return function(s, widgets, opts)
   widgets = widgets or {}
   opts = opts or {}
@@ -27,6 +27,8 @@ return function(s, widgets, opts)
     placement = function(c)
       if side == "right" then
         awful.placement.top_right(c, { margins = { top = top_margin, right = edge_margin } })
+      elseif side == "center" then
+        awful.placement.top(c, { margins = { top = top_margin } })
       else
         awful.placement.top_left(c, { margins = { top = top_margin, left = edge_margin } })
       end
