@@ -20,7 +20,7 @@ Theme.awesome_subicon = Theme_path .. "../assets/icons/ArchLogo.png"
 
 -- Wallpaper
 beautiful.wallpaper = user_vars.wallpaper
-local fallback_bg = "#1a0d2e"
+local fallback_bg = "#0c0617" -- palette.base (violet-black)
 local ok_err, err_mod = pcall(require, "src.core.error_handling")
 local function paint_fallback(s, reason)
   if reason then
