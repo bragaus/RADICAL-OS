@@ -32,9 +32,9 @@ local dpi = require("beautiful.xresources").apply_dpi
 local p = require("src.theme.palette")
 require("src.core.signals") -- garante Hover_signal global
 
-local MONO   = "JetBrainsMono Nerd Font 10"
-local BAR_H  = dpi(28)
-local PILL_H = dpi(20)
+local MONO   = "JetBrainsMono Nerd Font Bold 18" -- dockbar do meio ~200% maior
+local BAR_H  = dpi(56)
+local PILL_H = dpi(44)
 
 -- Glyphs Nerd Font para cada lozenge.
 local GLYPH_CPU = ""
@@ -46,7 +46,7 @@ local GLYPH_VOL = ""
 -- Forma de lozenge: hexágono achatado (pontas de seta côncava), igual ao tab_shape
 -- do taglist / status_dock. As pontas laterais apontam para fora (cápsula).
 local function lozenge_shape(cr, width, height)
-  local slant = math.min(dpi(7), math.floor(height * 0.4))
+  local slant = math.min(dpi(13), math.floor(height * 0.4))
 
   cr:move_to(slant, 0)
   cr:line_to(width - slant, 0)
@@ -99,11 +99,11 @@ return function(s, opts)
         {
           { glyph_box, fg = p.text_muted, widget = wibox.container.background },
           value_bg,
-          spacing = dpi(5),
+          spacing = dpi(10),
           layout  = wibox.layout.fixed.horizontal,
         },
-        left   = dpi(8),
-        right  = dpi(8),
+        left   = dpi(16),
+        right  = dpi(16),
         widget = wibox.container.margin,
       },
       bg                 = p.a(p.panel, 0.8), -- panel@cc
@@ -148,20 +148,42 @@ return function(s, opts)
     valign = "center",
     widget = wibox.widget.textbox,
   }
-  local clock_segment = wibox.widget {
+  -- Trigger calendário/relógio do CANTO SUPERIOR-DIREITO (mesmo porte do dockbar esquerdo).
+  local clock_glyph = wibox.widget {
+    text   = "", -- nf-fa-calendar
+    font   = "JetBrainsMono Nerd Font 20",
+    valign = "center",
+    widget = wibox.widget.textbox,
+  }
+  local clock_trigger = wibox.widget {
     {
       {
-        { clock_time, fg = p.text_bright, widget = wibox.container.background },
-        { clock_date, fg = p.text_muted,  widget = wibox.container.background },
-        spacing = dpi(6),
+        { clock_glyph, fg = p.text_heading, widget = wibox.container.background },
+        {
+          {
+            { clock_time, fg = p.text_bright, widget = wibox.container.background },
+            { clock_date, fg = p.text_muted,  widget = wibox.container.background },
+            spacing = dpi(8),
+            layout  = wibox.layout.fixed.horizontal,
+          },
+          valign = "center",
+          widget = wibox.container.place,
+        },
+        spacing = dpi(12),
         layout  = wibox.layout.fixed.horizontal,
       },
-      left   = dpi(10),
-      right  = dpi(2),
+      left   = dpi(18),
+      right  = dpi(18),
+      top    = dpi(6),
+      bottom = dpi(6),
       widget = wibox.container.margin,
     },
-    bg     = "#00000000",
-    widget = wibox.container.background,
+    bg                 = p.a(p.panel, 0.85),
+    shape              = lozenge_shape,
+    shape_border_width = dpi(1),
+    shape_border_color = p.line_base,
+    forced_height      = dpi(48), -- igual ao dockbar do canto superior-esquerdo (tags)
+    widget             = wibox.container.background,
   }
 
   local pills = wibox.widget {
@@ -170,15 +192,13 @@ return function(s, opts)
     pill_gpu,
     pill_net,
     pill_vol,
-    spacing = dpi(2),
+    spacing = dpi(8),
     layout  = wibox.layout.fixed.horizontal,
   }
 
   local row = wibox.widget {
     pills,
-    clock_segment,
-    spacing = dpi(12),
-    layout  = wibox.layout.fixed.horizontal,
+    layout = wibox.layout.fixed.horizontal,
   }
 
   local bar_widget = wibox.widget {
@@ -216,7 +236,7 @@ return function(s, opts)
     return stack
   end
 
-  local function make_dashboard(panel_list)
+  local function make_dashboard(panel_list, place)
     return awful.popup {
       widget = {
         stack_panels(panel_list),
@@ -227,8 +247,8 @@ return function(s, opts)
       visible   = false,
       screen    = s,
       bg        = "#0c0617e6", -- base@e6
-      placement = function(c)
-        awful.placement.top(c, { margins = { top = dpi(46) } })
+      placement = place or function(c)
+        awful.placement.top(c, { margins = { top = dpi(62) } })
       end,
     }
   end
@@ -242,7 +262,10 @@ return function(s, opts)
 
   local dash_system  = make_dashboard(opts.system_panels)
   local dash_network = make_dashboard(opts.network_panels)
-  local dash_time    = make_dashboard(opts.time_panels)
+  -- TIME cai do CANTO DIREITO (sob o relógio/calendário), não do centro.
+  local dash_time    = make_dashboard(opts.time_panels, function(c)
+    awful.placement.top_right(c, { margins = { top = dpi(62), right = dpi(10) } })
+  end)
 
   local dashboards = {
     system  = dash_system,
@@ -281,7 +304,7 @@ return function(s, opts)
   make_clickable(pill_vol, function()
     awesome.emit_signal("volume_controller::toggle", s)
   end)
-  make_clickable(clock_segment, function() toggle("time") end)
+  make_clickable(clock_trigger, function() toggle("time") end)
 
   ----------------------------------------------------------------------------------------
   -- BARRA — popup fino top-center sempre visível. Guarda contra duplicata em reload.
@@ -301,6 +324,35 @@ return function(s, opts)
     end,
   }
   s._control_center_bar = bar
+
+  ----------------------------------------------------------------------------------------
+  -- CLOCK/CALENDAR — barra do CANTO SUPERIOR-DIREITO (mesmo porte do dockbar esquerdo).
+  -- opts.right_widget (ex.: power) é anexado à direita do relógio. Guarda reload.
+  ----------------------------------------------------------------------------------------
+  if s._cc_clock_bar then s._cc_clock_bar.visible = false end
+
+  local clock_row = wibox.widget {
+    clock_trigger,
+    opts.right_widget and { opts.right_widget, valign = "center", widget = wibox.container.place } or nil,
+    spacing = dpi(10),
+    layout  = wibox.layout.fixed.horizontal,
+  }
+
+  local clock_bar = awful.popup {
+    widget = {
+      clock_row,
+      margins = dpi(2),
+      widget  = wibox.container.margin,
+    },
+    ontop     = false,
+    visible   = true,
+    screen    = s,
+    bg        = "#0c0617cc",
+    placement = function(c)
+      awful.placement.top_right(c, { margins = { top = dpi(8), right = dpi(10) } })
+    end,
+  }
+  s._cc_clock_bar = clock_bar
 
   ----------------------------------------------------------------------------------------
   -- Estado entre ticks (deltas de CPU e NET).
