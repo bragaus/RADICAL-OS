@@ -43,6 +43,8 @@ construindo toda a hierarquia por **luminosidade e opacidade**.
 - **Menu de apps** estilo lista com ícone + label.
 - Tudo monoespaçado, caixa-alta nos títulos, valores numéricos alinhados à direita.
 - Transparência sutil nos painéis e terminais.
+- **Ícones SVG próprios** (pasta `icons/`, §3.13) nos monitores de hardware e controles — já na
+  paleta violeta; **preferidos sobre glyphs Nerd-Font** (que ficam só como fallback).
 
 ### 1.2 O que DESCARTAR do estado atual (não usar como referência)
 
@@ -317,6 +319,86 @@ E em `src/core/signals.lua`, o workaround de foco passa de `#9C27B0` para `p.glo
 
 ---
 
+## 3.13 Icon set — pasta `icons/` (ícones SVG do sistema)
+
+> O repo tem um set próprio de ícones em **`icons/`** (raiz da config), **já desenhados na paleta
+> VIOLET HUD**. São a fonte de verdade para ícones dos **monitores de hardware** e dos controles —
+> **preferidos sobre os glyphs Nerd-Font**, que ficam só como fallback onde faltar SVG.
+
+**Estrutura:**
+- `icons/svg/<nome>.svg` — **41 vetoriais** (use estes; escalam sem perda).
+- `icons/png/{16,24,32,48,64}/<nome>.png` — rasterizados (fallback p/ tamanho fixo).
+- `icons/icondata.json` — metadados + categorias.
+
+**Cor:** os SVGs já vêm na paleta (traço `text_primary #cbb6ff`, fills `v400 #9d6ff6` / `v500
+#8b5cf6` / `glow_ice #d6c2ff`). **Use como estão por padrão.** Recolorir **só por estado**:
+`gears.color.recolor_image("icons/svg/<n>.svg", p.<token>)` — ex.: KILL → `crit` no hover; valor
+de stat ≥ 90% → `glow_hot`; ≥ 80 °C → `crit`. (Não fazer monocromático global.)
+
+**Helper a CRIAR — `src/tools/icons.lua`** (reusa o padrão `recolor_image`+`imagebox` de
+`clock.lua`/`network.lua`/`battery.lua`):
+```lua
+-- Icon("cpu", { color = p.text_muted, size = dpi(18) }) -> wibox.widget.imagebox
+local gfs    = require("gears.filesystem")
+local gcolor = require("gears.color")
+local wibox  = require("wibox")
+local DIR = gfs.get_configuration_dir() .. "icons/svg/"
+return function(name, o)
+  o = o or {}
+  local img = DIR .. name .. ".svg"
+  if o.color then img = gcolor.recolor_image(img, o.color) end
+  return wibox.widget {
+    image = img, resize = true,
+    forced_width = o.size, forced_height = o.size,
+    widget = wibox.widget.imagebox,
+  }
+end
+```
+
+**Lista (41), por categoria (`icondata.json`):**
+- **stats:** `cpu` `cpu_temp` `mem` `gpu` `gpu_temp` `net` `net_up` `net_down` `wifi` `vol` `volume_mute` `battery`
+- **power:** `shutdown` `reboot` `logout` `lock` `suspend`
+- **proc:** `kill` `kill_all`
+- **osd:** `notification` `dnd` `brightness`
+- **menu:** `visible` `sticky` `floating` `fullscreen` `send_signal` `close`
+- **tagctl:** `add` `remove` `move_left` `move_right`
+- **tags:** `term` `internet` `files` `develop` `edit` `media` `doc`
+- **time:** `clock` `calendar`
+
+> Cobertura completa dos monitores: temperatura (`cpu_temp`/`gpu_temp`), relógio (`clock`),
+> calendário (`calendar`). Sem ícone de disco/storage — não há painel DISK no HUD (reservar
+> `disk.svg` caso um dia exista).
+
+### 3.13.1 Mapeamento `elemento → ícone` (onde cada ícone entra)
+
+| Elemento (widget / arquivo) | Ícone (`icons/svg/…`) | Cor / estado |
+|---|---|---|
+| Lozenge **CPU** (`control_center.lua`) | `cpu` | as-is · ≥90% → `glow_hot` |
+| Lozenge **MEM** | `mem` | as-is · ≥90% → `glow_hot` |
+| Lozenge **GPU** | `gpu` | as-is · ≥90% → `glow_hot` |
+| Lozenge **NET** | `net` | as-is |
+| Lozenge **VOL** | `vol` (mudo → `volume_mute`) | as-is |
+| **Trigger relógio/calendário** (canto sup-direito) | `calendar` (ou `clock`) | `text_heading` |
+| **PROCESS** / **APPLICATIONS** botão KILL | `kill` (matar todos → `kill_all`) | `text_muted` → `crit` hover |
+| **tag_controls** `+ − ‹ ›` | `add` · `remove` · `move_left` · `move_right` | `text_muted` → `v400` hover |
+| **Tags** (term/internet/files/develop/edit/media/doc) | `term`/`internet`/`files`/`develop`/`edit`/`media`/`doc` | as-is; selecionada realça |
+| **USAGE** coluna TEMP / thermal | `cpu_temp` / `gpu_temp` | `text_muted` · ≥80 °C → `crit` |
+| **GRAPH** (rede ↑/↓) | `net_up` / `net_down` | `data4` / `v400` |
+| **IP** | `net` | `text_muted` |
+| **CONNECTIONS** / sinal | `net` / `send_signal` | as-is |
+| **CALENDAR** header / **TIME** (INTERNATIONAL) | `calendar` / `clock` | `text_muted` |
+| **powermenu** | `shutdown`/`reboot`/`logout`/`lock`/`suspend` | `v50` em chip `v700` |
+| **OSD volume / brilho** | `vol`·`volume_mute` / `brightness` | `text_heading` |
+| **Notificações** (naughty) | `notification` (DND → `dnd`) | `text_muted` |
+| **Battery** | `battery` | nível: `v500` / baixo `crit` |
+| **Headers de painel** (INFO/USAGE/…) | micro-ícone via `panel.lua opts.right_icon` (`cpu`/`mem`/`net`/`send_signal`/…) | `text_muted` |
+| **Menu de contexto** (§7.5) | `visible`/`sticky`/`floating`/`fullscreen`/`send_signal`/`close` | `text_primary` |
+
+> **Regra:** monitores de hardware e controles usam **ícone SVG** (este set). Glyph Nerd-Font só
+> como fallback onde não houver SVG equivalente.
+
+---
+
 ## 4. Tipografia
 
 A referência usa um **monoespaçado bitmap** apertado. Mantemos `JetBrainsMono Nerd Font`
@@ -493,6 +575,10 @@ ex. `src/tools/panel.lua`, com a assinatura `panel({ title=, body=, accent=, w=,
 - **Direita:** systray (`bg_systray = panel`, `systray_icon_spacing = dpi(6)`), mini-relógio
   `%H:%M` em `text_bright`, e indicadores compactos (layoutbox, kb layout) em `text_muted`.
 
+> **Ícones da taglist e do cluster (set `icons/`, §3.13.1):** cada tag pode usar o ícone do seu tipo
+> (`term`/`internet`/`files`/`develop`/`edit`/`media`/`doc`) à esquerda do índice; o `tag_controls`
+> usa `add`/`remove`/`move_left`/`move_right` (recolor `v400` no hover) no lugar dos `+ − ‹ ›` ASCII.
+
 ### 7.2.1 STATUS DO MEIO — lozenges de estatística (Image #7) — *o "status do meio"*
 
 A fita central da barra superior (a que está apontada na **Image #7**) é uma sequência de
@@ -505,7 +591,8 @@ Anatomia de UMA lozenge `〈  NN% 〉`:
   hexágono achatado tipo `tab_shape` do taglist; alternativa simples = `rounded_rect` raio
   `radius_chip` ladeado por cápsulas `‹` `›` em `line_dim`.
 - **Fundo:** `panel .. "cc"`; **borda:** 1px `line_base`; altura `dpi(20)`, padding-x `dpi(8)`.
-- **Conteúdo:** glyph/ícone `text_muted` + valor `text_bright`, monoespaçado, número à direita.
+- **Conteúdo:** **ícone SVG** de `icons/svg/` (cpu/mem/gpu/net/vol — via `src/tools/icons.lua`,
+  ~`dpi(18-20)`) + valor `text_bright`, monoespaçado, número à direita. (Substitui o glyph Nerd-Font; ver §3.13.1.)
 - **Fita contínua:** as lozenges encostam (gap pequeno `dpi(2)`) formando a tira da Image #7.
 
 Os stats, na ordem da Image #7:
@@ -517,6 +604,8 @@ Os stats, na ordem da Image #7:
 | **NET** | `` `` | `↑NN ↓NN` (KB/s) | `/proc/net/dev` (delta rx/tx entre ticks) |
 | **VOL** | `` | `NN%` | `pactl get-sink-volume @DEFAULT_SINK@` |
 
+- **Ícones (não glyphs):** a coluna "Glyph" da tabela acima é, na implementação, um **ícone SVG**
+  do set `icons/` (§3.13.1): CPU=`cpu`, MEM=`mem`, **GPU=`gpu`**, NET=`net`, VOL=`vol` (mudo=`volume_mute`).
 - À direita do grupo (na barra, fora das lozenges): **relógio** `HH:MM` + **data** `Mês DD`
   em `text_bright`/`text_muted` (como o `01:42  Jan 02` da Image #7).
 - Alerta opcional: valor ≥ 90% → `glow_hot`; caso contrário sempre violeta.
@@ -588,6 +677,10 @@ CPU  ▕████████████░░░░░░░░░▏ 58%
   `awful.spawn({"kill", pid})` (SIGTERM). O PID é guardado por linha; cursor `hand1` no hover.
 - Coluna de **sinais** (estilo referência): lista `SIGHUP SIGINT SIGKILL …` em
   `text_muted`, item ativo `v400` (ver também submenu Send Signal §7.5).
+
+> **Ícone do KILL (set `icons/`):** o botão usa `icons/svg/kill.svg` (matar todos = `kill_all.svg`)
+> via `src/tools/icons.lua`, recolorido p/ `crit` no hover — substitui o skull Nerd-Font. Mesmo
+> ícone no APPLICATIONS (§5.2). USAGE/thermal usam `cpu_temp.svg`/`gpu_temp.svg` (≥80 °C → `crit`).
 
 #### 7.4.8 Connections — `CONNECTIONS`
 - Lista de conexões de rede: `PROTO  LOCAL → REMOTO  ESTADO`.
@@ -742,6 +835,9 @@ opacity = 0.85
 | `src/modules/powermenu.lua` | Re-skin: botões chip `v700`, ícones recoloridos. |
 | `src/assets/icons/**` | Recolorir SVGs p/ `text_primary`/`v400` quando aplicável (via `gears.color.recolor_image`). |
 | `~/.config/alacritty/alacritty.toml` | Aplicar paleta §7.8 (fora do repo, documentar). |
+| `src/tools/icons.lua` | **CRIAR** helper `Icon(name, {color, size})` que carrega `icons/svg/<name>.svg` (recolor opcional) → `imagebox` (§3.13). |
+| `icons/` (svg + png + icondata.json) | **ASSETS novos** (set VIOLET HUD). Fonte de ícones de hardware/controles; **preferir** sobre glyphs Nerd-Font (§3.13.1). |
+| consumidores de ícone (`control_center.lua`, `process_panel.lua`, `apps_panel.lua`, `tag_controls.lua`, `taglist.lua`, `powermenu.lua`, OSDs, `usage_panel.lua`, trigger relógio/calendário) | Trocar glyph Nerd-Font por `Icon("<n>")` conforme a tabela §3.13.1. |
 
 > **Nota de globais:** `user_vars`, `Theme`, `Theme_path`, `Hover_signal` são globais por
 > design (ver AGENTS.md). Não os transforme em locals.
