@@ -72,9 +72,14 @@ awful.screen.connect_for_each_screen(
     s.clock_fr = require("src.widgets.world_clock") { city = "FRANCA", timezone = "Europe/Paris", country = "fr", width = dpi(84), segment_bg = "#1b1030" }
     s.clock_jp = require("src.widgets.world_clock") { city = "JAPAO", timezone = "Asia/Tokyo", country = "jp", width = dpi(84), segment_bg = "#241640" }
     s.clock_us = require("src.widgets.world_clock") { city = "EUA", timezone = "America/New_York", country = "us", width = dpi(84), segment_bg = "#2e1065" }
-    require("radical_wm.radical_bar")(s, { s.layoutlist, s.taglist, s.tasklist })
+    -- cluster de controle de tags (add/remove/mover) no fim da taglist + status dock central
+    s.tag_controls = require("src.widgets.tag_controls")(s)
+    s.tag_controls._preserve_colors = true
+    s.status_dock = require("src.widgets.status_dock")()
+    s.status_dock._preserve_colors = true
+    require("radical_wm.radical_bar")(s, { s.layoutlist, s.taglist, s.tag_controls, s.tasklist })
     require("radical_wm.center_bar")(s, { s.cyber_chart })
-    require("radical_wm.right_bar")(s, { s.clock_br, s.clock_fr, s.clock_jp, s.clock_us, s.powerbutton })
+    require("radical_wm.right_bar")(s, { s.status_dock, s.clock_br, s.clock_fr, s.clock_jp, s.clock_us, s.powerbutton })
     require("radical_wm.dock")(s, user_vars.dock_programs)
 
     -- VIOLET HUD §5: coluna lateral esquerda de painéis de dado

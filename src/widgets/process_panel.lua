@@ -2,7 +2,8 @@
 -- src/widgets/process_panel.lua — Painel "PROCESS" (VIOLET HUD §7.4.7)                    --
 --                                                                                        --
 -- Top 6 processos por uso de CPU. Cada linha: PID (text_muted) · NOME (text_primary,     --
--- esquerda, ~10 chars) · CPU% (text_bright, direita) · MEM% (text_muted).                --
+-- esquerda, ~10 chars) · CPU% (text_bright, direita) · MEM% (text_muted) · KILL (skull,  --
+-- text_muted -> crit no hover; clique-esquerdo envia SIGTERM ao PID via awful.spawn).     --
 --                                                                                        --
 -- Amostragem ASSÍNCRONA via awful.spawn.easy_async_with_shell em gears.timer (3s).       --
 -- NUNCA usar io.popen/os.execute em timer — trava o WM (deadlock conhecido neste repo).  --
@@ -43,17 +44,51 @@ local function cell(text, color, align, width)
   }
 end
 
--- Constrói uma linha de processo: PID | NOME | CPU% | MEM%.
+-- Glyph da skull (Nerd Font) usado como controle de KILL.
+local KILL_GLYPH = "" -- nf-md-skull
+
+-- Célula de KILL: clique-esquerdo envia SIGTERM ao PID; hover -> crit.
+local function kill_cell(pid)
+  local skull = wibox.widget {
+    text   = KILL_GLYPH,
+    font   = MONO .. " 9",
+    align  = "center",
+    valign = "center",
+    widget = wibox.widget.textbox,
+  }
+  local cellbg = wibox.widget {
+    skull,
+    fg           = p.text_muted,
+    forced_width = dpi(28),
+    widget       = wibox.container.background,
+  }
+
+  -- Recolore o fg para crit no hover (bg=nil -> só muda o fg).
+  Hover_signal(cellbg, nil, p.crit)
+
+  cellbg:buttons(awful.util.table.join(
+    awful.button({}, 1, function()
+      if pid and tonumber(pid) then
+        awful.spawn({ "kill", tostring(pid) }) -- SIGTERM
+      end
+    end)
+  ))
+
+  return cellbg
+end
+
+-- Constrói uma linha de processo: PID | NOME | CPU% | MEM% | KILL.
 local function build_row(pid, name, cpu, mem)
   return wibox.widget {
-    cell(pid,  p.text_muted,   "left",  dpi(46)),
+    cell(pid,  p.text_muted,   "left",  dpi(44)),
     {
       cell(name, p.text_primary, "left", nil),
       layout = wibox.layout.flex.horizontal,
     },
     {
-      cell(cpu, p.text_bright, "right", dpi(48)),
-      cell(mem, p.text_muted,  "right", dpi(48)),
+      cell(cpu, p.text_bright, "right", dpi(44)),
+      cell(mem, p.text_muted,  "right", dpi(44)),
+      kill_cell(pid),
       spacing = dpi(4),
       layout  = wibox.layout.fixed.horizontal,
     },
@@ -74,14 +109,15 @@ return function(args)
 
   -- Cabeçalho de colunas (estático).
   local header = wibox.widget {
-    cell("PID",  p.text_faint, "left",  dpi(46)),
+    cell("PID",  p.text_faint, "left",  dpi(44)),
     {
       cell("NAME", p.text_faint, "left", nil),
       layout = wibox.layout.flex.horizontal,
     },
     {
-      cell("CPU%", p.text_faint, "right", dpi(48)),
-      cell("MEM%", p.text_faint, "right", dpi(48)),
+      cell("CPU%", p.text_faint, "right", dpi(44)),
+      cell("MEM%", p.text_faint, "right", dpi(44)),
+      cell("",     p.text_faint, "center", dpi(28)),
       spacing = dpi(4),
       layout  = wibox.layout.fixed.horizontal,
     },

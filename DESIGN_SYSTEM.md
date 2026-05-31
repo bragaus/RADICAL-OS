@@ -445,12 +445,16 @@ ex. `src/tools/panel.lua`, com a assinatura `panel({ title=, body=, accent=, w=,
 ### 7.2 Barra superior (wibar)
 
 - **Fundo:** `base .. "cc"`, altura `dpi(26)`, baseline 1px `line_base` embaixo.
-- **Esquerda — Taglist:** cada tag um chip (`radius_chip`), fonte `bold 10` CAIXA-ALTA:
-  - inativa: bg `v975` (`#2b0c45`), fg `text_muted`
+- **Esquerda — Taglist (idêntico à Image #2):** cada tag é uma **aba inclinada** (`tab_shape`:
+  hexágono achatado com vértices laterais apontados) contendo `[índice] [ícone-da-tag] LABEL`
+  em CAIXA-ALTA, e as abas são ligadas por **setas afiadas** (separador powerline `` em
+  `line_dim`). Fonte `bold 10`. Cada tag pode exibir um **ícone** à esquerda do número
+  (como na Image #2: Term/Internet/Files/Develop…).
+  - inativa/vazia: bg `v975` (`#2b0c45`), fg `text_muted`
+  - ocupada (tem clientes): bg `v975`, fg `text_primary`
   - foco/selecionada: bg `v500`, fg `v50`
   - urgente: bg `glow_hot`, fg `v50`
-  - hover: clarear bg (selecionada `#9b6bffdd`, outra `#3f1680dd`) — já implementado no taglist atual; **mantenha a mecânica, ajuste só as cores p/ tokens**.
-  - Rótulo no estilo da referência: `1 PLANO-WEB3` ou bracket `[1]`.
+  - hover: clarear bg (selecionada `v400@dd`, outra `v900@dd`) — mecânica já no `taglist.lua`; **ajuste só as cores p/ tokens**.
 - **Centro — Tasklist:** título da janela focada em `text_primary`; inativas `text_muted`.
 - **Separadores — setas powerline AFIADAS, direcionais (idêntico à Image #1):** o dockbar
   de cima imita a barra de tags da referência (Image #1) — um *breadcrumb* de segmentos
@@ -462,6 +466,20 @@ ex. `src/tools/panel.lua`, com a assinatura `panel({ title=, body=, accent=, w=,
   segmento vizinho (`spacing` negativo, ~`-dpi(18)`). Segmentos em sombras violeta da paleta
   (`panel` → `panel_hi` → `raised` → `v950`), texto/ícone em `text_bright`/`v400`.
   *(Esta diretriz substitui — só para a barra superior — a antiga nota de "sem powerline / chevron sutil".)*
+- **Cluster de controle de tags (fim da taglist, idêntico à Image #2):** logo após as abas,
+  um grupo de botões-glyph (`src/widgets/tag_controls.lua`) para **gerenciar áreas de trabalho**:
+  - `` **adicionar** tag (`awful.tag.add(...):view_only()`)
+  - `` **remover** a tag atual (`s.selected_tag:delete()`, protegido p/ não zerar `#s.tags`)
+  - `` / `` **mover** a tag atual p/ a esquerda/direita entre as áreas (`awful.tag.move`)
+  Glyphs em `text_muted`, hover `v400`, cursor `hand1`. (Equivale ao grupo `+ - ⊕ ▣` do canto
+  direito da barra de tags da Image #2.)
+- **Centro — STATUS DOCK (entre as tags e os relógios):** uma faixa horizontal compacta
+  (`src/widgets/status_dock.lua`, altura ~`dpi(22)`) com estatísticas do sistema, como a
+  tira-de-status do topo da referência (Image #4). Segmentos, cada um `glyph/rótulo + valor`:
+  `CPU  NN%` · `MEM  NN%` · `NET  ↑/↓ KB/s` · `VOL  NN%` — glyph/rótulo `text_muted`, valor
+  `text_bright`, separados por `` fino em `line_dim`. **Amostragem assíncrona** (`/proc/stat`
+  com delta entre ticks, `/proc/meminfo`, `/proc/net/dev` com delta, `pactl`). Ocupa o **miolo**
+  da barra superior, posicionado **entre** a taglist (esquerda) e os relógios/systray (direita).
 - **Direita:** systray (`bg_systray = panel`, `systray_icon_spacing = dpi(6)`), mini-relógio
   `%H:%M` em `text_bright`, e indicadores compactos (layoutbox, kb layout) em `text_muted`.
 
@@ -519,14 +537,23 @@ CPU  ▕████████████░░░░░░░░░▏ 58%
 - Zonas como na referência: UTC / CET / EST / JST — ou as suas (BR/FR/JP/US).
 
 #### 7.4.7 Process list — `PROCESS`
-- Top N processos por CPU/MEM: `PID  NOME            CPU%  MEM%`.
+- Top N processos por CPU/MEM: `PID  NOME            CPU%  MEM%  [KILL]`.
 - Nome `text_primary`, números `text_bright`, mini-barra inline opcional (`v600`).
+- **Botão KILL por linha (interativo, igual à Image #4):** à direita de cada processo, um
+  controle `` (skull) / "KILL" em `text_muted` (hover `crit`); clique esquerdo →
+  `awful.spawn({"kill", pid})` (SIGTERM). O PID é guardado por linha; cursor `hand1` no hover.
 - Coluna de **sinais** (estilo referência): lista `SIGHUP SIGINT SIGKILL …` em
   `text_muted`, item ativo `v400` (ver também submenu Send Signal §7.5).
 
 #### 7.4.8 Connections — `CONNECTIONS`
 - Lista de conexões de rede: `PROTO  LOCAL → REMOTO  ESTADO`.
 - Estado `ESTABLISHED` em `ok`, `LISTEN` em `text_muted`, `TIME_WAIT` em `warn`.
+- **Clique = scan (interativo / dinâmico):** cada linha é clicável. Clique esquerdo → abre o
+  terminal do usuário rodando um **nmap de serviço mais completo** sobre o `host:porta` daquela
+  conexão e mantém o terminal aberto:
+  `<terminal> -e sh -c "nmap -Pn -sV -sC -p <porta> <host>; read"`. Faz parse de IPv4
+  (`host:porta`) e IPv6 (`[host]:porta`). **Contexto:** recon das **próprias** conexões abertas,
+  na **própria** máquina (uso administrativo/defensivo legítimo). Cursor `hand1` no hover.
 
 #### 7.4.9 Audio levels / EQ vertical — `USAGE` (áudio)
 - Barras verticais (EQ) ou rows de canais (`Master`, `Capture`, `Front`, `Rear Mic`…).
