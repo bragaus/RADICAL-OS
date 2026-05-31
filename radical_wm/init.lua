@@ -56,7 +56,6 @@ awful.screen.connect_for_each_screen(
     s.tag_controls._preserve_colors = true
     s.powerbutton  = require("src.widgets.power")()
     require("radical_wm.radical_bar")(s, { s.layoutlist, s.taglist, s.tag_controls })
-    require("radical_wm.right_bar")(s, { s.powerbutton })
 
     -- ----- PAINÉIS (2× — vivem DENTRO dos dashboards on-click) -----
     local W = dpi(520)
@@ -76,6 +75,7 @@ awful.screen.connect_for_each_screen(
 
     -- ----- CONTROL CENTER: lozenges clicáveis (topo-centro) + dashboards on-click -----
     require("src.widgets.control_center")(s, {
+      right_widget   = s.powerbutton, -- power vai p/ a barra do canto superior-direito (junto do relógio)
       system_panels  = { s.info_panel, s.usage_panel, s.process_panel },
       network_panels = { s.net_graph_panel, s.ip_panel, s.connections_panel, s.protocols_donut, s.apps_panel },
       time_panels    = { s.calendar_panel, s.clock_br, s.clock_fr, s.clock_jp, s.clock_us },
