@@ -4,7 +4,7 @@
 
 -- Awesome Libs
 local awful = require("awful")
-local color = require("src.theme.colors")
+local p = require("src.theme.palette")
 local dpi = require("beautiful").xresources.apply_dpi
 local gears = require("gears")
 local naughty = require("naughty")
@@ -34,7 +34,7 @@ return function()
           {
             {
               id = 'icon',
-              image = gears.color.recolor_image(icondir .. "no-internet" .. ".svg", "#ff8c00"),
+              image = gears.color.recolor_image(icondir .. "no-internet" .. ".svg", p.data4),
               widget = wibox.widget.imagebox,
               resize = false
             },
@@ -61,8 +61,8 @@ return function()
       right = dpi(8),
       widget = wibox.container.margin
     },
-    bg = color["Red200"],
-    fg = "#ff8c00",
+    bg = p.panel,
+    fg = p.text_bright,
     shape = function(cr, width, height)
       gears.shape.rounded_rect(cr, width, height, 5)
     end,
@@ -111,7 +111,7 @@ return function()
       text = message,
       title = title,
       app_name = app_name,
-      icon = gears.color.recolor_image(icon, color["White"]),
+      icon = gears.color.recolor_image(icon, p.text_bright),
       timeout = 3
     }
   end
@@ -165,7 +165,7 @@ return function()
             update_wireless_data(false)
           end
           network_widget.container.network_layout.spacing = dpi(8)
-          network_widget.container.network_layout.icon_margin.icon_layout.icon:set_image(gears.color.recolor_image(icondir .. icon .. ".svg", "#ff8c00"))
+          network_widget.container.network_layout.icon_margin.icon_layout.icon:set_image(gears.color.recolor_image(icondir .. icon .. ".svg", p.data4))
         end
       )
     end
@@ -261,7 +261,7 @@ return function()
     network_widget.container.network_layout.label.visible = false
     update_tooltip("Network unreachable")
     network_widget.container.network_layout.spacing = dpi(0)
-    network_widget.container.network_layout.icon_margin.icon_layout.icon:set_image(gears.color.recolor_image(icondir .. icon .. ".svg", "#ff8c00"))
+    network_widget.container.network_layout.icon_margin.icon_layout.icon:set_image(gears.color.recolor_image(icondir .. icon .. ".svg", p.data4))
   end
 
   local check_network_mode = function()
@@ -324,7 +324,7 @@ return function()
   }
 
   -- Signals
-  Hover_signal(network_widget, color["Red200"], "#ff8c00")
+  Hover_signal(network_widget, p.v700, p.text_bright)
 
   network_widget:connect_signal(
     "button::press",

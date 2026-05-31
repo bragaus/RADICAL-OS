@@ -4,7 +4,7 @@
 
 -- Awesome Libs
 local awful = require("awful")
-local color = require("src.theme.colors")
+local p = require("src.theme.palette")
 local dpi = require("beautiful").xresources.apply_dpi
 local gears = require("gears")
 local wibox = require("wibox")
@@ -64,12 +64,17 @@ return function(s)
               id = "volume_slider",
               bar_shape = gears.shape.rounded_rect,
               bar_height = dpi(10),
-              bar_color = color["Grey800"] .. "88",
-              bar_active_color = "#ffffff",
-              handle_color = "#ffffff",
+              bar_color = p.inset,
+              bar_active_color = {
+                type = "linear",
+                from = { 0, 0 },
+                to = { dpi(232), 0 },
+                stops = { { 0, p.v700 }, { 1, p.v500 } }
+              },
+              handle_color = p.v500,
               handle_shape = gears.shape.circle,
               handle_width = dpi(10),
-              handle_border_color = color["White"],
+              handle_border_color = p.line_bright,
               maximum = 100,
               widget = wibox.widget.slider
             },
@@ -89,7 +94,13 @@ return function(s)
       right = dpi(24),
       widget = wibox.container.margin
     },
-    bg = color["Grey900"] .. '88',
+    bg = p.panel .. 'f2',
+    fg = p.text_heading,
+    border_width = dpi(1),
+    border_color = p.line_base,
+    shape = function(cr, width, height)
+      gears.shape.rounded_rect(cr, width, height, 15)
+    end,
     widget = wibox.container.background,
     ontop = true,
     visible = true,
@@ -192,7 +203,7 @@ return function(s)
   local volume_container = awful.popup {
     widget = wibox.container.background,
     ontop = true,
-    bg = color["Grey900"] .. "00",
+    bg = p.base .. "00",
     stretch = false,
     visible = false,
     screen = s,

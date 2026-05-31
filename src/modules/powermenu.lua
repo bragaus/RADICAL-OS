@@ -4,7 +4,7 @@
 
 -- Awesome Libs
 local awful = require("awful")
-local color = require("src.theme.colors")
+local p = require("src.theme.palette")
 local dpi = require("beautiful").xresources.apply_dpi
 local gears = require("gears")
 local wibox = require("wibox")
@@ -80,8 +80,7 @@ return function(s)
                 -- TODO: using gears.color to recolor a SVG will make it look super low res
                 -- currently I recolor it in the .svg file directly, but later implement
                 -- a better way to recolor a SVG
-                -- image = gears.color.recolor_image(icon, color["Grey900"]),
-                image = icon,
+                image = gears.color.recolor_image(icon, p.v50),
                 resize = true,
                 forced_height = dpi(30),
                 widget = wibox.widget.imagebox
@@ -103,7 +102,7 @@ return function(s)
           margins = dpi(10),
           widget = wibox.container.margin
         },
-        fg = color["Grey900"],
+        fg = p.v50,
         bg = bg_color,
         shape = function(cr, width, height)
           gears.shape.rounded_rect(cr, width, height, 10)
@@ -151,18 +150,18 @@ return function(s)
   end
 
   -- Create the buttons with their command and name etc
-  local shutdown_button = button("Shutdown", icondir .. "shutdown.svg", color["Blue200"], shutdown_command)
-  local reboot_button = button("Reboot", icondir .. "reboot.svg", color["Red200"], reboot_command)
-  local suspend_button = button("Suspend", icondir .. "suspend.svg", color["Yellow200"], suspend_command)
-  local logout_button = button("Logout", icondir .. "logout.svg", color["Green200"], logout_command)
-  local lock_button = button("Lock", icondir .. "lock.svg", color["Orange200"], lock_command)
+  local shutdown_button = button("Shutdown", icondir .. "shutdown.svg", p.v700, shutdown_command)
+  local reboot_button = button("Reboot", icondir .. "reboot.svg", p.v700, reboot_command)
+  local suspend_button = button("Suspend", icondir .. "suspend.svg", p.v700, suspend_command)
+  local logout_button = button("Logout", icondir .. "logout.svg", p.v700, logout_command)
+  local lock_button = button("Lock", icondir .. "lock.svg", p.v700, lock_command)
 
   -- Signals to change color on hover
-  Hover_signal(shutdown_button.background, color["Blue200"], color["Grey900"])
-  Hover_signal(reboot_button.background, color["Red200"], color["Grey900"])
-  Hover_signal(suspend_button.background, color["Yellow200"], color["Grey900"])
-  Hover_signal(logout_button.background, color["Green200"], color["Grey900"])
-  Hover_signal(lock_button.background, color["Orange200"], color["Grey900"])
+  Hover_signal(shutdown_button.background, p.v600, p.v50)
+  Hover_signal(reboot_button.background, p.v600, p.v50)
+  Hover_signal(suspend_button.background, p.v600, p.v50)
+  Hover_signal(logout_button.background, p.v600, p.v50)
+  Hover_signal(lock_button.background, p.v600, p.v50)
 
   -- The powermenu widget
   local powermenu = wibox.widget {
@@ -233,7 +232,7 @@ return function(s)
     type = "splash",
     visible = false,
     ontop = true,
-    bg = color.with_alpha("#212121", overlay_alpha),
+    bg = p.a(p.abyss, overlay_alpha),
     height = s.geometry.height,
     width = s.geometry.width,
     x = s.geometry.x,

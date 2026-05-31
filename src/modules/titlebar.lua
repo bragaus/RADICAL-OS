@@ -4,10 +4,10 @@
 
 -- Awesome Libs
 local awful = require("awful")
-local color = require("src.theme.colors")
 local dpi = require("beautiful").xresources.apply_dpi
 local gears = require("gears")
 local wibox = require("wibox")
+local p = require("src.theme.palette")
 require("src.core.signals")
 
 -- Icon directory path
@@ -60,139 +60,171 @@ local create_click_events = function(c)
   return buttons
 end
 
+-- Textual chrome button: a glyph in p.text_muted that recolors on hover.
+--   glyph        the label text (e.g. "_", "[]" , "x")
+--   hover_fg     foreground when hovered/pressed
+--   action       function run on left click
+local create_chrome_button = function(c, glyph, hover_fg, action)
+  local label = wibox.widget {
+    markup = glyph,
+    font   = (user_vars.font and user_vars.font.bold) or "JetBrainsMono Nerd Font, bold 14",
+    align  = "center",
+    valign = "center",
+    widget = wibox.widget.textbox,
+  }
+
+  local button = wibox.widget {
+    label,
+    fg            = p.text_muted,
+    bg            = "#00000000",
+    forced_width  = dpi(26),
+    widget        = wibox.container.background,
+  }
+
+  button:buttons(gears.table.join(
+    awful.button({}, 1, nil, function()
+      action()
+    end)
+  ))
+
+  Hover_signal(button, nil, hover_fg)
+
+  return button
+end
+
 local create_titlebar = function(c, bg, size)
   local titlebar = awful.titlebar(c, {
-    position = "left",
+    position = "top",
     bg = bg,
     size = size
   })
 
+  local minimize_button = create_chrome_button(c, "_", p.v400, function()
+    gears.timer.delayed_call(function()
+      c.minimized = not c.minimized
+    end)
+  end)
+
+  local maximize_button = create_chrome_button(c, "□", p.v400, function()
+    c.maximized = not c.maximized
+    c:raise()
+  end)
+
+  local close_button = create_chrome_button(c, "x", p.crit, function()
+    c:kill()
+  end)
+
+  local title = wibox.widget {
+    awful.titlebar.widget.titlewidget(c),
+    fg     = p.text_primary,
+    widget = wibox.container.background,
+  }
+
   titlebar:setup {
     {
       {
-        {
-          awful.titlebar.widget.closebutton(c),
-          widget = wibox.container.background,
-          bg = color["Red200"],
-          shape = function(cr, height, width)
-            gears.shape.rounded_rect(cr, width, height, 4)
-          end,
-          id = "closebutton"
-        },
-        {
-          awful.titlebar.widget.maximizedbutton(c),
-          widget = wibox.container.background,
-          bg = color["Yellow200"],
-          shape = function(cr, height, width)
-            gears.shape.rounded_rect(cr, width, height, 4)
-          end,
-          id = "maximizebutton"
-        },
-        {
-          awful.titlebar.widget.minimizebutton(c),
-          widget = wibox.container.background,
-          bg = color["Green200"],
-          shape = function(cr, height, width)
-            gears.shape.rounded_rect(cr, width, height, 4)
-          end,
-          id = "minimizebutton"
-        },
-        spacing = dpi(10),
-        layout  = wibox.layout.fixed.vertical,
-        id      = "spacing"
+        title,
+        buttons = create_click_events(c),
+        left    = dpi(10),
+        widget  = wibox.container.margin,
       },
-      margins = dpi(8),
-      widget = wibox.container.margin,
-      id = "margin"
-    },
-    {
-      buttons = create_click_events(c),
-      layout = wibox.layout.flex.vertical
-    },
-    {
       {
-        widget = awful.widget.clienticon(c)
+        buttons = create_click_events(c),
+        layout  = wibox.layout.flex.horizontal,
       },
-      margins = dpi(5),
-      widget = wibox.container.margin
+      {
+        minimize_button,
+        maximize_button,
+        close_button,
+        spacing = dpi(2),
+        layout  = wibox.layout.fixed.horizontal,
+        id      = "spacing",
+      },
+      layout = wibox.layout.align.horizontal,
+      id     = "main",
     },
-    layout = wibox.layout.align.vertical,
-    id = "main"
+    widget  = wibox.container.background,
+    bg      = p.panel .. "e6",
+    bgimage = function(_, cr, width, height)
+      -- bottom 1px divider in line_base
+      cr:set_source(gears.color(p.line_base))
+      cr:rectangle(0, height - dpi(1), width, dpi(1))
+      cr:fill()
+    end,
   }
-  Hover_signal(titlebar.main.margin.spacing.closebutton, color["Red200"], color["Grey900"])
-  Hover_signal(titlebar.main.margin.spacing.maximizebutton, color["Yellow200"], color["Grey900"])
-  Hover_signal(titlebar.main.margin.spacing.minimizebutton, color["Green200"], color["Grey900"])
 end
 
 local create_titlebar_dialog = function(c, bg, size)
   local titlebar = awful.titlebar(c, {
-    position = "left",
+    position = "top",
     bg = bg,
     size = size
   })
 
+  local minimize_button = create_chrome_button(c, "_", p.v400, function()
+    gears.timer.delayed_call(function()
+      c.minimized = not c.minimized
+    end)
+  end)
+
+  local close_button = create_chrome_button(c, "x", p.crit, function()
+    c:kill()
+  end)
+
+  local title = wibox.widget {
+    awful.titlebar.widget.titlewidget(c),
+    fg     = p.text_primary,
+    widget = wibox.container.background,
+  }
+
   titlebar:setup {
     {
       {
-        {
-          awful.titlebar.widget.closebutton(c),
-          widget = wibox.container.background,
-          bg = color["Red200"],
-          shape = function(cr, height, width)
-            gears.shape.rounded_rect(cr, width, height, 4)
-          end,
-          id = "closebutton"
-        },
-        {
-          awful.titlebar.widget.minimizebutton(c),
-          widget = wibox.container.background,
-          bg = color["Green200"],
-          shape = function(cr, height, width)
-            gears.shape.rounded_rect(cr, width, height, 4)
-          end,
-          id = "minimizebutton"
-        },
-        spacing = dpi(10),
-        layout  = wibox.layout.fixed.vertical,
-        id      = "spacing"
+        title,
+        buttons = create_click_events(c),
+        left    = dpi(10),
+        widget  = wibox.container.margin,
       },
-      margins = dpi(8),
-      widget = wibox.container.margin,
-      id = "margin"
-    },
-    {
-      buttons = create_click_events(c),
-      layout = wibox.layout.flex.vertical
-    },
-    {
       {
-        widget = awful.widget.clienticon(c)
+        buttons = create_click_events(c),
+        layout  = wibox.layout.flex.horizontal,
       },
-      margins = dpi(5),
-      widget = wibox.container.margin
+      {
+        minimize_button,
+        close_button,
+        spacing = dpi(2),
+        layout  = wibox.layout.fixed.horizontal,
+        id      = "spacing",
+      },
+      layout = wibox.layout.align.horizontal,
+      id     = "main",
     },
-    layout = wibox.layout.align.vertical,
-    id = "main"
+    widget  = wibox.container.background,
+    bg      = p.panel .. "e6",
+    bgimage = function(_, cr, width, height)
+      -- bottom 1px divider in line_base
+      cr:set_source(gears.color(p.line_base))
+      cr:rectangle(0, height - dpi(1), width, dpi(1))
+      cr:fill()
+    end,
   }
-  Hover_signal(titlebar.main.margin.spacing.closebutton, color["Red200"], color["Grey900"])
-  Hover_signal(titlebar.main.margin.spacing.minimizebutton, color["Green200"], color["Grey900"])
 end
 
 local draw_titlebar = function(c)
   if c.type == 'normal' and not c.requests_no_titlebar then
     if c.class == 'Firefox' then
-      create_titlebar(c, '#121212AA', 35)
+      create_titlebar(c, p.panel .. "e6", dpi(22))
     elseif c.name == "Steam" then
-      create_titlebar(c, '#121212AA', 0)
+      create_titlebar(c, p.panel .. "e6", 0)
     elseif c.name == "Settings" then
-      create_titlebar(c, '#121212AA', 0)
+      create_titlebar(c, p.panel .. "e6", 0)
     elseif c.class == "gcr-prompter" or c.class == "Gcr-prompter" then
-      create_titlebar(c, '#121212AA', 0)
+      create_titlebar(c, p.panel .. "e6", 0)
     else
-      create_titlebar(c, '#121212AA', 35)
+      create_titlebar(c, p.panel .. "e6", dpi(22))
     end
   elseif c.type == 'dialog' then
-    create_titlebar_dialog(c, '#121212AA', 35)
+    create_titlebar_dialog(c, p.panel .. "e6", dpi(22))
   end
 end
 
@@ -238,9 +270,9 @@ client.connect_signal(
   'property::floating',
   function(c)
     if c.floating or (c.floating and c.maximized) then
-      awful.titlebar.show(c, 'left')
+      awful.titlebar.show(c, 'top')
+      awful.titlebar.hide(c, 'left')
       awful.titlebar.hide(c, 'right')
-      awful.titlebar.hide(c, 'top')
       awful.titlebar.hide(c, 'bottom')
     else
       awful.titlebar.hide(c, 'left')

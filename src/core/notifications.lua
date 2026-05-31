@@ -3,7 +3,7 @@
 -------------------------------
 -- Awesome Libs
 local awful = require("awful")
-local color = require("src.theme.colors")
+local p = require("src.theme.palette")
 local dpi = require("beautiful").xresources.apply_dpi
 local gears = require("gears")
 local menubar = require('menubar')
@@ -22,8 +22,8 @@ naughty.config.defaults.position = "bottom_right"
 naughty.config.defaults.shape = function(cr, width, height)
   gears.shape.rounded_rect(cr, width, height, dpi(10))
 end
-naughty.config.defaults.border_width = dpi(4)
-naughty.config.defaults.border_color = color["Grey800"]
+naughty.config.defaults.border_width = dpi(1)
+naughty.config.defaults.border_color = p.line_base
 naughty.config.defaults.spacing = dpi(10)
 
 naughty.connect_signal(
@@ -42,17 +42,21 @@ naughty.connect_signal(
 naughty.connect_signal(
   "request::display",
   function(n)
+    -- Accent strip color (left 3px): violet normally, crit when urgent
+    local accent_color = p.v500
     if n.urgency == "critical" then
+      accent_color = p.crit
       n.title = string.format("<span foreground='%s' font='JetBrainsMono Nerd Font, ExtraBold 16'>%s</span>",
-        color["RedA200"], n.title) or ""
-      n.message = string.format("<span foreground='%s'>%s</span>", color["Red200"], n.message) or ""
-      n.app_name = string.format("<span foreground='%s'>%s</span>", color["RedA400"], n.app_name) or ""
-      n.bg = color["Grey900"]
+        p.crit, string.upper(tostring(n.title or ""))) or ""
+      n.message = string.format("<span foreground='%s'>%s</span>", p.text_primary, n.message) or ""
+      n.app_name = string.format("<span foreground='%s'>%s</span>", p.text_muted, n.app_name) or ""
+      n.bg = p.panel .. "f2"
     else
       n.title = string.format("<span foreground='%s' font='JetBrainsMono Nerd Font, ExtraBold 16'>%s</span>",
-        color["Pink200"], n.title) or ""
-      n.message = string.format("<span foreground='%s'>%s</span>", "#ffffffaa", n.message) or ""
-      n.bg = color["Grey900"]
+        p.text_heading, string.upper(tostring(n.title or ""))) or ""
+      n.message = string.format("<span foreground='%s'>%s</span>", p.text_primary, n.message) or ""
+      n.app_name = string.format("<span foreground='%s'>%s</span>", p.text_muted, n.app_name) or ""
+      n.bg = p.panel .. "f2"
       n.timeout = n.timeout or 3
     end
 
@@ -62,15 +66,15 @@ naughty.connect_signal(
       n.actions = { naughty.action {
         program = "Spotify",
         id = "skip-prev",
-        icon = gears.color.recolor_image(icondir .. "skip-prev.svg", color["Cyan200"])
+        icon = gears.color.recolor_image(icondir .. "skip-prev.svg", p.text_bright)
       }, naughty.action {
         program = "Spotify",
         id = "play-pause",
-        icon = gears.color.recolor_image(icondir .. "play-pause.svg", color["Cyan200"])
+        icon = gears.color.recolor_image(icondir .. "play-pause.svg", p.text_bright)
       }, naughty.action {
         program = "Spotify",
         id = "skip-next",
-        icon = gears.color.recolor_image(icondir .. "skip-next.svg", color["Cyan200"])
+        icon = gears.color.recolor_image(icondir .. "skip-next.svg", p.text_bright)
       } }
       use_image = true
     end
@@ -96,8 +100,8 @@ naughty.connect_signal(
           },
           forced_height = dpi(35),
           forced_width = dpi(35),
-          fg = color["Cyan200"],
-          bg = color["Grey800"],
+          fg = p.text_bright,
+          bg = p.v700,
           shape = function(cr, width, height)
             gears.shape.rounded_rect(cr, width, height, dpi(6))
           end,
@@ -125,8 +129,8 @@ naughty.connect_signal(
             margins = dpi(5),
             widget = wibox.container.margin
           },
-          fg = color["Green200"],
-          bg = color["Grey800"],
+          fg = p.text_bright,
+          bg = p.v700,
           shape = function(cr, width, height)
             gears.shape.rounded_rect(cr, width, height, dpi(6))
           end,
@@ -150,14 +154,21 @@ naughty.connect_signal(
       style = {
         underline_normal = false,
         underline_selected = true,
-        bg_normal = color["Grey100"],
-        bg_selected = color["Grey200"]
+        bg_normal = p.v700,
+        bg_selected = p.v600
       },
       widget = naughty.list.actions
     }
 
     local w_template = wibox.widget {
       {
+        -- 3px left accent strip (violet, or crit when urgent)
+        {
+          forced_width = dpi(3),
+          bg = accent_color,
+          widget = wibox.container.background,
+          id = "accent_strip"
+        },
         {
           {
             {
@@ -167,153 +178,157 @@ naughty.connect_signal(
                     {
                       {
                         {
-                          image = gears.color.recolor_image(icondir .. "notification-outline.svg", color["Teal200"]),
-                          resize = false,
-                          widget = wibox.widget.imagebox
+                          {
+                            image = gears.color.recolor_image(icondir .. "notification-outline.svg", p.text_muted),
+                            resize = false,
+                            widget = wibox.widget.imagebox
+                          },
+                          right = dpi(5),
+                          widget = wibox.container.margin
                         },
-                        right = dpi(5),
-                        widget = wibox.container.margin
+                        {
+                          markup = n.app_name or 'System Notification',
+                          align = "center",
+                          valign = "center",
+                          widget = wibox.widget.textbox
+                        },
+                        layout = wibox.layout.fixed.horizontal
                       },
-                      {
-                        markup = n.app_name or 'System Notification',
-                        align = "center",
-                        valign = "center",
-                        widget = wibox.widget.textbox
-                      },
-                      layout = wibox.layout.fixed.horizontal
+                      fg = p.text_muted,
+                      widget = wibox.container.background
                     },
-                    fg = color["Teal200"],
-                    widget = wibox.container.background
+                    margins = dpi(10),
+                    widget = wibox.container.margin
                   },
-                  margins = dpi(10),
-                  widget = wibox.container.margin
-                },
-                nil,
-                {
+                  nil,
                   {
                     {
-                      text = os.date("%H:%M"),
-                      widget = wibox.widget.textbox
+                      {
+                        text = os.date("%H:%M"),
+                        widget = wibox.widget.textbox
+                      },
+                      id = "background",
+                      fg = p.text_muted,
+                      widget = wibox.container.background
                     },
-                    id = "background",
-                    fg = color["Teal200"],
-                    widget = wibox.container.background
-                  },
-                  {
                     {
                       {
                         {
                           {
-                            font = user_vars.font.specify .. ", 10",
-                            text = "✕",
-                            align = "center",
-                            valign = "center",
-                            widget = wibox.widget.textbox
+                            {
+                              font = user_vars.font.specify .. ", 10",
+                              text = "✕",
+                              align = "center",
+                              valign = "center",
+                              widget = wibox.widget.textbox
+                            },
+                            start_angle = 4.71239,
+                            thickness = dpi(2),
+                            min_value = 0,
+                            max_value = 360,
+                            value = 360,
+                            widget = wibox.container.arcchart,
+                            id = "arc_chart"
                           },
-                          start_angle = 4.71239,
-                          thickness = dpi(2),
-                          min_value = 0,
-                          max_value = 360,
-                          value = 360,
-                          widget = wibox.container.arcchart,
-                          id = "arc_chart"
+                          id = "background",
+                          fg = p.text_muted,
+                          bg = p.panel,
+                          widget = wibox.container.background
                         },
-                        id = "background",
-                        fg = color["Teal200"],
-                        bg = color["Grey900"],
-                        widget = wibox.container.background
+                        strategy = "exact",
+                        width = dpi(20),
+                        height = dpi(20),
+                        widget = wibox.container.constraint,
+                        id = "const"
                       },
-                      strategy = "exact",
-                      width = dpi(20),
-                      height = dpi(20),
-                      widget = wibox.container.constraint,
-                      id = "const"
+                      margins = dpi(10),
+                      widget = wibox.container.margin,
+                      id = "arc_margin"
                     },
-                    margins = dpi(10),
-                    widget = wibox.container.margin,
-                    id = "arc_margin"
+                    layout = wibox.layout.fixed.horizontal,
+                    id = "arc_app_layout_2"
                   },
-                  layout = wibox.layout.fixed.horizontal,
-                  id = "arc_app_layout_2"
+                  id = "arc_app_layout",
+                  layout = wibox.layout.align.horizontal
                 },
-                id = "arc_app_layout",
-                layout = wibox.layout.align.horizontal
+                id = "arc_app_bg",
+                border_color = p.line_base,
+                border_width = dpi(1),
+                widget = wibox.container.background
               },
-              id = "arc_app_bg",
-              border_color = color["Grey800"],
-              border_width = dpi(2),
-              widget = wibox.container.background
-            },
-            {
               {
                 {
                   {
                     {
-                      image = n.icon,
-                      resize = true,
-                      widget = wibox.widget.imagebox,
-                      clip_shape = function(cr, width, height)
-                        gears.shape.rounded_rect(cr, width, height, 10)
-                      end
+                      {
+                        image = n.icon,
+                        resize = true,
+                        widget = wibox.widget.imagebox,
+                        clip_shape = function(cr, width, height)
+                          gears.shape.rounded_rect(cr, width, height, 10)
+                        end
+                      },
+                      width = naughty.config.defaults.icon_size,
+                      height = naughty.config.defaults.icon_size,
+                      strategy = "exact",
+                      widget = wibox.container.constraint
                     },
-                    width = naughty.config.defaults.icon_size,
-                    height = naughty.config.defaults.icon_size,
-                    strategy = "exact",
-                    widget = wibox.container.constraint
-                  },
-                  halign = "center",
-                  valign = "top",
-                  widget = wibox.container.place
-                },
-                left = dpi(20),
-                bottom = dpi(15),
-                top = dpi(15),
-                right = dpi(10),
-                widget = wibox.container.margin
-              },
-              {
-                {
-                  {
-                    widget = naughty.widget.title,
-                    align = "left"
-                  },
-                  {
-                    widget = naughty.widget.message,
-                    align = "left"
-                  },
-                  {
-                    actions_template,
+                    halign = "center",
+                    valign = "top",
                     widget = wibox.container.place
                   },
-                  layout = wibox.layout.fixed.vertical
+                  left = dpi(20),
+                  bottom = dpi(15),
+                  top = dpi(15),
+                  right = dpi(10),
+                  widget = wibox.container.margin
                 },
-                left = dpi(10),
-                bottom = dpi(10),
-                top = dpi(10),
-                right = dpi(20),
-                widget = wibox.container.margin
+                {
+                  {
+                    {
+                      widget = naughty.widget.title,
+                      align = "left"
+                    },
+                    {
+                      widget = naughty.widget.message,
+                      align = "left"
+                    },
+                    {
+                      actions_template,
+                      widget = wibox.container.place
+                    },
+                    layout = wibox.layout.fixed.vertical
+                  },
+                  left = dpi(10),
+                  bottom = dpi(10),
+                  top = dpi(10),
+                  right = dpi(20),
+                  widget = wibox.container.margin
+                },
+                layout = wibox.layout.fixed.horizontal
               },
-              layout = wibox.layout.fixed.horizontal
+              id = "widget_layout",
+              layout = wibox.layout.fixed.vertical
             },
-            id = "widget_layout",
-            layout = wibox.layout.fixed.vertical
+            id = "min_size",
+            strategy = "min",
+            width = dpi(100),
+            widget = wibox.container.constraint
           },
-          id = "min_size",
-          strategy = "min",
-          width = dpi(100),
+          id = "max_size",
+          strategy = "max",
+          width = Theme.notification_max_width or dpi(500),
           widget = wibox.container.constraint
         },
-        id = "max_size",
-        strategy = "max",
-        width = Theme.notification_max_width or dpi(500),
-        widget = wibox.container.constraint
+        nil,
+        layout = wibox.layout.align.horizontal
       },
       id = "background",
-      bg = color["Grey900"],
-      border_color = color["Grey800"],
-      border_width = dpi(4),
+      bg = p.panel .. "f2",
+      border_color = p.line_base,
+      border_width = dpi(1),
       shape = function(cr, width, height)
-        gears.shape.rounded_rect(cr, width, height, 4)
+        gears.shape.rounded_rect(cr, width, height, dpi(4))
       end,
       widget = wibox.container.background
     }
@@ -354,7 +369,7 @@ naughty.connect_signal(
       )
     end
 
-    Hover_signal(close, color["Grey900"], color["Teal200"])
+    Hover_signal(close, p.panel, p.text_bright)
 
     close:connect_signal(
       "button::press",

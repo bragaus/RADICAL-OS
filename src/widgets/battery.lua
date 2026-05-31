@@ -4,6 +4,7 @@
 -- Awesome Libs
 local awful = require("awful")
 local color = require("src.theme.colors")
+local p = require("src.theme.palette")
 local dpi = require("beautiful").xresources.apply_dpi
 local gears = require("gears")
 local naughty = require("naughty")
@@ -42,8 +43,8 @@ return function()
       right = dpi(8),
       widget = wibox.container.margin
     },
-    bg = color["Purple200"],
-    fg = "#ff8c00",
+    bg = p.panel,
+    fg = p.text_bright,
     shape = function(cr, width, height)
       gears.shape.rounded_rect(cr, width, height, 5)
     end,
@@ -99,7 +100,7 @@ return function()
 
   local battery_warning = function()
     naughty.notification {
-      icon = gears.color.recolor_image(icondir .. "battery-alert.svg", color["White"]),
+      icon = gears.color.recolor_image(icondir .. "battery-alert.svg", p.text_bright),
       app_name = "System notification",
       title = "Battery is low",
       message = "Battery is almost empty",
@@ -108,11 +109,11 @@ return function()
   end
 
    local battery_colors = {
-    charged = "#ff8c00",
-    charging = "#ff8c00",
-    discharging = color["Purple200"],
-    critical = color["Red200"],
-    unavailable = "#212121"
+    charged = p.v500,
+    charging = p.v500,
+    discharging = p.v700,
+    critical = p.crit,
+    unavailable = p.text_faint
   }
 
   local set_battery_icon = function(icon_name, icon_color)
@@ -170,7 +171,7 @@ return function()
             battery_warning()
           end
           --battery_widget.container.battery_layout.icon_margin.icon_layout.icon:set_image(gears.surface.load_uncached(
-            --gears.color.recolor_image(icondir .. icon .. '.svg', "#ff8c00")))
+            --gears.color.recolor_image(icondir .. icon .. '.svg', p.v500)))
             i--set_battery_icon(icon, battery_colors.critical)
             set_battery_text(battery_percentage, battery_colors.critical, false)
           return
@@ -204,7 +205,7 @@ return function()
         end--]]
 
         --battery_widget.container.battery_layout.icon_margin.icon_layout.icon:set_image(gears.surface.load_uncached(
-          --gears.color.recolor_image(icondir .. icon .. '.svg', "#ff8c00")))
+          --gears.color.recolor_image(icondir .. icon .. '.svg', p.v500)))
         local min_opacity = 0.45
         local max_opacity = 1
         local opacity = min_opacity + ((100 - battery_percentage) / 100) * (max_opacity - min_opacity)
@@ -216,7 +217,7 @@ return function()
     )
   end
 
-  Hover_signal(battery_widget, color["Purple200"], "#ff8c00")
+  Hover_signal(battery_widget, p.v500, p.text_bright)
 
   battery_widget:connect_signal(
     'button::press',
@@ -245,7 +246,7 @@ return function()
         battery_widget.container.battery_layout.label:set_markup('<span foreground="' .. battery_colors.unavailable .. '">N/A</span>')
 
         --battery_widget.container.battery_layout.icon_margin.icon_layout.icon:set_image(gears.surface.load_uncached(
-          --gears.color.recolor_image(icondir .. 'battery-off' .. '.svg', "#ff8c00")))
+          --gears.color.recolor_image(icondir .. 'battery-off' .. '.svg', p.text_faint)))
            --set_battery_icon('battery-off', battery_colors.unavailable)
       end
       update_battery(status)

@@ -4,7 +4,7 @@
 
 -- Awesome Libs
 local awful = require("awful")
-local color = require("src.theme.colors")
+local p = require("src.theme.palette")
 local dpi = require("beautiful").xresources.apply_dpi
 local gears = require("gears")
 local watch = awful.widget.watch
@@ -24,7 +24,7 @@ return function(widget, clock_mode)
             {
               id = "icon",
               widget = wibox.widget.imagebox,
-              image = gears.color.recolor_image(icon_dir .. "cpu.svg", color["Grey900"]),
+              image = gears.color.recolor_image(icon_dir .. "cpu.svg", p.text_bright),
               resize = false
             },
             id = "icon_layout",
@@ -49,8 +49,8 @@ return function(widget, clock_mode)
       right = dpi(8),
       widget = wibox.container.margin
     },
-    bg = color["Blue200"],
-    fg = color["Grey900"],
+    bg = p.v600,
+    fg = p.text_bright,
     shape = function(cr, width, height)
       gears.shape.rounded_rect(cr, width, height, 5)
     end,
@@ -89,8 +89,8 @@ return function(widget, clock_mode)
       right = dpi(8),
       widget = wibox.container.margin
     },
-    bg = color["Green200"],
-    fg = color["Grey900"],
+    bg = p.v700,
+    fg = p.text_bright,
     shape = function(cr, width, height)
       gears.shape.rounded_rect(cr, width, height, 5)
     end,
@@ -130,8 +130,8 @@ return function(widget, clock_mode)
       right = dpi(8),
       widget = wibox.container.margin
     },
-    bg = color["Purple200"],
-    fg = color["Grey900"],
+    bg = p.v500,
+    fg = p.text_bright,
     shape = function(cr, width, height)
       gears.shape.rounded_rect(cr, width, height, 5)
     end,
@@ -175,16 +175,16 @@ return function(widget, clock_mode)
       local temp_num = tonumber(stdout:match("%d+"))
       if not temp_num then return end
       if temp_num < 50 then
-        temp_color = color["Green200"]
+        temp_color = p.v700
         temp_icon = icon_dir .. "thermometer-low.svg"
       elseif temp_num >= 50 and temp_num < 80 then
-        temp_color = color["Orange200"]
+        temp_color = p.v500
         temp_icon = icon_dir .. "thermometer.svg"
       elseif temp_num >= 80 then
-        temp_color = color["Red200"]
+        temp_color = p.glow_hot
         temp_icon = icon_dir .. "thermometer-high.svg"
       end
-      Hover_signal(cpu_temp, temp_color, color["Grey900"])
+      Hover_signal(cpu_temp, temp_color, p.text_bright)
       cpu_temp.container.cpu_layout.icon_margin.icon_layout.icon:set_image(temp_icon)
       cpu_temp:set_bg(temp_color)
       cpu_temp.container.cpu_layout.label.text = math.floor(temp_num) .. "°C"
@@ -215,8 +215,8 @@ return function(widget, clock_mode)
     end
   )
 
-  Hover_signal(cpu_usage_widget, color["Blue200"], color["Grey900"])
-  Hover_signal(cpu_clock, color["Purple200"], color["Grey900"])
+  Hover_signal(cpu_usage_widget, p.v600, p.text_bright)
+  Hover_signal(cpu_clock, p.v500, p.text_bright)
 
   if widget == "usage" then
     return cpu_usage_widget

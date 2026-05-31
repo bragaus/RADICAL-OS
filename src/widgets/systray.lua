@@ -4,7 +4,7 @@
 
 -- Awesome Libs
 local awful = require("awful")
-local color = require("src.theme.colors")
+local p = require("src.theme.palette")
 local dpi = require("beautiful").xresources.apply_dpi
 local gears = require("gears")
 local wibox = require("wibox")
@@ -27,10 +27,10 @@ return function(s)
     shape = function(cr, width, height)
       gears.shape.rounded_rect(cr, width, height, 5)
     end,
-    bg = color["BlueGrey800"]
+    bg = p.panel
   }
   -- Signals
-  Hover_signal(systray.container, color["Red200"], color["Grey900"])
+  Hover_signal(systray.container, p.v500, p.text_bright)
 
   awesome.connect_signal("systray::update", function()
     local num_entries = awesome.systray()
