@@ -8,10 +8,13 @@ local dpi = require("beautiful").xresources.apply_dpi
 local gears = require("gears")
 local wibox = require("wibox")
 local p = require("src.theme.palette")
+local Icon = require("src.tools.icons") -- ícones SVG do set icons/ (§3.13)
 require("src.core.signals")
 
 -- Icon directory path
 local icondir = awful.util.getdir("config") .. "src/assets/icons/titlebar/"
+-- VIOLET HUD icon set (icons/svg/) — close / fullscreen p/ os botões de chrome (§3.13.1).
+local hud_svg = awful.util.getdir("config") .. "icons/svg/"
 
 awful.titlebar.enable_tooltip = true
 awful.titlebar.fallback_name = 'Client'
@@ -92,6 +95,32 @@ local create_chrome_button = function(c, glyph, hover_fg, action)
   return button
 end
 
+-- Botão de chrome com ÍCONE SVG (set icons/) em vez de glyph. Repouso text_muted,
+-- hover -> hover_fg (recolor da imagem; imagebox não muda cor via fg).
+local create_icon_button = function(c, icon_name, hover_fg, action)
+  local svg = hud_svg .. icon_name .. ".svg"
+  local ib = Icon(icon_name, { size = dpi(14), color = p.text_muted })
+
+  local button = wibox.widget {
+    { ib, widget = wibox.container.place },
+    bg           = "#00000000",
+    forced_width = dpi(26),
+    widget       = wibox.container.background,
+  }
+
+  button:buttons(gears.table.join(
+    awful.button({}, 1, nil, function()
+      action()
+    end)
+  ))
+
+  button:connect_signal("mouse::enter", function() ib.image = gears.color.recolor_image(svg, hover_fg) end)
+  button:connect_signal("mouse::leave", function() ib.image = gears.color.recolor_image(svg, p.text_muted) end)
+  Hover_signal(button, nil, hover_fg)
+
+  return button
+end
+
 local create_titlebar = function(c, bg, size)
   local titlebar = awful.titlebar(c, {
     position = "top",
@@ -99,18 +128,27 @@ local create_titlebar = function(c, bg, size)
     size = size
   })
 
+  -- STICKY (fixar em todas as tags) e ONTOP (manter acima) — toggles do set icons/.
+  local sticky_button = create_icon_button(c, "sticky", p.v400, function()
+    c.sticky = not c.sticky
+  end)
+
+  local ontop_button = create_icon_button(c, "visible", p.v400, function()
+    c.ontop = not c.ontop
+  end)
+
   local minimize_button = create_chrome_button(c, "_", p.v400, function()
     gears.timer.delayed_call(function()
       c.minimized = not c.minimized
     end)
   end)
 
-  local maximize_button = create_chrome_button(c, "□", p.v400, function()
+  local maximize_button = create_icon_button(c, "fullscreen", p.v400, function()
     c.maximized = not c.maximized
     c:raise()
   end)
 
-  local close_button = create_chrome_button(c, "x", p.crit, function()
+  local close_button = create_icon_button(c, "close", p.crit, function()
     c:kill()
   end)
 
@@ -133,6 +171,8 @@ local create_titlebar = function(c, bg, size)
         layout  = wibox.layout.flex.horizontal,
       },
       {
+        sticky_button,
+        ontop_button,
         minimize_button,
         maximize_button,
         close_button,
@@ -167,7 +207,7 @@ local create_titlebar_dialog = function(c, bg, size)
     end)
   end)
 
-  local close_button = create_chrome_button(c, "x", p.crit, function()
+  local close_button = create_icon_button(c, "close", p.crit, function()
     c:kill()
   end)
 

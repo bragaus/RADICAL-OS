@@ -97,48 +97,49 @@ return function(args)
   local text_color = args.text_color or p.text_bright
 
   local flag = make_flag_widget(country)
-  flag.forced_height = dpi(18)
-  flag.forced_width = dpi(28)
+  flag.forced_height = dpi(16)
+  flag.forced_width = dpi(24)
 
-  local widget = wibox.widget {
+  -- Row: FLAG  CITY ........  HH:MM  (time pinned right via align.horizontal)
+  local left = wibox.widget {
     {
-      {
-        flag,
-        halign = "center",
-        valign = "center",
-        widget = wibox.container.place,
-      },
-      {
-        {
-          format = "%H:%M",
-          timezone = timezone,
-          refresh = 30,
-          font = user_vars.font.extrabold,
-          align = "center",
-          widget = wibox.widget.textclock,
-        },
-        spacing = dpi(4),
-        layout = wibox.layout.fixed.vertical,
-      },
-      spacing = dpi(4),
-      layout = wibox.layout.fixed.vertical,
+      flag,
+      halign = "center",
+      valign = "center",
+      widget = wibox.container.place,
     },
-    left = dpi(2),
-    right = dpi(2),
-    top = dpi(2),
-    bottom = dpi(2),
-    widget = wibox.container.margin,
+    {
+      markup = "<span foreground='" .. p.text_muted .. "'>" .. city:upper() .. "</span>",
+      font = user_vars.font.bold,
+      valign = "center",
+      widget = wibox.widget.textbox,
+    },
+    spacing = dpi(8),
+    layout = wibox.layout.fixed.horizontal,
   }
 
-  local segment_bg = args.segment_bg or p.panel
+  local time = wibox.widget {
+    {
+      format = "%H:%M",
+      timezone = timezone,
+      refresh = 30,
+      font = user_vars.font.extrabold,
+      align = "right",
+      valign = "center",
+      widget = wibox.widget.textclock,
+    },
+    fg = text_color,
+    widget = wibox.container.background,
+  }
 
-  widget._preserve_colors = true
-  widget.fg = text_color
-  widget._preferred_segment_width = label_width
-  widget._preferred_segment_height = dpi(46)
-  widget._segment_bg = segment_bg
-  widget._segment_edge = segment_bg
-  widget._segment_border_width = 0
+  local widget = wibox.widget {
+    left,
+    nil,
+    time,
+    expand = "inside",
+    forced_width = label_width,
+    layout = wibox.layout.align.horizontal,
+  }
 
   awful.tooltip {
     objects = { widget },

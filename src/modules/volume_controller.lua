@@ -907,6 +907,20 @@ return function(s)
     function(scr)
       if scr == s then
         volume_controller_container.visible = not volume_controller_container.visible
+        if volume_controller_container.visible then
+          local geo = mouse.current_widget_geometry
+          if geo then
+            awful.placement.next_to(volume_controller_container, {
+              geometry = geo,
+              preferred_positions = "bottom",
+              preferred_anchors = "back",
+            })
+          else
+            awful.placement.align(volume_controller_container,
+              { position = "top_right", margins = { right = dpi(305), top = dpi(60) } })
+          end
+          awful.placement.no_offscreen(volume_controller_container)
+        end
       end
 
     end

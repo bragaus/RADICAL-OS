@@ -17,9 +17,10 @@ local gears = require("gears")
 local wibox = require("wibox")
 local dpi = require("beautiful.xresources").apply_dpi
 local p = require("src.theme.palette")
+local Icon = require("src.tools.icons") -- ícones SVG do set icons/ (§3.13)
 
+local KILL_SVG   = gears.filesystem.get_configuration_dir() .. "icons/svg/kill.svg"
 local MONO       = "JetBrainsMono Nerd Font"
-local KILL_GLYPH = "" -- nf-md-skull
 local NAME_MAX   = 22 -- chars máximos do nome antes de encurtar
 local MAX_ROWS   = 12 -- teto de linhas renderizadas (evita estourar a coluna)
 
@@ -42,23 +43,18 @@ local function client_label(c)
   return shorten(label)
 end
 
--- Célula de KILL: glyph skull; hover -> crit (+ hand1); clique-esquerdo -> c:kill().
+-- Célula de KILL: ícone SVG (set icons/); hover -> crit (+ hand1); clique-esquerdo -> c:kill().
 local function kill_cell(c)
-  local skull = wibox.widget {
-    text   = KILL_GLYPH,
-    font   = MONO .. " 9",
-    align  = "center",
-    valign = "center",
-    widget = wibox.widget.textbox,
-  }
+  local ib = Icon("kill", { size = dpi(14), color = p.text_muted })
   local cellbg = wibox.widget {
-    skull,
-    fg           = p.text_muted,
+    { ib, widget = wibox.container.place },
     forced_width = dpi(28),
     widget       = wibox.container.background,
   }
 
-  -- bg=nil -> só recolore o fg p/ crit no hover; Hover_signal já seta cursor hand1.
+  -- Recolore a imagem p/ crit no hover (imagebox não muda cor via fg); Hover_signal -> hand1.
+  cellbg:connect_signal("mouse::enter", function() ib.image = gears.color.recolor_image(KILL_SVG, p.crit) end)
+  cellbg:connect_signal("mouse::leave", function() ib.image = gears.color.recolor_image(KILL_SVG, p.text_muted) end)
   Hover_signal(cellbg, nil, p.crit)
 
   cellbg:buttons(awful.util.table.join(

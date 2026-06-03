@@ -2,7 +2,11 @@
 -- This is the statusbar, every widget, module and so on is combined to all the stuff you see on the screen --
 --------------------------------------------------------------------------------------------------------------
 local awful = require("awful")
+local wibox = require("wibox")
 local dpi = require("beautiful").xresources.apply_dpi
+local p = require("src.theme.palette")
+local panel = require("src.tools.panel")
+local Icon = require("src.tools.icons")
 
 -- Pick a primary that is actually usable: prefer screen.primary, but if its
 -- geometry is zero (e.g. xrandr left a disconnected output marked primary),
@@ -33,18 +37,19 @@ awful.screen.connect_for_each_screen(
     user_vars.layouts[12]
   )
 --[[ uma das coisas mais tristes na vida e chegar ao fim e olhar oara traz com remorso, sabendo que voce poderia teer sido feito e tido muito mais --]]
-  require("src.modules.powermenu")(s)
-  -- TODO: rewrite calendar osd, maybe write an own inplementation
-  -- require("src.modules.calendar_osd")(s)
-  require("src.modules.volume_osd")(s)
-  require("src.modules.brightness_osd")(s)
-  require("src.modules.titlebar")
-  require("src.modules.volume_controller")(s)
-
-  -- Widgets
-  s.layoutlist = require("src.widgets.layout_list")(s)
-  s.taglist = require("src.widgets.taglist")(s)
+  -- Tela secundária (vertical) fica limpa: só tags, sem barras/widgets/menus/OSDs.
   if s == resolve_primary() then
+    require("src.modules.powermenu")(s)
+    -- TODO: rewrite calendar osd, maybe write an own inplementation
+    -- require("src.modules.calendar_osd")(s)
+    require("src.modules.volume_osd")(s)
+    require("src.modules.brightness_osd")(s)
+    require("src.modules.titlebar")
+    require("src.modules.volume_controller")(s)
+
+    -- Widgets
+    s.layoutlist = require("src.widgets.layout_list")(s)
+    s.taglist = require("src.widgets.taglist")(s)
     -- =====================================================================================
     -- BARRA SUPERIOR + DASHBOARDS ON-CLICK (DESIGN_SYSTEM §5).
     -- Sem colunas estáticas, sem chart monolítico, sem dock: os painéis aparecem em popups
@@ -68,18 +73,34 @@ awful.screen.connect_for_each_screen(
     s.protocols_donut   = require("src.widgets.protocols_donut") { w = W }
     s.apps_panel        = require("src.widgets.apps_panel") { w = W }
     s.calendar_panel    = require("src.widgets.calendar_panel") { w = W }
-    s.clock_br = require("src.widgets.world_clock") { city = "BRASIL", timezone = "America/Sao_Paulo", country = "br", width = dpi(150), segment_bg = "#130a24" }
-    s.clock_fr = require("src.widgets.world_clock") { city = "FRANCA", timezone = "Europe/Paris", country = "fr", width = dpi(150), segment_bg = "#1b1030" }
-    s.clock_jp = require("src.widgets.world_clock") { city = "JAPAO", timezone = "Asia/Tokyo", country = "jp", width = dpi(150), segment_bg = "#241640" }
-    s.clock_us = require("src.widgets.world_clock") { city = "EUA", timezone = "America/New_York", country = "us", width = dpi(150), segment_bg = "#2e1065" }
+    s.clock_br = require("src.widgets.world_clock") { city = "BRASIL", timezone = "America/Sao_Paulo", country = "br", width = dpi(504) }
+    s.clock_fr = require("src.widgets.world_clock") { city = "FRANCA", timezone = "Europe/Paris", country = "fr", width = dpi(504) }
+    s.clock_jp = require("src.widgets.world_clock") { city = "JAPAO", timezone = "Asia/Tokyo", country = "jp", width = dpi(504) }
+    s.clock_us = require("src.widgets.world_clock") { city = "EUA", timezone = "America/New_York", country = "us", width = dpi(504) }
+    s.international_panel = panel({
+      title = "INTERNATIONAL",
+      w = W,
+      right_icon = Icon("clock", { size = dpi(14), color = p.text_muted }),
+      body = wibox.widget {
+        s.clock_br,
+        s.clock_fr,
+        s.clock_jp,
+        s.clock_us,
+        spacing = dpi(6),
+        layout = wibox.layout.fixed.vertical,
+      },
+    })
 
     -- ----- CONTROL CENTER: lozenges clicáveis (topo-centro) + dashboards on-click -----
     require("src.widgets.control_center")(s, {
       right_widget   = s.powerbutton, -- power vai p/ a barra do canto superior-direito (junto do relógio)
       system_panels  = { s.info_panel, s.usage_panel, s.process_panel },
       network_panels = { s.net_graph_panel, s.ip_panel, s.connections_panel, s.protocols_donut, s.apps_panel },
-      time_panels    = { s.calendar_panel, s.clock_br, s.clock_fr, s.clock_jp, s.clock_us },
+      time_panels    = { s.calendar_panel, s.international_panel },
     })
+
+    -- ----- LAUNCHER: botão GIF circular no canto inferior-direito + menu de apps -----
+    s.app_launcher = require("src.widgets.app_launcher")(s)
   end
 end
 )

@@ -8,9 +8,15 @@ local dpi = require("beautiful").xresources.apply_dpi
 local gears = require("gears")
 local wibox = require("wibox")
 local p = require("src.theme.palette")
+local panel = require("src.tools.panel")
 
 -- Icon directory path
 local icondir = awful.util.getdir("config") .. "src/assets/icons/brightness/"
+-- VIOLET HUD icon set (icons/svg/): brightness (§3.13.1), recolorido p/ text_heading.
+local hud_svg = awful.util.getdir("config") .. "icons/svg/"
+local function brightness_image()
+  return gears.color.recolor_image(hud_svg .. "brightness.svg", p.text_heading)
+end
 
 -- This is a desktop with an NVIDIA RTX 3060 and an external DP monitor: there is no
 -- hardware backlight (/sys/class/backlight is empty), so brightness is done in software
@@ -21,121 +27,73 @@ BACKLIGHT_SEPS = 10
 
 return function(s)
 
-  local brightness_osd_widget = wibox.widget {
-    {
-      {
-        {
-          {
-            nil,
-            {
-              nil,
-              {
-                {
-                  id = "icon",
-                  forced_height = dpi(220),
-                  image = icondir .. "brightness-high.svg",
-                  widget = wibox.widget.imagebox
-                },
-                fg = p.text_heading,
-                widget = wibox.container.background
-              },
-              nil,
-              expand = "none",
-              id = "icon_margin2",
-              layout = wibox.layout.align.vertical
-            },
-            nil,
-            id = "icon_margin1",
-            expand = "none",
-            layout = wibox.layout.align.horizontal
-          },
-          {
-            {
-              {
-                id = "label",
-                text = "Brightness",
-                align = "left",
-                valign = "center",
-                widget = wibox.widget.textbox
-              },
-              fg = p.text_muted,
-              widget = wibox.container.background
-            },
-            nil,
-            {
-              {
-                id = "value",
-                text = "0%",
-                align = "center",
-                valign = "center",
-                widget = wibox.widget.textbox
-              },
-              fg = p.text_bright,
-              widget = wibox.container.background
-            },
-            id = "label_value_layout",
-            forced_height = dpi(48),
-            layout = wibox.layout.align.horizontal,
-          },
-          {
-            {
-              id = "brightness_slider",
-              bar_shape = gears.shape.rounded_rect,
-              bar_height = dpi(10),
-              bar_color = p.inset,
-              bar_active_color = p.v500,
-              handle_color = p.v500,
-              handle_shape = gears.shape.circle,
-              handle_width = dpi(10),
-              handle_border_color = p.line_bright,
-              maximum = 100,
-              widget = wibox.widget.slider
-            },
-            id = "slider_layout",
-            forced_height = dpi(24),
-            widget = wibox.container.place
-          },
-          id = "icon_slider_layout",
-          spacing = dpi(0),
-          layout = wibox.layout.align.vertical
-        },
-        id = "osd_layout",
-        layout = wibox.layout.align.vertical
-      },
-      id = "container",
-      left = dpi(24),
-      right = dpi(24),
-      widget = wibox.container.margin
-    },
-    bg = p.a(p.panel, 0.9),
-    widget = wibox.container.background,
-    ontop = true,
-    visible = true,
-    type = "notification",
-    forced_height = dpi(300),
-    forced_width = dpi(300),
-    offset = dpi(5),
+  -- Sub-widgets como locais diretos: panel() aninha um `body` pré-construído, então os
+  -- ids declarativos NÃO entram no by_id do painel — get_children_by_id devolveria nil
+  -- (era o bug de construção). Referência direta é robusta (mesmo padrão do volume_osd).
+  local icon_image = wibox.widget {
+    forced_height = dpi(24),
+    forced_width  = dpi(24),
+    image         = brightness_image(),
+    widget        = wibox.widget.imagebox,
   }
 
-  -- Cached refs: the re-skin wrapped some textboxes/imageboxes in extra background
-  -- containers (to set fg), which breaks the dotted id chains. get_children_by_id
-  -- resolves an id regardless of nesting depth.
-  local value_label       = brightness_osd_widget:get_children_by_id("value")[1]
-  local icon_image        = brightness_osd_widget:get_children_by_id("icon")[1]
-  local brightness_slider = brightness_osd_widget:get_children_by_id("brightness_slider")[1]
+  local value_label = wibox.widget {
+    text   = "0%",
+    align  = "left",
+    valign = "center",
+    widget = wibox.widget.textbox,
+  }
+
+  local brightness_slider = wibox.widget {
+    bar_shape           = gears.shape.rounded_rect,
+    bar_height          = dpi(8),
+    bar_color           = p.inset,
+    bar_active_color    = {
+      type = "linear",
+      from = { 0, 0 },
+      to   = { dpi(232), 0 },
+      stops = { { 0, p.v700 }, { 1, p.v500 } },
+    },
+    handle_color        = p.v500,
+    handle_shape        = gears.shape.circle,
+    handle_width        = dpi(10),
+    handle_border_color = p.line_bright,
+    maximum             = 100,
+    widget              = wibox.widget.slider,
+  }
+
+  local osd_body = wibox.widget {
+    {
+      icon_image,
+      fg     = p.text_heading,
+      widget = wibox.container.background,
+    },
+    {
+      {
+        value_label,
+        fg     = p.text_bright,
+        widget = wibox.container.background,
+      },
+      {
+        brightness_slider,
+        widget = wibox.container.place,
+      },
+      spacing = dpi(6),
+      layout  = wibox.layout.fixed.vertical,
+    },
+    spacing = dpi(10),
+    layout  = wibox.layout.fixed.horizontal,
+  }
+
+  local brightness_osd_widget = panel({
+    title = "BRIGHTNESS",
+    body  = osd_body,
+    w     = dpi(280),
+  })
 
   local refresh_label = function(brightness_value)
     value_label:set_text(tostring(brightness_value) .. "%")
-
-    local icon = icondir .. "brightness"
-    if brightness_value >= 0 and brightness_value < 34 then
-      icon = icon .. "-low"
-    elseif brightness_value >= 34 and brightness_value < 67 then
-      icon = icon .. "-medium"
-    elseif brightness_value >= 67 then
-      icon = icon .. "-high"
-    end
-    icon_image:set_image(icon .. ".svg")
+    icon_image:set_image(brightness_image())
   end
 
   -- Guard so programmatic set_value() (from update_slider) does not re-trigger an xrandr write.
@@ -200,9 +158,9 @@ return function(s)
     stretch = false,
     visible = false,
     screen = s,
-    placement = function(c) awful.placement.centered(c, { margins = { top = dpi(200) } }) end,
+    placement = function(c) awful.placement.bottom(c, { margins = { bottom = dpi(40) } }) end,
     shape = function(cr, width, height)
-      gears.shape.rounded_rect(cr, width, height, 15)
+      gears.shape.rounded_rect(cr, width, height, dpi(4))
     end
   }
 

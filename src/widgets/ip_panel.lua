@@ -20,6 +20,7 @@ local gears = require("gears")
 local wibox = require("wibox")
 local dpi = require("beautiful.xresources").apply_dpi
 local p = require("src.theme.palette")
+local Icon = require("src.tools.icons") -- ícones SVG do set icons/ (§3.13)
 
 local FONT = "JetBrainsMono Nerd Font 9"
 local EMPTY = "—"
@@ -150,9 +151,10 @@ return function(args)
   }
 
   return panel({
-    title  = "IP",
-    body   = body,
-    accent = p.v500,
-    w      = args.w or dpi(260),
+    title      = "IP",
+    body       = body,
+    accent     = p.v500,
+    w          = args.w or dpi(260),
+    right_icon = Icon("net", { size = dpi(14), color = p.text_muted }),
   })
 end

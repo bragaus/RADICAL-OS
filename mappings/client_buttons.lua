@@ -15,5 +15,13 @@ return gears.table.join(
   awful.button({ modkey }, 3, function(c)
     c:emit_signal("request::activate", "mouse_click", { raise = true })
     awful.mouse.client.resize(c)
+  end),
+  -- Clique do SCROLL (botão do meio / roda) abre o menu de contexto VIOLET HUD (§7.5).
+  -- Botão-direito SEM modkey continua livre p/ o app (tmux/terminal/navegador) usar o
+  -- próprio menu. (Atenção: em terminais o botão-do-meio costuma colar a seleção; aqui
+  -- ele é capturado p/ o menu. Resize de janela = modkey + clique-direito.)
+  awful.button({}, 2, function(c)
+    c:emit_signal("request::activate", "mouse_click", { raise = true })
+    require("src.widgets.context_menu")(c)
   end)
 )

@@ -11,6 +11,8 @@ local naughty = require("naughty")
 local wibox = require("wibox")
 
 local icondir = awful.util.getdir("config") .. "src/assets/icons/notifications/"
+-- VIOLET HUD icon set (icons/svg/) — notification / dnd (§3.13.1).
+local hud_svg = awful.util.getdir("config") .. "icons/svg/"
 
 -- TODO: Figure out how to use hover effects without messing up the actions
 naughty.config.defaults.ontop = true
@@ -20,7 +22,7 @@ naughty.config.defaults.title = "System Notification"
 naughty.config.defaults.margin = dpi(10)
 naughty.config.defaults.position = "bottom_right"
 naughty.config.defaults.shape = function(cr, width, height)
-  gears.shape.rounded_rect(cr, width, height, dpi(10))
+  gears.shape.rounded_rect(cr, width, height, dpi(4))
 end
 naughty.config.defaults.border_width = dpi(1)
 naughty.config.defaults.border_color = p.line_base
@@ -179,7 +181,7 @@ naughty.connect_signal(
                       {
                         {
                           {
-                            image = gears.color.recolor_image(icondir .. "notification-outline.svg", p.text_muted),
+                            image = gears.color.recolor_image(hud_svg .. "notification.svg", p.text_muted),
                             resize = false,
                             widget = wibox.widget.imagebox
                           },
@@ -404,7 +406,7 @@ naughty.connect_signal(
       type = "notification",
       screen = awful.screen.focused(),
       shape = function(cr, width, height)
-        gears.shape.rounded_rect(cr, width, height, 10)
+        gears.shape.rounded_rect(cr, width, height, dpi(4))
       end,
       widget_template = w_template
     }

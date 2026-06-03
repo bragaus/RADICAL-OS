@@ -19,6 +19,7 @@ local gears = require("gears")
 local wibox = require("wibox")
 local dpi = require("beautiful.xresources").apply_dpi
 local p = require("src.theme.palette")
+local Icon = require("src.tools.icons") -- ícones SVG do set icons/ (§3.13)
 
 local MONO = "JetBrainsMono Nerd Font"
 local SAMPLES = 30 -- profundidade do histórico (≈30s a 1s/amostra)
@@ -201,18 +202,24 @@ return function(args)
   local up_rate = make_rate_label()
   local down_rate = make_rate_label()
 
-  -- cabeçalho de uma série: rótulo (text_muted, esquerda) + taxa (acento, direita)
-  local function make_header(label_text, rate_widget, accent)
+  -- cabeçalho de uma série: ícone SVG (net_up/net_down) + rótulo (text_muted, esquerda)
+  -- + taxa (acento, direita).
+  local function make_header(icon_name, label_text, rate_widget, accent)
     return wibox.widget {
       {
+        Icon(icon_name, { size = dpi(12), color = accent }),
         {
-          text = label_text,
-          font = MONO .. " 9",
-          valign = "center",
-          widget = wibox.widget.textbox,
+          {
+            text = label_text,
+            font = MONO .. " 9",
+            valign = "center",
+            widget = wibox.widget.textbox,
+          },
+          fg = p.text_muted,
+          widget = wibox.container.background,
         },
-        fg = p.text_muted,
-        widget = wibox.container.background,
+        spacing = dpi(5),
+        layout = wibox.layout.fixed.horizontal,
       },
       nil,
       {
@@ -226,9 +233,9 @@ return function(args)
   end
 
   -- bloco de uma série: header + gráfico
-  local function make_block(label_text, rate_widget, graph, accent)
+  local function make_block(icon_name, label_text, rate_widget, graph, accent)
     return wibox.widget {
-      make_header(label_text, rate_widget, accent),
+      make_header(icon_name, label_text, rate_widget, accent),
       graph,
       spacing = dpi(4),
       layout = wibox.layout.fixed.vertical,
@@ -236,8 +243,8 @@ return function(args)
   end
 
   local body = wibox.widget {
-    make_block("↑ UPLOAD", up_rate, up_graph, p.data4),
-    make_block("↓ DOWNLOAD", down_rate, down_graph, p.v400),
+    make_block("net_up", "UPLOAD", up_rate, up_graph, p.data4),
+    make_block("net_down", "DOWNLOAD", down_rate, down_graph, p.v400),
     spacing = dpi(10),
     layout = wibox.layout.fixed.vertical,
   }
@@ -334,5 +341,6 @@ return function(args)
     body = body,
     accent = p.v500,
     w = args.w or dpi(260),
+    right_icon = Icon("net", { size = dpi(14), color = p.text_muted }),
   })
 end

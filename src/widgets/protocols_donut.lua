@@ -13,6 +13,7 @@ local wibox = require("wibox")
 local dpi = require("beautiful.xresources").apply_dpi
 local p = require("src.theme.palette")
 local panel = require("src.tools.panel")
+local Icon = require("src.tools.icons") -- ícones SVG do set icons/ (§3.13)
 
 local FONT_LABEL = "JetBrainsMono Nerd Font, 9"
 local FONT_VALUE = "JetBrainsMono Nerd Font, Bold 9"
@@ -26,7 +27,7 @@ return function(args)
     min_value     = 0,
     max_value     = 1,
     values        = { 0, 0, 0 },
-    colors        = { p.data1, p.data3, p.v950 },
+    colors        = { p.data1, p.data3, p.data5 },
     border_width  = dpi(1),
     border_color  = p.base,
     rounded_edge  = false,
@@ -43,14 +44,15 @@ return function(args)
 
   -- Uma linha da legenda: quadradinho colorido + label + contagem ------------------------
   local function legend_row(color)
+    local swatch_bg = wibox.widget {
+      bg            = color,
+      forced_width  = dpi(10),
+      forced_height = dpi(10),
+      shape         = function(cr, w, h) gears.shape.rounded_rect(cr, w, h, dpi(2)) end,
+      widget        = wibox.container.background,
+    }
     local swatch = wibox.widget {
-      {
-        bg            = color,
-        forced_width  = dpi(10),
-        forced_height = dpi(10),
-        shape         = function(cr, w, h) gears.shape.rounded_rect(cr, w, h, dpi(2)) end,
-        widget        = wibox.container.background,
-      },
+      swatch_bg,
       valign = "center",
       widget = wibox.container.place,
     }
@@ -83,24 +85,18 @@ return function(args)
       layout        = wibox.layout.align.horizontal,
     }
 
-    return row, label, count
+    return row, swatch_bg, label, count
   end
 
-  local row_estab, lbl_estab, cnt_estab = legend_row(p.data1)
-  local row_listen, lbl_listen, cnt_listen = legend_row(p.data3)
-  local row_other, lbl_other, cnt_other = legend_row(p.v950)
-
-  lbl_estab:set_text("ESTABLISHED")
-  lbl_listen:set_text("LISTEN")
-  lbl_other:set_text("OTHER")
-  cnt_estab:set_text("0")
-  cnt_listen:set_text("0")
-  cnt_other:set_text("0")
+  -- Três linhas genéricas; rótulo/cor/valor são atribuídos por ordem (maior→menor) no update.
+  local row1, sw1, lbl1, cnt1 = legend_row(p.data1)
+  local row2, sw2, lbl2, cnt2 = legend_row(p.data3)
+  local row3, sw3, lbl3, cnt3 = legend_row(p.data5)
 
   local legend = wibox.widget {
-    row_estab,
-    row_listen,
-    row_other,
+    row1,
+    row2,
+    row3,
     spacing = dpi(4),
     layout  = wibox.layout.fixed.vertical,
   }
@@ -118,19 +114,39 @@ return function(args)
   }
 
   -- Atualização --------------------------------------------------------------------------
+  local legend_slots = {
+    { sw = sw1, lbl = lbl1, cnt = cnt1 },
+    { sw = sw2, lbl = lbl2, cnt = cnt2 },
+    { sw = sw3, lbl = lbl3, cnt = cnt3 },
+  }
+
   local function update(estab, listen, other)
     estab  = tonumber(estab) or 0
     listen = tonumber(listen) or 0
     other  = tonumber(other) or 0
 
     local sum = estab + listen + other
+
+    -- Ordena as três categorias por valor (maior→menor) para donut e legenda.
+    local cats = {
+      { value = estab,  color = p.data1, label = "ESTABLISHED" },
+      { value = listen, color = p.data3, label = "LISTEN" },
+      { value = other,  color = p.data5, label = "OTHER" },
+    }
+    table.sort(cats, function(a, b) return a.value > b.value end)
+
     -- Guarda contra all-zero (evita divisão por zero no arcchart)
     donut.max_value = (sum > 0) and sum or 1
-    donut.values    = { estab, listen, other }
+    donut.values    = { cats[1].value, cats[2].value, cats[3].value }
+    donut.colors    = { cats[1].color, cats[2].color, cats[3].color }
 
-    cnt_estab:set_text(tostring(estab))
-    cnt_listen:set_text(tostring(listen))
-    cnt_other:set_text(tostring(other))
+    for i, slot in ipairs(legend_slots) do
+      local c   = cats[i]
+      local pct = (sum > 0) and math.floor(c.value / sum * 100 + 0.5) or 0
+      slot.sw.bg = c.color
+      slot.lbl:set_text(c.label)
+      slot.cnt:set_text(pct .. "%")
+    end
   end
 
   -- ss -tunH: uma linha por socket; o campo de estado é a 2a coluna (Netid State ...).
@@ -159,5 +175,11 @@ return function(args)
     callback  = refresh,
   }
 
-  return panel({ title = "PROTOCOLS", body = body, accent = p.v500, w = args.w or dpi(300) })
+  return panel({
+    title      = "PROTOCOLS",
+    body       = body,
+    accent     = p.v500,
+    w          = args.w or dpi(300),
+    right_icon = Icon("send_signal", { size = dpi(14), color = p.text_muted }),
+  })
 end

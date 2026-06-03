@@ -19,10 +19,12 @@ local gears = require("gears")
 local wibox = require("wibox")
 local dpi = require("beautiful.xresources").apply_dpi
 local p = require("src.theme.palette")
+local Icon = require("src.tools.icons") -- ícones SVG do set icons/ (§3.13)
 
 local MONO = "JetBrainsMono Nerd Font"
 local MAX_CORES = 8
 local HOT_TEMP = 80 -- >= -> p.crit
+local HOT_USED = 90 -- >= -> p.glow_hot (alert threshold §7.4.2)
 
 -- Comando único: per-core /proc/stat + MHz por processor + temps do sensors.
 -- Delimitadores garantem parse robusto mesmo se `sensors` faltar.
@@ -88,12 +90,13 @@ return function(args)
 
   -- Monta a linha de um core: rótulo (muted) + GHz/TEMP/USED% (right, bright).
   -- temp_hot=true recolora a célula TEMP para p.crit.
-  local function build_row(label, ghz, temp, used, temp_hot)
+  -- used_hot=true recolora a célula USED% para p.glow_hot (>= alert threshold).
+  local function build_row(label, ghz, temp, used, temp_hot, used_hot)
     return wibox.widget {
       cell(label, p.text_muted, "left",  W_CORE),
       cell(ghz,   p.text_bright, "right", W_GHZ),
       cell(temp,  temp_hot and p.crit or p.text_bright, "right", W_TEMP),
-      cell(used,  p.text_bright, "right", W_USED),
+      cell(used,  used_hot and p.glow_hot or p.text_bright, "right", W_USED),
       forced_height = dpi(18),
       spacing       = dpi(4),
       layout        = wibox.layout.fixed.horizontal,
@@ -210,11 +213,14 @@ return function(args)
       end
 
       local used_str = "--"
-      if tonumber(used[i]) then
-        used_str = string.format("%d", math.floor(used[i] + 0.5))
+      local used_hot = false
+      local uv = tonumber(used[i])
+      if uv then
+        used_str = string.format("%d", math.floor(uv + 0.5))
+        used_hot = uv >= HOT_USED
       end
 
-      rows:add(build_row(label, ghz_str, temp_str, used_str, temp_hot))
+      rows:add(build_row(label, ghz_str, temp_str, used_str, temp_hot, used_hot))
     end
   end
 
@@ -230,9 +236,10 @@ return function(args)
   }
 
   return panel({
-    title  = "USAGE",
-    body   = body,
-    accent = p.v500,
-    w      = args.w or dpi(260),
+    title      = "USAGE",
+    body       = body,
+    accent     = p.v500,
+    w          = args.w or dpi(260),
+    right_icon = Icon("cpu_temp", { size = dpi(14), color = p.text_muted }),
   })
 end

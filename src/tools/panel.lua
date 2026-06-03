@@ -43,6 +43,7 @@ local function build(opts)
   local pad          = opts.pad or dpi(8)
   local grad_w       = opts.w or dpi(300)
   local border_color = opts.focus and p.line_bright or p.line_base
+  local focused      = opts.focus and true or false
 
   -- Título (caixa-alta, text_heading, extrabold) centralizado verticalmente
   local title_box = wibox.widget {
@@ -98,11 +99,11 @@ local function build(opts)
 
   -- Decoração desenhada atrás do conteúdo: header band + bevel + ticks de canto
   local function decoration(_, cr, w, h)
-    -- header band (panel_hi), recortado nos cantos arredondados do topo
+    -- header band (foco => v700, senão panel_hi), recortado nos cantos arredondados do topo
     cr:save()
     gears.shape.rounded_rect(cr, w, h, radius)
     cr:clip()
-    cr:set_source(gears.color(p.panel_hi))
+    cr:set_source(gears.color(focused and p.v700 or p.panel_hi))
     cr:rectangle(0, 0, w, header_h)
     cr:fill()
     cr:restore()
@@ -143,9 +144,11 @@ local function build(opts)
   if opts.w then outer.forced_width = opts.w end
   if opts.h then outer.forced_height = opts.h end
 
-  -- Troca a cor da borda (normal/foco) em runtime
+  -- Troca a cor da borda (normal/foco) e a header band em runtime
   function outer:panel_set_focus(f)
+    focused = f and true or false
     self.shape_border_color = f and p.line_bright or p.line_base
+    self:emit_signal("widget::redraw_needed")
   end
 
   return outer

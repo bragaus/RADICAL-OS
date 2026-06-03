@@ -12,6 +12,8 @@ require("src.core.signals")
 
 -- Icon directory path
 local icondir = awful.util.getdir("config") .. "src/assets/icons/powermenu/"
+-- VIOLET HUD icon set (icons/svg/) — fonte dos ícones de power (§3.13.1).
+local hud_icondir = awful.util.getdir("config") .. "icons/svg/"
 
 return function(s)
   local panel_transparency = (user_vars.transparency and user_vars.transparency.panels) or {}
@@ -91,7 +93,7 @@ return function(s)
             {
               {
                 text = name,
-                font = "JetBrains Mono Bold 30",
+                font = user_vars.font.extrabold,
                 widget = wibox.widget.textbox
               },
               margins = dpi(0),
@@ -105,7 +107,7 @@ return function(s)
         fg = p.v50,
         bg = bg_color,
         shape = function(cr, width, height)
-          gears.shape.rounded_rect(cr, width, height, 10)
+          gears.shape.rounded_rect(cr, width, height, dpi(3))
         end,
         widget = wibox.container.background,
         id = 'background'
@@ -150,11 +152,11 @@ return function(s)
   end
 
   -- Create the buttons with their command and name etc
-  local shutdown_button = button("Shutdown", icondir .. "shutdown.svg", p.v700, shutdown_command)
-  local reboot_button = button("Reboot", icondir .. "reboot.svg", p.v700, reboot_command)
-  local suspend_button = button("Suspend", icondir .. "suspend.svg", p.v700, suspend_command)
-  local logout_button = button("Logout", icondir .. "logout.svg", p.v700, logout_command)
-  local lock_button = button("Lock", icondir .. "lock.svg", p.v700, lock_command)
+  local shutdown_button = button("Shutdown", hud_icondir .. "shutdown.svg", p.v700, shutdown_command)
+  local reboot_button = button("Reboot", hud_icondir .. "reboot.svg", p.v700, reboot_command)
+  local suspend_button = button("Suspend", hud_icondir .. "suspend.svg", p.v700, suspend_command)
+  local logout_button = button("Logout", hud_icondir .. "logout.svg", p.v700, logout_command)
+  local lock_button = button("Lock", hud_icondir .. "lock.svg", p.v700, lock_command)
 
   -- Signals to change color on hover
   Hover_signal(shutdown_button.background, p.v600, p.v50)

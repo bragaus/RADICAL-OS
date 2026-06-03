@@ -8,7 +8,20 @@ local color = require("src.theme.colors")
 local p = require("src.theme.palette")
 local gears = require("gears")
 local dpi = require("beautiful").xresources.apply_dpi
+local Icon = require("src.tools.icons") -- ícones SVG do set icons/ (§3.13)
 require("src.tools.icon_handler")
+
+-- Mapa nome-da-tag -> ícone de TIPO (set icons/, categoria "tags"). Default: term.
+local TAG_ICON = {
+  ["PLANO-WEB3"]   = "internet",
+  ["VIBE-STUDING"] = "edit",
+  ["GHOST-SIGN"]   = "develop",
+  ["NEW-ICHIMOKU"] = "media",
+  ["NEW"]          = "files",
+}
+local function tag_icon(name)
+  return (name and TAG_ICON[name:upper()]) or "term"
+end
 
 local panel_transparency = (user_vars.transparency and user_vars.transparency.panels) or {}
 local tab_alpha = panel_transparency.enabled == false and 1 or (panel_transparency.tab or 0.88)
@@ -20,7 +33,7 @@ local palette = {
   selected_bg = color.with_alpha(p.v500, tab_alpha),
   urgent_bg = color.with_alpha(p.glow_hot, tab_alpha),
   empty_fg = p.text_muted,
-  occupied_fg = p.text_muted,
+  occupied_fg = p.text_primary,
   selected_fg = p.v50,
   separator_fg = p.line_dim
 }
@@ -87,6 +100,7 @@ local list_update = function(widget, buttons, _, _, objects)
     local background = wibox.widget {
       {
         {
+          Icon(tag_icon(object.name), { size = dpi(14), color = fg }),
           {
             markup = string.format("<span weight='bold'>%s</span>", tostring(object.index)),
             align = "center",
