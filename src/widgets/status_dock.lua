@@ -24,16 +24,11 @@ local gears = require("gears")
 local wibox = require("wibox")
 local dpi = require("beautiful.xresources").apply_dpi
 local p = require("src.theme.palette")
+local Icon = require("src.tools.icons") -- ícones SVG do set icons/ (§3.13)
 
 local MONO   = "JetBrainsMono Nerd Font 10"
 local HEIGHT = dpi(22)
 local PILL_H = dpi(20)
-
--- Glyphs Nerd Font para cada lozenge.
-local GLYPH_CPU = ""
-local GLYPH_MEM = ""
-local GLYPH_NET = ""
-local GLYPH_VOL = ""
 
 -- Forma de lozenge: hexágono achatado (pontas de seta côncava), igual ao tab_shape
 -- do taglist. As pontas laterais apontam para fora, dando o efeito de cápsula.
@@ -66,13 +61,8 @@ return function(args)
   -- Cria uma lozenge (pílula hexagonal) com glyph + valor.
   -- Retorna o widget; o textbox de valor fica acessível em ._value e o background
   -- de fg do valor em ._value_bg (para alternar glow_hot em alerta).
-  local function make_lozenge(glyph)
-    local glyph_box = wibox.widget {
-      text   = glyph,
-      font   = MONO,
-      valign = "center",
-      widget = wibox.widget.textbox,
-    }
+  local function make_lozenge(icon_name)
+    local glyph_box = Icon(icon_name, { size = dpi(16) }) -- ícone SVG (multitom violeta)
     local value_box = wibox.widget {
       text   = "--",
       font   = MONO,
@@ -120,10 +110,10 @@ return function(args)
     end
   end
 
-  local pill_cpu = make_lozenge(GLYPH_CPU)
-  local pill_mem = make_lozenge(GLYPH_MEM)
-  local pill_net = make_lozenge(GLYPH_NET)
-  local pill_vol = make_lozenge(GLYPH_VOL)
+  local pill_cpu = make_lozenge("cpu")
+  local pill_mem = make_lozenge("mem")
+  local pill_net = make_lozenge("net")
+  local pill_vol = make_lozenge("vol")
 
   -- Relógio HH:MM + data "Mês DD" à direita das pílulas.
   local clock_time = wibox.widget {

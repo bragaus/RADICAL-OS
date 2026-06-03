@@ -72,13 +72,15 @@ return function(s)
   -- Signals
   Hover_signal(layout, p.raised, glyph_active)
 
-  layout:connect_signal(
-    "button::press",
-    function()
-      awful.layout.inc(-1, s)
-      update_layout_icon()
-    end
-  )
+  -- Botões por-botão (antes: button::press em QUALQUER botão fazia sempre inc(-1), então
+  -- clique-esquerdo voltava o layout e scroll/direito também — rearranjava as janelas ao
+  -- contrário do esperado). Agora: esquerdo = próximo, direito = anterior, scroll = cicla.
+  layout:buttons(gears.table.join(
+    awful.button({}, 1, function() awful.layout.inc( 1, s); update_layout_icon() end),
+    awful.button({}, 3, function() awful.layout.inc(-1, s); update_layout_icon() end),
+    awful.button({}, 4, function() awful.layout.inc( 1, s); update_layout_icon() end),
+    awful.button({}, 5, function() awful.layout.inc(-1, s); update_layout_icon() end)
+  ))
 
   tag.connect_signal(
     "property::layout",

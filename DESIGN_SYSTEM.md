@@ -1,7 +1,7 @@
 # DESIGN_SYSTEM.md — RADICAL-WM · **VIOLET HUD EDITION**
 
 > Sistema de design para **redesenhar do zero** a interface do AwesomeWM (Lua) deste
-> repositório, copiando a linguagem visual da **imagem de referência** (o "rice" azul,
+> repositório, copiando a linguagem visual da **imagem_de_referencia.png** Localizada nesse repositorio (o "rice" azul,
 > denso, em painéis com cabeçalho e gráficos) e **traduzindo a paleta azul para roxo**.
 >
 > **Diretriz primária:** o alvo é a imagem de referência. **NÃO** preserve o visual atual
@@ -324,78 +324,178 @@ E em `src/core/signals.lua`, o workaround de foco passa de `#9C27B0` para `p.glo
 > O repo tem um set próprio de ícones em **`icons/`** (raiz da config), **já desenhados na paleta
 > VIOLET HUD**. São a fonte de verdade para ícones dos **monitores de hardware** e dos controles —
 > **preferidos sobre os glyphs Nerd-Font**, que ficam só como fallback onde faltar SVG.
+>
+> **Status de integração:** o set **já está conectado** aos widgets via `src/tools/icons.lua`
+> (`Icon("<n>")`). **36 dos 41** ícones têm consumidor no código; os 5 restantes
+> (`battery` `dnd` `gpu_temp` `wifi` `doc`) ficam **reservados** por falta de hardware/UI
+> correspondente — ver tabela de integração em [§3.13.1](#3131-mapeamento-elemento--ícone-onde-cada-ícone-entra--status-wired).
 
 **Estrutura:**
 - `icons/svg/<nome>.svg` — **41 vetoriais** (use estes; escalam sem perda).
 - `icons/png/{16,24,32,48,64}/<nome>.png` — rasterizados (fallback p/ tamanho fixo).
 - `icons/icondata.json` — metadados + categorias.
 
-**Cor:** os SVGs já vêm na paleta (traço `text_primary #cbb6ff`, fills `v400 #9d6ff6` / `v500
-#8b5cf6` / `glow_ice #d6c2ff`). **Use como estão por padrão.** Recolorir **só por estado**:
-`gears.color.recolor_image("icons/svg/<n>.svg", p.<token>)` — ex.: KILL → `crit` no hover; valor
-de stat ≥ 90% → `glow_hot`; ≥ 80 °C → `crit`. (Não fazer monocromático global.)
+**Cor:** os SVGs já vêm na paleta — **7 tokens** (inventário completo + ocorrências em
+[§3.13.2](#3132-formato-de-dados-icondatajson--geometria-svg--inventário-de-cor)):
+`text_primary #cbb6ff` (todo o traço/contorno), `v400 #9d6ff6` e `v500 #8b5cf6` (fills de
+acento/primário), `bevel_lo #160c28` (espaço negativo: olhos do skull, furo do cadeado,
+janela de trás do `floating`), `glow_ice #d6c2ff` (realce/LED: ponto do `wifi`, núcleo do
+`send_signal`), `text_muted #6f5a96` (células inativas do `calendar`) e `v800 #5b21b6` (fill
+profundo: corpo da pasta `files`, pino do `sticky`). **Use como estão por padrão.** Recolorir
+**só por estado**: `gears.color.recolor_image("icons/svg/<n>.svg", p.<token>)` — ex.: KILL →
+`crit` no hover; valor de stat ≥ 90% → `glow_hot`; ≥ 80 °C → `crit`. (Não fazer monocromático
+global; recolor pinta o SVG inteiro de uma cor só — perde a composição multitom.)
 
-**Helper a CRIAR — `src/tools/icons.lua`** (reusa o padrão `recolor_image`+`imagebox` de
-`clock.lua`/`network.lua`/`battery.lua`):
+**Helper — `src/tools/icons.lua` (JÁ EXISTE no repo).** Reusa o padrão `recolor_image`+`imagebox`
+de `clock.lua`/`network.lua`/`battery.lua`. Assinatura `Icon(name, opts)` → `wibox.widget.imagebox`:
+`opts.color` recolore o SVG inteiro (omita p/ manter o multitom nativo); `opts.size` força
+largura/altura em px. Conteúdo atual:
 ```lua
--- Icon("cpu", { color = p.text_muted, size = dpi(18) }) -> wibox.widget.imagebox
+-- local Icon = require("src.tools.icons")
+-- Icon("cpu")                                   -- imagebox multitom, tamanho natural
+-- Icon("kill", { color = p.crit, size = dpi(14) })  -- recolorido + tamanho fixo
 local gfs    = require("gears.filesystem")
 local gcolor = require("gears.color")
 local wibox  = require("wibox")
 local DIR = gfs.get_configuration_dir() .. "icons/svg/"
-return function(name, o)
-  o = o or {}
-  local img = DIR .. name .. ".svg"
-  if o.color then img = gcolor.recolor_image(img, o.color) end
+local function Icon(name, opts)
+  opts = opts or {}
+  local path  = DIR .. tostring(name) .. ".svg"
+  local image = opts.color and gcolor.recolor_image(path, opts.color) or path
   return wibox.widget {
-    image = img, resize = true,
-    forced_width = o.size, forced_height = o.size,
-    widget = wibox.widget.imagebox,
+    image         = image,
+    resize        = true,
+    forced_width  = opts.size,
+    forced_height = opts.size,
+    widget        = wibox.widget.imagebox,
   }
 end
+return Icon
 ```
+> **Consumo:** `require("src.tools.icons")` retorna a função `Icon` direto (não uma tabela). A
+> migração dos consumidores **já foi feita** — cada arquivo e o ícone que ele usa estão na tabela
+> de [§3.13.1](#3131-mapeamento-elemento--ícone-onde-cada-ícone-entra--status-wired).
+>
+> **Hover/estado em `imagebox`:** a cor de um `imagebox` **não** muda por `fg` — para recolorir no
+> hover/estado, troque a imagem: `ib.image = gcolor.recolor_image(SVG.."<n>.svg", p.<token>)` nos
+> sinais `mouse::enter`/`mouse::leave` (padrão usado em `tag_controls`/`process_panel`/`titlebar`).
 
-**Lista (41), por categoria (`icondata.json`):**
-- **stats:** `cpu` `cpu_temp` `mem` `gpu` `gpu_temp` `net` `net_up` `net_down` `wifi` `vol` `volume_mute` `battery`
-- **power:** `shutdown` `reboot` `logout` `lock` `suspend`
-- **proc:** `kill` `kill_all`
-- **osd:** `notification` `dnd` `brightness`
-- **menu:** `visible` `sticky` `floating` `fullscreen` `send_signal` `close`
-- **tagctl:** `add` `remove` `move_left` `move_right`
-- **tags:** `term` `internet` `files` `develop` `edit` `media` `doc`
-- **time:** `clock` `calendar`
+**Lista (41), por categoria — exatamente como em `icondata.json` (8 categorias):**
+- **stats (11):** `cpu` `cpu_temp` `mem` `gpu` `gpu_temp` `net` `net_up` `net_down` `wifi` `vol` `battery`
+- **power (5):** `shutdown` `reboot` `logout` `lock` `suspend`
+- **proc (2):** `kill` `kill_all`
+- **osd (4):** `notification` `dnd` `brightness` `volume_mute`
+- **menu (6):** `visible` `sticky` `floating` `fullscreen` `send_signal` `close`
+- **tagctl (4):** `add` `remove` `move_left` `move_right`
+- **tags (7):** `term` `internet` `files` `develop` `edit` `media` `doc`
+- **time (2):** `clock` `calendar`
+
+> **Atenção:** `volume_mute` vive em **`osd`** (não em `stats`) no `icondata.json` — mesmo sendo o
+> par mudo do `vol` (que é `stats`). A lozenge VOL (§7.2.1) usa `vol`/`volume_mute`; o OSD de volume
+> (§7.10) também. `cpu_temp`/`gpu_temp` ficam em `stats` junto dos demais sensores.
 
 > Cobertura completa dos monitores: temperatura (`cpu_temp`/`gpu_temp`), relógio (`clock`),
 > calendário (`calendar`). Sem ícone de disco/storage — não há painel DISK no HUD (reservar
 > `disk.svg` caso um dia exista).
 
-### 3.13.1 Mapeamento `elemento → ícone` (onde cada ícone entra)
+### 3.13.1 Mapeamento `elemento → ícone` (onde cada ícone entra) — **status wired**
 
-| Elemento (widget / arquivo) | Ícone (`icons/svg/…`) | Cor / estado |
-|---|---|---|
-| Lozenge **CPU** (`control_center.lua`) | `cpu` | as-is · ≥90% → `glow_hot` |
-| Lozenge **MEM** | `mem` | as-is · ≥90% → `glow_hot` |
-| Lozenge **GPU** | `gpu` | as-is · ≥90% → `glow_hot` |
-| Lozenge **NET** | `net` | as-is |
-| Lozenge **VOL** | `vol` (mudo → `volume_mute`) | as-is |
-| **Trigger relógio/calendário** (canto sup-direito) | `calendar` (ou `clock`) | `text_heading` |
-| **PROCESS** / **APPLICATIONS** botão KILL | `kill` (matar todos → `kill_all`) | `text_muted` → `crit` hover |
-| **tag_controls** `+ − ‹ ›` | `add` · `remove` · `move_left` · `move_right` | `text_muted` → `v400` hover |
-| **Tags** (term/internet/files/develop/edit/media/doc) | `term`/`internet`/`files`/`develop`/`edit`/`media`/`doc` | as-is; selecionada realça |
-| **USAGE** coluna TEMP / thermal | `cpu_temp` / `gpu_temp` | `text_muted` · ≥80 °C → `crit` |
-| **GRAPH** (rede ↑/↓) | `net_up` / `net_down` | `data4` / `v400` |
-| **IP** | `net` | `text_muted` |
-| **CONNECTIONS** / sinal | `net` / `send_signal` | as-is |
-| **CALENDAR** header / **TIME** (INTERNATIONAL) | `calendar` / `clock` | `text_muted` |
-| **powermenu** | `shutdown`/`reboot`/`logout`/`lock`/`suspend` | `v50` em chip `v700` |
-| **OSD volume / brilho** | `vol`·`volume_mute` / `brightness` | `text_heading` |
-| **Notificações** (naughty) | `notification` (DND → `dnd`) | `text_muted` |
-| **Battery** | `battery` | nível: `v500` / baixo `crit` |
-| **Headers de painel** (INFO/USAGE/…) | micro-ícone via `panel.lua opts.right_icon` (`cpu`/`mem`/`net`/`send_signal`/…) | `text_muted` |
-| **Menu de contexto** (§7.5) | `visible`/`sticky`/`floating`/`fullscreen`/`send_signal`/`close` | `text_primary` |
+Tabela de integração **real** (o que está conectado hoje). `✓` = wired no código; tamanho em
+`dpi`; "as-is" = multitom nativo (sem recolor).
+
+| Elemento | Ícone | Arquivo · tamanho · cor/estado |
+|---|---|:--:|
+| Lozenges **CPU·MEM·GPU·NET·VOL** | `cpu` `mem` `gpu` `net` `vol` | ✓ `control_center.lua` · **dpi(30)** centralizado (`ICON_SZ`) · as-is · valor ≥90% → `glow_hot` |
+| Fita de status (barra fina) **CPU·MEM·NET·VOL** | `cpu` `mem` `net` `vol` | ✓ `status_dock.lua` · dpi(16) · as-is |
+| **Trigger relógio/calendário** (canto sup-dir.) | `calendar` | ✓ `control_center.lua` · **dpi(30)** centralizado · `text_heading` |
+| **PROCESS** — KILL por linha | `kill` | ✓ `process_panel.lua` · dpi(14) · `text_muted` → `crit` (swap no hover) |
+| **PROCESS** — header | `kill_all` | ✓ `process_panel.lua` (`right_icon`) · dpi(14) · `text_muted` |
+| **APPLICATIONS** — KILL por linha | `kill` | ✓ `apps_panel.lua` · dpi(14) · `text_muted` → `crit` |
+| **tag_controls** `+ − ‹ ›` | `add` `remove` `move_left` `move_right` | ✓ `tag_controls.lua` · dpi(16) · `v200` → `v400` (swap) |
+| **Tags** (ícone do tipo, à esq. do índice) | `internet` `edit` `develop` `media` (+`term`/`files` default) | ✓ `taglist.lua` · dpi(16) · cor = `fg` do estado (foco → `v50`) |
+| **USAGE** — header / thermal | `cpu_temp` | ✓ `usage_panel.lua` (`right_icon`) · dpi(14) · coluna TEMP ≥80 °C → `crit` |
+| **GRAPH** — séries ↑/↓ | `net_up` / `net_down` | ✓ `net_graph_panel.lua` · dpi(12) · `data4` / `v400` |
+| **GRAPH** — header | `net` | ✓ `net_graph_panel.lua` (`right_icon`) · dpi(14) · `text_muted` |
+| **IP** — header | `net` | ✓ `ip_panel.lua` (`right_icon`) · dpi(14) · `text_muted` |
+| **CONNECTIONS** — header (recon/scan) | `send_signal` | ✓ `connections_panel.lua` (`right_icon`) · dpi(14) · `text_muted` |
+| **PROTOCOLS** — header | `send_signal` | ✓ `protocols_donut.lua` (`right_icon`) · dpi(14) · `text_muted` |
+| **INFO** — header | `cpu` | ✓ `info_panel.lua` (`right_icon`) · dpi(14) · `text_muted` |
+| **CALENDAR** — header | `calendar` | ✓ `calendar_panel.lua` (`right_icon`) · dpi(14) · `text_muted` |
+| **powermenu** | `shutdown` `reboot` `logout` `lock` `suspend` | ✓ `powermenu.lua` · recolor `v50` em chip `v700` |
+| **OSD volume** | `vol` / `volume_mute` | ✓ `volume_osd.lua` · recolor `text_heading` (mudo → `volume_mute`) |
+| **OSD brilho** | `brightness` | ✓ `brightness_osd.lua` · recolor `text_heading` |
+| **Clock** (widget de barra) | `clock` | ✓ `clock.lua` · recolor `v400` |
+| **Notificações** (naughty) | `notification` | ✓ `core/notifications.lua` · recolor `text_muted` |
+| **Titlebar** (janela flutuante) | `sticky` `visible` `fullscreen` `close` | ✓ `modules/titlebar.lua` · dpi(14) · hover: close → `crit`, resto → `v400` (minimize segue glyph `_`, sem SVG) |
+
+**Headers de painel:** todos via `panel.lua → opts.right_icon = Icon("<n>", { size = dpi(14), color = p.text_muted })`.
+
+**Reservados (sem consumidor por ora — não forçar):**
+
+| Ícone | Por que não está wired |
+|---|---|
+| `battery` | `battery.lua` é **dead code** (não é `require`d) e a máquina é desktop **sem bateria** (ver perfil de hardware). |
+| `wifi` | máquina **sem wifi** (só `eno1`); não há indicador de wifi. |
+| `gpu_temp` | não há painel/linha de **temperatura de GPU** no HUD atual. |
+| `dnd` | `notifications.lua` não tem toggle de **Do-Not-Disturb**. |
+| `doc` | faz parte do **vocabulário de ícone de tag** (`TAG_ICON` em `taglist.lua`); fica disponível como fallback, não atribuído às 4 tags atuais. |
 
 > **Regra:** monitores de hardware e controles usam **ícone SVG** (este set). Glyph Nerd-Font só
-> como fallback onde não houver SVG equivalente.
+> como fallback onde não houver SVG equivalente (hoje: só o `_` de minimizar na titlebar).
+> Para dar casa aos reservados, crie o consumidor (ex.: painel GPU-temp → `gpu_temp`; toggle DND
+> → `dnd`) e siga o mesmo padrão `Icon("<n>")`.
+
+### 3.13.2 Formato de dados (`icondata.json`) · geometria SVG · inventário de cor
+
+**Estrutura de `icons/icondata.json`** — array com **41** objetos (1 por ícone). Cada objeto é a
+fonte declarativa do SVG: o set foi gerado a partir deste JSON, então **os `.svg` e o JSON estão
+1:1** (mesmos nomes, mesmas cores — verificado).
+
+```json
+[
+  {
+    "name": "cpu",                 // = nome do arquivo (icons/svg/<name>.svg, sem extensão)
+    "cat": "stats",                // 1 de 8: stats power proc osd menu tagctl tags time
+    "shapes": [                    // ordem = ordem de desenho / ordem dos <path> no SVG
+      { "op": "stroke", "d": "M6 6 H18 V18 H6 Z",   "c": "#cbb6ff", "w": 2 },
+      { "op": "fill",   "d": "M10 10 H14 V14 H10 Z", "c": "#9d6ff6", "rule": "nonzero" }
+    ]
+  }
+]
+```
+
+Campos de `shapes[]`:
+
+| Campo | Em | Valores | Significado |
+|---|---|---|---|
+| `op` | sempre | `"stroke"` \| `"fill"` | traço (contorno) ou preenchimento |
+| `d` | sempre | path SVG | geometria no grid **24×24** (mesmos comandos `M/H/V/L/a/A/C/Z`) |
+| `c` | sempre | hex 6 díg. | cor = **um token da paleta** (nunca cor solta — ver inventário abaixo) |
+| `w` | só `stroke` | `1.4` `1.6` `2` `2.6` | `stroke-width` |
+| `rule` | só `fill` | sempre `"nonzero"` | `fill-rule` |
+
+**Geometria canônica de TODO `.svg`** (constante no set — preserve ao editar/gerar):
+- `viewBox="0 0 24 24"`, `width="24" height="24"`; raiz `<svg … fill="none">`.
+- 1 `<path>` por shape, na ordem do array `shapes`.
+- Strokes sempre `stroke-linecap="round" stroke-linejoin="round"`.
+- **PNG:** `icons/png/{16,24,32,48,64}/<name>.png` — os 41 ícones rasterizados em 5 tamanhos
+  (= **205 PNGs**), fallback p/ tamanho fixo. SVG é a fonte; prefira-o (escala sem perda).
+
+**Inventário de cor (todo o set usa só estes 7 tokens — contagem real de ocorrências):**
+
+| Token | Hex | Ocorr. | Papel nos ícones |
+|---|---|---:|---|
+| `text_primary` | `#cbb6ff` | 119 | **todo o traço/contorno** (presente em ~todos os ícones) |
+| `v400` | `#9d6ff6` | 19 | fill de acento: núcleo do `cpu`, ponteiro do `clock`, raio do `suspend`, capô do `kill` |
+| `v500` | `#8b5cf6` | 14 | fill primário: blocos de `mem`, chip do `lock`, faixa do `calendar`, `kill_all` |
+| `bevel_lo` | `#160c28` | 12 | espaço negativo: olhos/dentes do skull, furo do cadeado, janela de trás do `floating` |
+| `glow_ice` | `#d6c2ff` | 5 | realce/LED: ponto do `wifi`, núcleo do `send_signal`, glint do `gpu`/`gpu_temp`, sino do `notification` |
+| `text_muted` | `#6f5a96` | 4 | células inativas do `calendar` |
+| `v800` | `#5b21b6` | 2 | fill profundo: corpo da pasta `files`, pino do `sticky` |
+
+> **Implicação p/ recolor:** como os ícones são **multitom** (até 7 tokens num só arquivo),
+> `recolor_image` achata tudo numa cor — use **só por estado** (§3.13). P/ um realce que respeite a
+> composição, troque o **token de origem** no `.svg`/JSON e regenere, não recolore em runtime.
 
 ---
 
@@ -591,9 +691,22 @@ Anatomia de UMA lozenge `〈  NN% 〉`:
   hexágono achatado tipo `tab_shape` do taglist; alternativa simples = `rounded_rect` raio
   `radius_chip` ladeado por cápsulas `‹` `›` em `line_dim`.
 - **Fundo:** `panel .. "cc"`; **borda:** 1px `line_base`; altura `dpi(20)`, padding-x `dpi(8)`.
-- **Conteúdo:** **ícone SVG** de `icons/svg/` (cpu/mem/gpu/net/vol — via `src/tools/icons.lua`,
-  ~`dpi(18-20)`) + valor `text_bright`, monoespaçado, número à direita. (Substitui o glyph Nerd-Font; ver §3.13.1.)
+- **Conteúdo:** **ícone SVG** de `icons/svg/` (cpu/mem/gpu/net/vol — via `src/tools/icons.lua`)
+  + valor `text_bright`, monoespaçado, número à direita. (Substitui o glyph Nerd-Font; ver §3.13.1.)
+- **ÍCONE GRANDE + CENTRALIZADO (obrigatório):** o ícone deve ser **grande** — ~`dpi(28–30)` no
+  dockbar do meio (`control_center.lua`, pílula `PILL_H = dpi(44)`), nunca os antigos `dpi(18-20)`,
+  que ficam pequenos demais perto do valor (fonte `Bold 18`). E **centralizado nos DOIS eixos**:
+  envolva o grupo `{ ícone, valor }` num `wibox.container.place` (`halign="center"`,
+  `valign="center"`) — sem isso o conteúdo cola no TOPO da pílula (um `container.margin` só com
+  `left/right` não centraliza vertical) e fica desalinhado. O ícone também vai dentro do seu
+  próprio `place` (center/center). Tamanho via constante `ICON_SZ` no topo do arquivo.
+  - Na barra fina alternativa (`status_dock.lua`, `PILL_H = dpi(20)`) escale junto: ícone ~`dpi(16)`.
 - **Fita contínua:** as lozenges encostam (gap pequeno `dpi(2)`) formando a tira da Image #7.
+- **SEMPRE no MEIO (centragem do dockbar):** o popup do dockbar do meio é `placement = top`
+  (centrado na tela). Como os valores chegam **assíncronos** (`"--"` → `"3%"`/`"↑0 ↓1"`/`"98%"`),
+  a largura **cresce após** o placement inicial e o bar escorrega para a direita (entrando por
+  cima do dockbar do relógio). **Obrigatório re-centrar a cada mudança de largura:**
+  `bar:connect_signal("property::width", function() awful.placement.top(bar, {margins={top=dpi(8)}}) end)`.
 
 Os stats, na ordem da Image #7:
 
@@ -670,8 +783,20 @@ CPU  ▕████████████░░░░░░░░░▏ 58%
 - Zonas como na referência: UTC / CET / EST / JST — ou as suas (BR/FR/JP/US).
 
 #### 7.4.7 Process list — `PROCESS`
-- Top N processos por CPU/MEM: `PID  NOME            CPU%  MEM%  [KILL]`.
+- **Todos** os processos por CPU/MEM: `PID  NOME            CPU%  MEM%  [KILL]`.
 - Nome `text_primary`, números `text_bright`, mini-barra inline opcional (`v600`).
+- **Scroll por roda do mouse (altura FIXA — o painel NÃO cresce):** a lista mostra `VISIBLE`
+  linhas de altura fixa (`AREA_H = VISIBLE × ROW_H + (VISIBLE-1) × ROW_GAP = 6 × dpi(18) +
+  5 × dpi(2) = dpi(118)`); a amostra (`ps … --sort=-pcpu`, **sem `head`**)
+  guarda a lista inteira, e a roda do mouse (botões 4/5) desliza um `offset` por linha,
+  re-renderizando só a fatia visível. O `offset` é preservado entre ticks de amostragem
+  (reclampado ao novo total). Barra fina à direita numa calha de `dpi(10)`: track
+  `line_base@50%` + thumb `v500` cuja altura ∝ `VISIBLE/total` e cuja posição ∝ `offset`
+  (some quando não há overflow). Cabeçalho e linhas compartilham a mesma calha → colunas
+  alinhadas. **Padrão reusável:** qualquer lista densa (PROCESS, CONNECTIONS, sinais, …)
+  deve usar esta janela de rolagem — janela de altura fixa + windowing por wheel + thumb
+  na calha direita — **nunca** crescer o widget para caber todos os itens. Sem
+  `wibox.layout.overflow` neste build do awesome → o windowing manual é a forma canônica.
 - **Botão KILL por linha (interativo, igual à Image #4):** à direita de cada processo, um
   controle `` (skull) / "KILL" em `text_muted` (hover `crit`); clique esquerdo →
   `awful.spawn({"kill", pid})` (SIGTERM). O PID é guardado por linha; cursor `hand1` no hover.
@@ -683,14 +808,28 @@ CPU  ▕████████████░░░░░░░░░▏ 58%
 > ícone no APPLICATIONS (§5.2). USAGE/thermal usam `cpu_temp.svg`/`gpu_temp.svg` (≥80 °C → `crit`).
 
 #### 7.4.8 Connections — `CONNECTIONS`
-- Lista de conexões de rede: `PROTO  LOCAL → REMOTO  ESTADO`.
+- Lista **todas** as conexões de rede: `PROTO  LOCAL → REMOTO  ESTADO` (via `ss -tunH`, **sem
+  `head`** — a lista inteira fica disponível pelo scroll).
 - Estado `ESTABLISHED` em `ok`, `LISTEN` em `text_muted`, `TIME_WAIT` em `warn`.
+- **Scroll por roda do mouse (altura FIXA — o painel NÃO cresce):** mesmo padrão reusável do
+  PROCESS (§7.4.7). A área tem altura fixa de `VISIBLE × ROW_H + (VISIBLE-1) × ROW_GAP =
+  6 × dpi(18) + 5 × dpi(2) = dpi(118)`; a roda (botões 4/5) desliza um `offset` por linha,
+  re-renderizando a fatia visível nas `VISIBLE = 6` linhas reusáveis (cada `set_row` reaproveita
+  os textboxes existentes). `offset` preservado entre ticks (5 s), reclampado ao novo total.
+  Barra fina na calha de `dpi(10)` à direita: track `line_base@50%` + thumb `v500` (some quando
+  não há overflow). Quando não há conexões, mostra a linha única `NO CONNECTIONS`.
 - **Clique = scan (interativo / dinâmico):** cada linha é clicável. Clique esquerdo → abre o
-  terminal do usuário rodando um **nmap de serviço mais completo** sobre o `host:porta` daquela
-  conexão e mantém o terminal aberto:
-  `<terminal> -e sh -c "nmap -Pn -sV -sC -p <porta> <host>; read"`. Faz parse de IPv4
-  (`host:porta`) e IPv6 (`[host]:porta`). **Contexto:** recon das **próprias** conexões abertas,
-  na **própria** máquina (uso administrativo/defensivo legítimo). Cursor `hand1` no hover.
+  terminal do usuário numa **nova sessão tmux** nomeada com o **endereço do serviço** e roda um
+  **nmap de serviço** sobre o `host:porta` daquela conexão, mantendo o terminal aberto:
+  `<terminal> -e tmux new-session -A -s <addr-sanitizado> "nmap -Pn -sV -sC -p <porta> <host>; exec zsh"`.
+  - O nome da sessão = `host[:porta]` com `.` `:` `%` `/` → `-` (tmux **proíbe** `.`/`:` em nomes).
+  - `-A` anexa se a sessão já existir (clicar 2× no mesmo serviço não duplica/erra).
+  - `exec zsh` deixa o terminal **aberto** após o scan; como roda **dentro do tmux** (`$TMUX`
+    setado), o menu inicial de sessões do `~/.zshrc` NÃO dispara (guarda em `~/.zshrc:341`).
+  - Forma de **tabela** em `awful.spawn{}` (sem shell) → sem inferno de aspas; `nmap -Pn -sV -sC`
+    não exige root (connect scan). Faz parse de IPv4 (`host:porta`) e IPv6 (`[host]:porta`).
+  - **Contexto:** recon das **próprias** conexões abertas, na **própria** máquina (uso
+    administrativo/defensivo legítimo). Cursor `hand1` no hover.
 
 #### 7.4.9 Audio levels / EQ vertical — `USAGE` (áudio)
 - Barras verticais (EQ) ou rows de canais (`Master`, `Capture`, `Front`, `Rear Mic`…).
@@ -703,10 +842,23 @@ CPU  ▕████████████░░░░░░░░░▏ 58%
 
 A referência tem menus densos com **faixa-título em gradiente**.
 
+> **Gatilho (sem conflito com apps):** o menu abre pelo **clique do SCROLL (botão do meio /
+> botão 2)** sobre o cliente (`mappings/client_buttons.lua`). O botão-DIREITO fica livre p/ o
+> app usar o próprio menu (tmux, terminais, navegadores) sem o menu do awesome por cima. Resize
+> de janela = `modkey` + clique-direito; mover = `modkey` + clique-esquerdo.
+> ⚠️ Em terminais o botão-do-meio normalmente cola a seleção primária — aqui ele é capturado p/
+> o menu (trade-off escolhido). `src/widgets/context_menu.lua` é um popup ÚNICO (sem submenus
+> aninhados) com `current` global (um por vez); dismiss ao sair do ponteiro ou clicar num item.
+
 - **Faixa-título** (cabeçalho da seção): gradiente horizontal `line_bright (#7c3aed) → v950
-  (#2e1065)`, texto `v50` CAIXA-ALTA. Altura `dpi(20)`.
-- **Item:** altura `dpi(24)`, fg `text_primary`, padding `dpi(8)`.
+  (#2e1065)`, texto `v50` CAIXA-ALTA. Altura `dpi(30)`.
+- **Item:** altura `dpi(36)`, fg `text_primary`, padding `dpi(8)`, ícone `dpi(21)`.
   - hover/foco: bg `v700`, fg `v50`.
+- **Tipografia (FONTE A 150% — ×1.5 sobre a base do usuário):** itens `Bold 21`, faixa-título
+  `ExtraBold 21` (= base `14` × 1.5). **Não** herdar `user_vars.font.bold/extrabold` direto (size
+  14, pequeno demais p/ o menu); o `context_menu.lua` deriva `FONT_FAM = user_vars.font.specify`
+  e fixa o size 21. Largura do popup `dpi(330)` (= 220 × 1.5) e alturas/ícone escalados juntos
+  para a fonte maior não cortar.
 - **Seta de submenu** `▸` em `text_muted`.
 - **Borda do menu:** 1px `line_base`, bg `panel@f2`, raio `radius_chip`.
 - **Submenu "Send Signal":** replicar a lista (`SIGHUP, SIGINT, SIGQUIT, SIGKILL, SIGTERM,
@@ -716,6 +868,15 @@ A referência tem menus densos com **faixa-título em gradiente**.
   Move to tag ▸ · Send Signal ▸ · Layer ▸ · Close`.
 
 ### 7.6 Menu de apps (launcher)
+
+> **Launcher GIF (canto inferior-direito):** `src/widgets/app_launcher.lua` — botão circular
+> `dpi(72)` com o `src/assets/logo.gif` ANIMADO, fixado no canto inferior-direito
+> (`awful.placement.bottom_right`, margem `dpi(16)`). GIF desenhado direto em Cairo recortado
+> num círculo; disco escuro `panel@d9` + anel `line_base` p/ visibilidade sobre o wallpaper.
+> Frames extraídos 1× via ImageMagick e cacheados em `/tmp/awesome_launcher_frames/`. Clique
+> esquerdo abre/fecha um popup (bottom-right, acima do botão) com TODOS os `.desktop` instalados
+> (scrollável). Some quando há cliente fullscreen na tag. Montado em `radical_wm/init.lua`
+> (tela primária); guarda contra duplicata em reload via `s._app_launcher_host`.
 
 - Lista com **ícone (recolorido) + label**, categorias como na referência (Internet,
   Develop, Edit, Media, Doc…).
@@ -835,9 +996,9 @@ opacity = 0.85
 | `src/modules/powermenu.lua` | Re-skin: botões chip `v700`, ícones recoloridos. |
 | `src/assets/icons/**` | Recolorir SVGs p/ `text_primary`/`v400` quando aplicável (via `gears.color.recolor_image`). |
 | `~/.config/alacritty/alacritty.toml` | Aplicar paleta §7.8 (fora do repo, documentar). |
-| `src/tools/icons.lua` | **CRIAR** helper `Icon(name, {color, size})` que carrega `icons/svg/<name>.svg` (recolor opcional) → `imagebox` (§3.13). |
-| `icons/` (svg + png + icondata.json) | **ASSETS novos** (set VIOLET HUD). Fonte de ícones de hardware/controles; **preferir** sobre glyphs Nerd-Font (§3.13.1). |
-| consumidores de ícone (`control_center.lua`, `process_panel.lua`, `apps_panel.lua`, `tag_controls.lua`, `taglist.lua`, `powermenu.lua`, OSDs, `usage_panel.lua`, trigger relógio/calendário) | Trocar glyph Nerd-Font por `Icon("<n>")` conforme a tabela §3.13.1. |
+| `src/tools/icons.lua` | **EXISTE + EM USO** — helper `Icon(name, {color, size})` carrega `icons/svg/<name>.svg` (recolor opcional) → `imagebox` (§3.13). Retorna a função direto. |
+| `icons/` (svg + png + icondata.json) | **ASSETS presentes** (set VIOLET HUD): 41 SVG + 41×5 PNG + `icondata.json` (§3.13.2). Fonte de ícones de hardware/controles; **preferir** sobre glyphs Nerd-Font (§3.13.1). |
+| consumidores de ícone | **MIGRAÇÃO FEITA** (36/41 wired). Arquivos tocados: `control_center.lua` `status_dock.lua` `tag_controls.lua` `taglist.lua` `process_panel.lua` `apps_panel.lua` `usage_panel.lua` `net_graph_panel.lua` `ip_panel.lua` `connections_panel.lua` `protocols_donut.lua` `info_panel.lua` `calendar_panel.lua` `clock.lua` `powermenu.lua` `volume_osd.lua` `brightness_osd.lua` `core/notifications.lua` `modules/titlebar.lua`. Detalhe por elemento em §3.13.1. **Reservados:** `battery` `dnd` `gpu_temp` `wifi` `doc`. |
 
 > **Nota de globais:** `user_vars`, `Theme`, `Theme_path`, `Hover_signal` são globais por
 > design (ver AGENTS.md). Não os transforme em locals.
@@ -899,7 +1060,8 @@ end
 - [ ] Terminais translúcidos com a paleta 16-cores violeta.
 - [ ] Sem dock macOS, sem powerline, sem titlebar semáforo.
 - [ ] Densidade alta, monoespaçado, números à direita.
-- [ ] `awesome -k rc.lua` passa sem erros.
+- [x] **Ícones do set `icons/` wired** via `Icon("<n>")` (36/41; reservados: `battery` `dnd` `gpu_temp` `wifi` `doc`) — tabela §3.13.1.
+- [x] `awesome -k rc.lua` passa sem erros.
 - [ ] Lado a lado com a referência: **mesma vibe, cor roxa**.
 
 ---

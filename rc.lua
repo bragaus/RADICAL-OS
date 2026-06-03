@@ -10,6 +10,14 @@
 
 local awful = require("awful")
 
+-- 0. Locale for time strings — set a VALID UTF-8 LC_TIME GLOBALLY and EARLY, before any
+--    widget lays out. Otherwise an early calendar/clock layout pass can run while LC_TIME is
+--    still a Latin-1 codeset, so month/weekday names ("sáb", "março") reach Pango as invalid
+--    bytes and set_markup throws. Prefer pt_BR (Portuguese); fall back to C UTF-8 / ASCII.
+for _, loc in ipairs({ "pt_BR.UTF-8", "pt_BR.utf8", "C.UTF-8", "C.utf8", "C" }) do
+  if os.setlocale(loc, "time") then break end
+end
+
 -- 1. user_vars first (defines global `user_vars` used by error_handling for terminal/modkey).
 require("src.theme.user_variables")
 

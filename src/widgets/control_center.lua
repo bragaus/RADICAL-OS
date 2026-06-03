@@ -30,18 +30,13 @@ local gears = require("gears")
 local wibox = require("wibox")
 local dpi = require("beautiful.xresources").apply_dpi
 local p = require("src.theme.palette")
+local Icon = require("src.tools.icons") -- ícones SVG do set icons/ (§3.13)
 require("src.core.signals") -- garante Hover_signal global
 
-local MONO   = "JetBrainsMono Nerd Font Bold 18" -- dockbar do meio ~200% maior
-local BAR_H  = dpi(56)
-local PILL_H = dpi(44)
-
--- Glyphs Nerd Font para cada lozenge.
-local GLYPH_CPU = ""
-local GLYPH_MEM = ""
-local GLYPH_GPU = "󰢮"
-local GLYPH_NET = ""
-local GLYPH_VOL = ""
+local MONO    = "JetBrainsMono Nerd Font Bold 18" -- dockbar do meio ~200% maior
+local BAR_H   = dpi(56)
+local PILL_H  = dpi(44)
+local ICON_SZ = dpi(30) -- ícones GRANDES nas lozenges (DESIGN_SYSTEM §7.2.1)
 
 -- Forma de lozenge: hexágono achatado (pontas de seta côncava), igual ao tab_shape
 -- do taglist / status_dock. As pontas laterais apontam para fora (cápsula).
@@ -75,17 +70,14 @@ return function(s, opts)
   -- Cria uma lozenge (pílula hexagonal) com glyph + valor. Retorna o widget de fundo; o
   -- textbox do valor fica em ._value e o container de fg em ._value_bg (alterna glow_hot).
   ----------------------------------------------------------------------------------------
-  local function make_lozenge(glyph)
-    local glyph_box = wibox.widget {
-      text   = glyph,
-      font   = MONO,
-      valign = "center",
-      widget = wibox.widget.textbox,
-    }
+  local function make_lozenge(icon_name)
+    -- Ícone GRANDE (DESIGN_SYSTEM §7.2.1) e CENTRALIZADO vertical+horizontal na pílula.
+    local glyph_box = Icon(icon_name, { size = ICON_SZ }) -- ícone SVG (multitom violeta)
     local value_box = wibox.widget {
       text   = "--",
       font   = MONO,
       valign = "center",
+      align  = "center",
       widget = wibox.widget.textbox,
     }
     local value_bg = wibox.widget {
@@ -94,16 +86,25 @@ return function(s, opts)
       widget = wibox.container.background,
     }
 
+    -- container.place centraliza o grupo (ícone+valor) nos DOIS eixos dentro da pílula;
+    -- sem isso o conteúdo cola no topo (margin sem top/bottom) e fica desalinhado.
+    local content = wibox.widget {
+      {
+        { glyph_box, valign = "center", halign = "center", widget = wibox.container.place },
+        value_bg,
+        spacing = dpi(10),
+        layout  = wibox.layout.fixed.horizontal,
+      },
+      valign = "center",
+      halign = "center",
+      widget = wibox.container.place,
+    }
+
     local pill = wibox.widget {
       {
-        {
-          { glyph_box, fg = p.text_muted, widget = wibox.container.background },
-          value_bg,
-          spacing = dpi(10),
-          layout  = wibox.layout.fixed.horizontal,
-        },
-        left   = dpi(16),
-        right  = dpi(16),
+        content,
+        left   = dpi(18),
+        right  = dpi(18),
         widget = wibox.container.margin,
       },
       bg                 = p.a(p.panel, 0.8), -- panel@cc
@@ -129,11 +130,11 @@ return function(s, opts)
     end
   end
 
-  local pill_cpu = make_lozenge(GLYPH_CPU)
-  local pill_mem = make_lozenge(GLYPH_MEM)
-  local pill_gpu = make_lozenge(GLYPH_GPU)
-  local pill_net = make_lozenge(GLYPH_NET)
-  local pill_vol = make_lozenge(GLYPH_VOL)
+  local pill_cpu = make_lozenge("cpu")
+  local pill_mem = make_lozenge("mem")
+  local pill_gpu = make_lozenge("gpu")
+  local pill_net = make_lozenge("net")
+  local pill_vol = make_lozenge("vol")
 
   -- Segmento de relógio "HH:MM  Mês DD" (clicável -> dashboard TIME).
   local clock_time = wibox.widget {
@@ -149,16 +150,11 @@ return function(s, opts)
     widget = wibox.widget.textbox,
   }
   -- Trigger calendário/relógio do CANTO SUPERIOR-DIREITO (mesmo porte do dockbar esquerdo).
-  local clock_glyph = wibox.widget {
-    text   = "", -- nf-fa-calendar
-    font   = "JetBrainsMono Nerd Font 20",
-    valign = "center",
-    widget = wibox.widget.textbox,
-  }
+  local clock_glyph = Icon("calendar", { color = p.text_heading, size = ICON_SZ }) -- ícone SVG (set icons/)
   local clock_trigger = wibox.widget {
     {
       {
-        { clock_glyph, fg = p.text_heading, widget = wibox.container.background },
+        { clock_glyph, valign = "center", halign = "center", widget = wibox.container.place },
         {
           {
             { clock_time, fg = p.text_bright, widget = wibox.container.background },
@@ -313,17 +309,24 @@ return function(s, opts)
     s._control_center_bar.visible = false
   end
 
+  -- Re-centra o bar SEMPRE que sua largura muda. Necessário porque os valores das
+  -- lozenges chegam ASSÍNCRONOS ("--" -> "3%" / "↑0 ↓1" / "98%"): a largura cresce
+  -- depois do placement inicial e, sem reaplicar, o bar fica deslocado à direita
+  -- (entrando por cima do dockbar do relógio). Mantém o meio SEMPRE no MEIO.
+  local function recenter_bar(c)
+    awful.placement.top(c, { margins = { top = dpi(8) } })
+  end
+
   local bar = awful.popup {
     widget    = bar_widget,
     ontop     = false,
     visible   = true,
     screen    = s,
     bg        = "#0c0617cc", -- base@cc
-    placement = function(c)
-      awful.placement.top(c, { margins = { top = dpi(8) } })
-    end,
+    placement = recenter_bar,
   }
   s._control_center_bar = bar
+  bar:connect_signal("property::width", function() recenter_bar(bar) end)
 
   ----------------------------------------------------------------------------------------
   -- CLOCK/CALENDAR — barra do CANTO SUPERIOR-DIREITO (mesmo porte do dockbar esquerdo).

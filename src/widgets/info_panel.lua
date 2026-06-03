@@ -19,6 +19,7 @@ local gears = require("gears")
 local wibox = require("wibox")
 local dpi = require("beautiful.xresources").apply_dpi
 local p = require("src.theme.palette")
+local Icon = require("src.tools.icons") -- ícones SVG do set icons/ (§3.13)
 
 local MONO = "JetBrainsMono Nerd Font"
 
@@ -86,12 +87,12 @@ local function create_info_row(label_text)
       bottom = dpi(3),
       widget = wibox.container.margin,
     },
-    forced_height = dpi(24),
+    forced_height = dpi(18),
     bg            = p.a(p.v500, 0.06),
     border_width  = dpi(1),
     border_color  = p.a(p.v500, 0.20),
     shape         = function(cr, w, h)
-      gears.shape.rounded_rect(cr, w, h, dpi(6))
+      gears.shape.rounded_rect(cr, w, h, dpi(2))
     end,
     widget = wibox.container.background,
   }
@@ -157,9 +158,10 @@ return function(args)
   }
 
   return panel({
-    title  = "INFO",
-    body   = body,
-    accent = p.v500,
-    w      = args.w or dpi(260),
+    title      = "INFO",
+    body       = body,
+    accent     = p.v500,
+    w          = args.w or dpi(260),
+    right_icon = Icon("cpu", { size = dpi(14), color = p.text_muted }),
   })
 end

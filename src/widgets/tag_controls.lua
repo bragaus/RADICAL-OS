@@ -14,26 +14,23 @@
 local awful = require("awful")
 local wibox = require("wibox")
 local dpi = require("beautiful.xresources").apply_dpi
+local gcolor = require("gears.color")
+local gfs = require("gears.filesystem")
 local p = require("src.theme.palette")
+local Icon = require("src.tools.icons") -- ícones SVG do set icons/ (§3.13)
 require("src.core.signals")
 
-local MONO = "JetBrainsMono Nerd Font"
+local SVG = gfs.get_configuration_dir() .. "icons/svg/"
 
--- Constrói um botão glyph clicável. `action` é chamado em button 1.
-local function make_button(glyph, action)
+-- Constrói um botão de ícone SVG clicável. `icon_name` é um arquivo de icons/svg/;
+-- `action` é chamado em button 1. Repouso em p.v200, hover -> p.v400 (recolor da imagem).
+local function make_button(icon_name, action)
+  local ib = Icon(icon_name, { size = dpi(16), color = p.v200 })
+  local svg = SVG .. icon_name .. ".svg"
+
   local button = wibox.widget {
-    {
-      {
-        markup = string.format("<b>%s</b>", glyph),
-        font   = MONO .. " 13",
-        align  = "center",
-        valign = "center",
-        widget = wibox.widget.textbox,
-      },
-      widget = wibox.container.place,
-    },
+    { ib, widget = wibox.container.place },
     forced_width = dpi(22),
-    fg           = p.v200,
     bg           = "#00000000",
     widget       = wibox.container.background,
   }
@@ -44,7 +41,10 @@ local function make_button(glyph, action)
     end)
   ))
 
-  -- hover -> p.v400 (bg permanece transparente; Hover_signal guarda nil bg)
+  -- hover -> p.v400: recolore a imagem (imagebox não muda cor via fg). Hover_signal
+  -- mantém o cursor hand1.
+  button:connect_signal("mouse::enter", function() ib.image = gcolor.recolor_image(svg, p.v400) end)
+  button:connect_signal("mouse::leave", function() ib.image = gcolor.recolor_image(svg, p.v200) end)
   Hover_signal(button, nil, p.v400)
 
   return button
@@ -52,7 +52,7 @@ end
 
 return function(s)
   -- ADD: nova tag "NEW" nesta screen, vira a selecionada.
-  local add_button = make_button("+", function()
+  local add_button = make_button("add", function()
     awful.tag.add("NEW", {
       screen = s,
       layout = awful.layout.layouts[1] or awful.layout.suit.tile,
@@ -60,7 +60,7 @@ return function(s)
   end)
 
   -- REMOVE: deleta a tag selecionada, mantendo ao menos uma.
-  local remove_button = make_button("−", function()
+  local remove_button = make_button("remove", function()
     local t = s.selected_tag
     if t and #s.tags > 1 then
       t:delete()
@@ -68,7 +68,7 @@ return function(s)
   end)
 
   -- MOVE LEFT: move a tag atual uma posição para a esquerda (clamp em [1, #tags]).
-  local move_left_button = make_button("‹", function()
+  local move_left_button = make_button("move_left", function()
     local t = s.selected_tag
     if t then
       local target = t.index - 1
@@ -79,7 +79,7 @@ return function(s)
   end)
 
   -- MOVE RIGHT: move a tag atual uma posição para a direita (clamp em [1, #tags]).
-  local move_right_button = make_button("›", function()
+  local move_right_button = make_button("move_right", function()
     local t = s.selected_tag
     if t then
       local target = t.index + 1

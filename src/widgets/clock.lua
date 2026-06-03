@@ -10,8 +10,8 @@ local gears = require("gears")
 local wibox = require("wibox")
 require("src.core.signals")
 
--- Icon directory path
-local icondir = awful.util.getdir("config") .. "src/assets/icons/clock/"
+-- VIOLET HUD icon set (icons/svg/) — clock (§3.13.1).
+local hud_svg = awful.util.getdir("config") .. "icons/svg/"
 
 -- Returns the clock widget
 return function()
@@ -23,7 +23,7 @@ return function()
           {
             {
               id = "icon",
-              image = gears.color.recolor_image(icondir .. "clock.svg", p.v400),
+              image = gears.color.recolor_image(hud_svg .. "clock.svg", p.v400),
               widget = wibox.widget.imagebox,
               resize = false
             },

@@ -8,107 +8,74 @@ local p = require("src.theme.palette")
 local dpi = require("beautiful").xresources.apply_dpi
 local gears = require("gears")
 local wibox = require("wibox")
+local panel = require("src.tools.panel")
 
 -- Icon directory path
 local icondir = awful.util.getdir("config") .. "src/assets/icons/audio/"
+-- VIOLET HUD icon set (icons/svg/): vol / volume_mute (§3.13.1), recolorido p/ text_heading.
+local hud_svg = awful.util.getdir("config") .. "icons/svg/"
+local function vol_image(muted)
+  return gears.color.recolor_image(hud_svg .. (muted and "volume_mute" or "vol") .. ".svg", p.text_heading)
+end
 
 -- Returns the volume_osd
 return function(s)
 
-  local volume_osd_widget = wibox.widget {
-    {
-      {
-        {
-          {
-            nil,
-            {
-              nil,
-              {
-                id = "icon",
-                forced_height = dpi(220),
-                image = icondir .. "volume-high.svg",
-                widget = wibox.widget.imagebox
-              },
-              nil,
-              expand = "none",
-              id = "icon_margin2",
-              layout = wibox.layout.align.vertical
-            },
-            nil,
-            id = "icon_margin1",
-            expand = "none",
-            layout = wibox.layout.align.horizontal
-          },
-          {
-            {
-              id = "label",
-              text = "Volume",
-              align = "left",
-              valign = "center",
-              widget = wibox.widget.textbox
-            },
-            nil,
-            {
-              id = "value",
-              text = "0%",
-              align = "center",
-              valign = "center",
-              widget = wibox.widget.textbox
-            },
-            id = "label_value_layout",
-            forced_height = dpi(48),
-            layout = wibox.layout.align.horizontal,
-          },
-          {
-            {
-              id = "volume_slider",
-              bar_shape = gears.shape.rounded_rect,
-              bar_height = dpi(10),
-              bar_color = p.inset,
-              bar_active_color = {
-                type = "linear",
-                from = { 0, 0 },
-                to = { dpi(232), 0 },
-                stops = { { 0, p.v700 }, { 1, p.v500 } }
-              },
-              handle_color = p.v500,
-              handle_shape = gears.shape.circle,
-              handle_width = dpi(10),
-              handle_border_color = p.line_bright,
-              maximum = 100,
-              widget = wibox.widget.slider
-            },
-            id = "slider_layout",
-            forced_height = dpi(24),
-            widget = wibox.container.place
-          },
-          id = "icon_slider_layout",
-          spacing = dpi(0),
-          layout = wibox.layout.align.vertical
-        },
-        id = "osd_layout",
-        layout = wibox.layout.align.vertical
-      },
-      id = "container",
-      left = dpi(24),
-      right = dpi(24),
-      widget = wibox.container.margin
-    },
-    bg = p.panel .. 'f2',
-    fg = p.text_heading,
-    border_width = dpi(1),
-    border_color = p.line_base,
-    shape = function(cr, width, height)
-      gears.shape.rounded_rect(cr, width, height, 15)
-    end,
-    widget = wibox.container.background,
-    ontop = true,
-    visible = true,
-    type = "notification",
-    forced_height = dpi(300),
-    forced_width = dpi(300),
-    offset = dpi(5),
+  -- Compact icon (~dpi(24)), recolored text_heading; held as a direct ref
+  -- (panel's bg-wrapper breaks dotted id chains — see MEMORY violet-hud note).
+  local icon = wibox.widget {
+    forced_height = dpi(24),
+    forced_width  = dpi(24),
+    image  = vol_image(false),
+    widget = wibox.widget.imagebox,
   }
+
+  local value_label = wibox.widget {
+    text   = "0%",
+    align  = "right",
+    valign = "center",
+    widget = wibox.widget.textbox,
+  }
+
+  -- Trilha inset, height dpi(8) (§7.4.2), fill gradient v700 -> v500
+  local volume_slider = wibox.widget {
+    bar_shape        = gears.shape.rounded_bar,
+    bar_height       = dpi(8),
+    bar_color        = p.inset,
+    bar_active_color = {
+      type  = "linear",
+      from  = { 0, 0 },
+      to    = { dpi(232), 0 },
+      stops = { { 0, p.v700 }, { 1, p.v500 } }
+    },
+    handle_color        = p.v500,
+    handle_shape        = gears.shape.circle,
+    handle_width        = dpi(10),
+    handle_border_color = p.line_bright,
+    maximum             = 100,
+    widget              = wibox.widget.slider,
+  }
+
+  -- Body: icon + horizontal bar (value % on the right); slider is the
+  -- expanding middle element so it fills the panel width.
+  local osd_body = wibox.widget {
+    icon,
+    {
+      volume_slider,
+      forced_height = dpi(24),
+      widget        = wibox.container.place,
+    },
+    value_label,
+    spacing = dpi(10),
+    expand  = "inside",
+    layout  = wibox.layout.align.horizontal,
+  }
+
+  local volume_osd_widget = panel({
+    title = "VOLUME",
+    body  = osd_body,
+    w     = dpi(280),
+  })
 
   local function is_not_a_number(value)
     return value == nil or tonumber(value) == nil
@@ -123,7 +90,7 @@ return function(s)
         return
       end
       awesome.emit_signal("widget::volume")
-      volume_osd_widget.container.osd_layout.icon_slider_layout.label_value_layout.value:set_text(volume_level .. "%")
+      value_label:set_text(volume_level .. "%")
 
       awesome.emit_signal(
         "widget::volume:update",
@@ -137,22 +104,12 @@ return function(s)
         )
       end
       volume_level = tonumber(volume_level)
-      local icon = icondir .. "volume"
-      if volume_level < 1 then
-        icon = icon .. "-mute"
-      elseif volume_level >= 1 and volume_level < 34 then
-        icon = icon .. "-low"
-      elseif volume_level >= 34 and volume_level < 67 then
-        icon = icon .. "-medium"
-      elseif volume_level >= 67 then
-        icon = icon .. "-high"
-      end
-      volume_osd_widget.container.osd_layout.icon_slider_layout.icon_margin1.icon_margin2.icon:set_image(icon .. ".svg")
+      icon:set_image(vol_image(volume_level < 1))
     end
     )
   end
 
-  volume_osd_widget.container.osd_layout.icon_slider_layout.slider_layout.volume_slider:connect_signal(
+  volume_slider:connect_signal(
     "property::value",
     function()
     update_osd()
@@ -164,8 +121,8 @@ return function(s)
       "./.config/awesome/src/scripts/vol.sh mute",
       function(stdout)
       if stdout:match("yes") then
-        volume_osd_widget.container.osd_layout.icon_slider_layout.label_value_layout.value:set_text("0%")
-        volume_osd_widget.container.osd_layout.icon_slider_layout.icon_margin1.icon_margin2.icon:set_image(icondir .. "volume-mute" .. ".svg")
+        value_label:set_text("0%")
+        icon:set_image(vol_image(true))
       else
         awful.spawn.easy_async_with_shell(
           "./.config/awesome/src/scripts/vol.sh volume",
@@ -174,7 +131,7 @@ return function(s)
           if is_not_a_number(volume_level) then
             return
           end
-          volume_osd_widget.container.osd_layout.icon_slider_layout.slider_layout.volume_slider:set_value(tonumber(volume_level))
+          volume_slider:set_value(tonumber(volume_level))
           update_osd()
         end
         )
@@ -194,7 +151,7 @@ return function(s)
   awesome.connect_signal(
     "widget::volume:update",
     function(value)
-    volume_osd_widget.container.osd_layout.icon_slider_layout.slider_layout.volume_slider:set_value(tonumber(value))
+    volume_slider:set_value(tonumber(value))
   end
   )
 
@@ -207,9 +164,9 @@ return function(s)
     stretch = false,
     visible = false,
     screen = s,
-    placement = function(c) awful.placement.centered(c, { margins = { top = dpi(200) } }) end,
+    placement = function(c) awful.placement.bottom(c, { margins = { bottom = dpi(40) } }) end,
     shape = function(cr, width, height)
-      gears.shape.rounded_rect(cr, width, height, 15)
+      gears.shape.rounded_rect(cr, width, height, dpi(4))
     end
   }
 
