@@ -1,0 +1,203 @@
+/* ============================================================================
+   RADICAL-WM · VIOLET HUD — colors_and_type.css
+   Foundational design tokens. The HUD is monochromatic violet: hierarchy comes
+   from LUMINOSITY and OPACITY, not from different hues. Translated 1:1 from the
+   blue AwesomeWM "rice" reference (imagem_de_referencia.png) to violet.
+   ----------------------------------------------------------------------------
+   Font note: the WM uses "JetBrainsMono Nerd Font". We load the upstream
+   JetBrains Mono from Google Fonts here — the Nerd Font is the same metrics +
+   patched glyph ranges (powerline arrows, hardware icons). Powerline arrows are
+   reproduced with CSS clip-path and the hardware icons come from assets/icons/*.
+   ============================================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,700;0,800;1,400&display=swap');
+
+/* Brand DISPLAY face — Xirod. A wide, angular sci-fi face used ONLY for the
+   RADICAL wordmark / hero logotype. Never for HUD data (that stays monospaced). */
+@font-face {
+  font-family: 'Xirod';
+  src: url('fonts/Xirod.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* ---------- BACKGROUNDS — violet-blacks (dark → light) ---------- */
+  --void:      #000000;  /* absolute black / screen base                   */
+  --abyss:     #070310;  /* solid wallpaper / behind everything            */
+  --base:      #0c0617;  /* usable screen background, under the panels      */
+  --inset:     #0a0514;  /* chart wells, fields, bar tracks (deeper)        */
+  --panel:     #130a24;  /* DEFAULT panel background                        */
+  --panel-hi:  #1b1030;  /* panel header / selected row                     */
+  --raised:    #241640;  /* elevated element (hover, active chip)           */
+
+  /* ---------- VIOLET RAMP v50–v975 (structure + accent) ---------- */
+  --v50:   #f4effe;  --v100:  #e7dafd;  --v200:  #cbb2fb;  --v300:  #b491f9;
+  --v400:  #9d6ff6;  --v500:  #8b5cf6;  --v600:  #7c3aed;  --v700:  #6d28d9;
+  --v800:  #5b21b6;  --v900:  #4c1d95;  --v950:  #2e1065;  --v975:  #2b0c45;
+
+  /* ---------- NEON / GLOW (saturated, highlights only) ---------- */
+  --glow-ice:  #d6c2ff;  /* max highlight text (was cyan in the reference)  */
+  --glow-soft: #b794ff;  /* header/focus glow                               */
+  --glow-core: #a855f7;  /* neon accent / live focus border                 */
+  --glow-hot:  #c026d3;  /* graph peak / magenta-violet alert               */
+
+  /* ---------- TEXT ---------- */
+  --text-bright:   #e9dcff;  /* highlighted values, important numbers       */
+  --text-primary:  #cbb6ff;  /* default body text on panel                  */
+  --text-heading:  #b794ff;  /* panel titles (uppercase)                    */
+  --text-body:     #9a82c4;  /* secondary text                             */
+  --text-muted:    #6f5a96;  /* labels, legends, units                      */
+  --text-faint:    #463566;  /* placeholders, out-of-month calendar days    */
+  --text-disabled: #2f2348;  /* disabled                                    */
+
+  /* ---------- BORDERS / LINES / BEVEL ---------- */
+  --line-faint:  #241640;  /* subtle internal dividers                      */
+  --line-dim:    #3a1f63;  /* chart grid / separators                       */
+  --line-base:   #5b21b6;  /* default panel border                          */
+  --line-bright: #7c3aed;  /* focused/active panel border                   */
+  --bevel-hi:    #9d6ff6;  /* bevel highlight (top + left)                  */
+  --bevel-lo:    #160c28;  /* bevel shadow (bottom + right)                 */
+  --grid:        #3a1f63;  /* grid lines (use at low alpha)                 */
+
+  /* ---------- DATA SERIES (within the violet family) ---------- */
+  --data1: #a855f7;  /* CPU         */
+  --data2: #c084fc;  /* MEM         */
+  --data3: #7c3aed;  /* GPU         */
+  --data4: #d946ef;  /* NET (peak)  */
+  --data5: #8b5cf6;  /* extra       */
+  --data6: #6d28d9;  /* extra       */
+
+  /* ---------- STATUS (subtle — use sparingly) ---------- */
+  --ok:   #5ad1a0;  /* online / healthy        */
+  --warn: #f0c44c;  /* attention / high temp   */
+  --crit: #fb5e8a;  /* urgent                  */
+  --info: #8b5cf6;  /* informative (= accent)  */
+
+  /* ---------- TYPE ---------- */
+  --font-mono: 'JetBrains Mono', 'JetBrainsMono Nerd Font', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  --font-display: 'Xirod', 'JetBrains Mono', monospace;  /* brand wordmark ONLY */
+
+  /* Type ROLES (px sizes match the WM, scaled for screen readability) */
+  --fs-panel-title: 11px;  --fw-panel-title: 800;  /* @kind font */ /* UPPERCASE, tracking +1 */
+  --fs-label:       10px;  --fw-label:       700;  /* @kind font */ /* UPPERCASE              */
+  --fs-value:       12px;  --fw-value:       800;  /* @kind font */
+  --fs-body:        11px;  --fw-body:        500;  /* @kind font */
+  --fs-bar:         11px;  --fw-bar:         700;  /* @kind font */ /* top bar, UPPERCASE     */
+  --fs-micro:        9px;  --fw-micro:       700;  /* @kind font */ /* UPPERCASE              */
+
+  /* ---------- SPACING / RADII / BORDERS ---------- */
+  --radius-panel: 4px;   /* panel corners (reference is near-square)        */
+  --radius-chip:  3px;   /* tags, chips, buttons                            */
+  --radius-bar:   2px;   /* bar tracks / fills                              */
+  --pad-panel:    8px;   /* interior body padding                           */
+  --pad-header-x: 8px;   /* header horizontal padding                       */
+  --pad-row-y:    3px;   /* data-row breathing height                       */
+  --gap:          8px;   /* between panels                                  */
+  --border-panel: 1px;   /* panel border                                    */
+  --border-focus: 2px;   /* focused window border                           */
+  --corner-tick:  10px;  /* corner "L" length                               */
+
+  --header-h:     20px;  /* panel header height                             */
+  --bar-h:        26px;  /* top bar height                                  */
+  --lozenge-h:    20px;  /* status lozenge height                           */
+}
+
+/* ============================================================================
+   SEMANTIC ELEMENT STYLES — opt-in via classes (the WM is not HTML, so these
+   are HTML-side conveniences that mirror the Lua widget specs).
+   ============================================================================ */
+
+.hud-title {            /* panel header title */
+  font-family: var(--font-mono);
+  font-size: var(--fs-panel-title);
+  font-weight: var(--fw-panel-title);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-heading);
+}
+
+.hud-label {            /* data-row label, left aligned */
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  font-weight: var(--fw-label);
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.hud-value {            /* numeric value, right aligned */
+  font-family: var(--font-mono);
+  font-size: var(--fs-value);
+  font-weight: var(--fw-value);
+  color: var(--text-bright);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-body {
+  font-family: var(--font-mono);
+  font-size: var(--fs-body);
+  font-weight: var(--fw-body);
+  color: var(--text-primary);
+}
+
+.hud-micro {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-micro);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+}
+
+.hud-display {            /* brand wordmark / hero logotype — Xirod, ALL CAPS */
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--text-bright);
+}
+
+/* ---------- PANEL CHROME — the central motif (see panel.lua / DS §7.1) ----- */
+.hud-panel {
+  position: relative;
+  background: color-mix(in srgb, var(--panel) 90%, transparent);
+  border: var(--border-panel) solid var(--line-base);
+  border-radius: var(--radius-panel);
+  /* 2-tone bevel: highlight top+left, shadow bottom+right (inset effect) */
+  box-shadow:
+    inset 1px 1px 0 color-mix(in srgb, var(--bevel-hi) 70%, transparent),
+    inset -1px -1px 0 color-mix(in srgb, var(--bevel-lo) 90%, transparent);
+}
+.hud-panel.is-focus { border-color: var(--line-bright); }
+
+.hud-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--header-h);
+  padding: 0 var(--pad-header-x);
+  background: var(--panel-hi);
+  border-radius: var(--radius-panel) var(--radius-panel) 0 0;
+}
+.hud-panel.is-focus .hud-panel__header { background: var(--v700); }
+
+/* header divider: accent → accent@22% → transparent */
+.hud-panel__divider {
+  height: 2px;
+  background: linear-gradient(90deg,
+    var(--v500) 0%,
+    color-mix(in srgb, var(--v500) 22%, transparent) 55%,
+    transparent 100%);
+}
+.hud-panel__body { padding: 6px var(--pad-panel) var(--pad-panel); }
+
+/* corner ticks — the "L" in each corner, drawn with a tiny pseudo grid */
+.hud-panel__ticks { position: absolute; inset: 0; pointer-events: none; }
+.hud-panel__ticks::before,
+.hud-panel__ticks::after {
+  content: ""; position: absolute; width: var(--corner-tick); height: var(--corner-tick);
+  border-color: color-mix(in srgb, var(--v500) 90%, transparent); border-style: solid;
+}
+.hud-panel__ticks::before { top: 0; left: 0; border-width: 1.4px 0 0 1.4px; }
+.hud-panel__ticks::after  { bottom: 0; right: 0; border-width: 0 1.4px 1.4px 0; }

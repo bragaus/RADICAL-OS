@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<!-- @dsCard group="Colors" name="Data series" subtitle="data1–6 for multi-series charts" viewport="700x110" -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html,body{margin:0;background:var(--abyss);font-family:var(--font-mono)}
+  .wrap{padding:16px;display:flex;gap:6px}
+  .sw{flex:1;border-radius:var(--radius-bar);overflow:hidden;border:1px solid rgba(91,33,182,.35)}
+  .chip{height:56px;display:flex;align-items:flex-end;padding:5px;color:var(--v50)}
+  .name{font-size:9.5px;font-weight:800;letter-spacing:.4px}
+  .hex{font-size:8px;font-weight:600;opacity:.85;margin-top:1px}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="sw"><div class="chip" style="background:var(--data1)"><div><div class="name">data1 CPU</div><div class="hex">#a855f7</div></div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--data2)"><div><div class="name">data2 MEM</div><div class="hex">#c084fc</div></div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--data3)"><div><div class="name">data3 GPU</div><div class="hex">#7c3aed</div></div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--data4)"><div><div class="name">data4 NET</div><div class="hex">#d946ef</div></div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--data5)"><div><div class="name">data5</div><div class="hex">#8b5cf6</div></div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--data6)"><div><div class="name">data6</div><div class="hex">#6d28d9</div></div></div></div>
+  </div>
+</body>
+</html>

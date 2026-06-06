@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<!-- @dsCard group="Colors" name="Status colors" subtitle="ok / warn / crit / info — subtle" viewport="700x120" -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html,body{margin:0;background:var(--base);font-family:var(--font-mono)}
+  .wrap{padding:16px;display:flex;gap:10px}
+  .sw{flex:1;border:1px solid rgba(91,33,182,.4);border-radius:var(--radius-chip);overflow:hidden}
+  .chip{height:48px}
+  .meta{padding:6px 8px;background:rgba(19,10,36,.7)}
+  .name{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--text-heading)}
+  .hex{font-size:9.5px;color:var(--text-muted);margin-top:2px}
+  .use{font-size:8.5px;color:var(--text-body);margin-top:3px;text-transform:uppercase;letter-spacing:.4px}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="sw"><div class="chip" style="background:var(--ok)"></div><div class="meta"><div class="name">ok</div><div class="hex">#5ad1a0</div><div class="use">online / healthy</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--warn)"></div><div class="meta"><div class="name">warn</div><div class="hex">#f0c44c</div><div class="use">attention / temp</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--crit)"></div><div class="meta"><div class="name">crit</div><div class="hex">#fb5e8a</div><div class="use">urgent</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--info)"></div><div class="meta"><div class="name">info</div><div class="hex">#8b5cf6</div><div class="use">= accent</div></div></div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<!-- @dsCard group="Type" name="Type roles" subtitle="Title / value / label / body / micro" viewport="700x220" -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html,body{margin:0;background:var(--panel);font-family:var(--font-mono)}
+  .wrap{padding:16px;display:flex;flex-direction:column;gap:11px}
+  .row{display:flex;align-items:baseline;gap:14px}
+  .tag{width:96px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-faint);flex:none}
+  .spec{flex:1}
+  .meta{font-size:8.5px;color:var(--text-muted);white-space:nowrap}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="row"><div class="tag">Panel title</div><div class="spec hud-title" style="font-size:15px">SYSTEM MONITOR</div><div class="meta">ExtraBold · UPPER · +1</div></div>
+    <div class="row"><div class="tag">Value</div><div class="spec hud-value" style="font-size:17px;text-align:left">58% · 04:21:55</div><div class="meta">ExtraBold · tabular</div></div>
+    <div class="row"><div class="tag">Label</div><div class="spec hud-label" style="font-size:13px">KERNEL · UPTIME</div><div class="meta">Bold · UPPER</div></div>
+    <div class="row"><div class="tag">Body</div><div class="spec hud-body" style="font-size:14px">monospaced body text</div><div class="meta">Regular / Medium</div></div>
+    <div class="row"><div class="tag">Micro</div><div class="spec hud-micro" style="font-size:11px">SU MO TU WE TH FR SA</div><div class="meta">Bold · UPPER</div></div>
+  </div>
+</body>
+</html>

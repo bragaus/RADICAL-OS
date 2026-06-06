@@ -1,0 +1,213 @@
+{
+  "plugins": [
+    "react",
+    "import"
+  ],
+  "rules": {
+    "react/forbid-elements": [
+      "warn",
+      {
+        "forbid": []
+      }
+    ],
+    "no-restricted-imports": [
+      "warn",
+      {
+        "patterns": [
+          {
+            "group": [
+              "ui_kits/radical-hud/**"
+            ],
+            "message": "Import design-system components from 'index.js', not component internals."
+          }
+        ]
+      }
+    ],
+    "no-restricted-syntax": [
+      "warn",
+      {
+        "selector": "Literal[value=/#[0-9a-fA-F]{3,8}\\b/]",
+        "message": "Raw hex color — use a design-system color token via var()."
+      },
+      {
+        "selector": "Literal[value=/\\b\\d+px\\b/]",
+        "message": "Raw px value — use a design-system spacing token via var()."
+      },
+      {
+        "selector": "Literal[value=/font-family\\s*:\\s*(?!['\\\"]?(?:Xirod|JetBrains Mono))/i]",
+        "message": "Font not provided by the design system. Available: Xirod, JetBrains Mono."
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": [
+        "**/index.js"
+      ],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    }
+  ],
+  "x-omelette": {
+    "components": {},
+    "tokens": [
+      "--abyss",
+      "--bar-h",
+      "--base",
+      "--bevel-hi",
+      "--bevel-lo",
+      "--border-focus",
+      "--border-panel",
+      "--corner-tick",
+      "--crit",
+      "--data1",
+      "--data2",
+      "--data3",
+      "--data4",
+      "--data5",
+      "--data6",
+      "--font-display",
+      "--font-mono",
+      "--fs-bar",
+      "--fs-body",
+      "--fs-label",
+      "--fs-micro",
+      "--fs-panel-title",
+      "--fs-value",
+      "--fw-bar",
+      "--fw-body",
+      "--fw-label",
+      "--fw-micro",
+      "--fw-panel-title",
+      "--fw-value",
+      "--gap",
+      "--glow-core",
+      "--glow-hot",
+      "--glow-ice",
+      "--glow-soft",
+      "--grid",
+      "--header-h",
+      "--info",
+      "--inset",
+      "--line-base",
+      "--line-bright",
+      "--line-dim",
+      "--line-faint",
+      "--lozenge-h",
+      "--mon-h",
+      "--ok",
+      "--pad-header-x",
+      "--pad-panel",
+      "--pad-row-y",
+      "--panel",
+      "--panel-hi",
+      "--radius-bar",
+      "--radius-chip",
+      "--radius-panel",
+      "--raised",
+      "--text-body",
+      "--text-bright",
+      "--text-disabled",
+      "--text-faint",
+      "--text-heading",
+      "--text-muted",
+      "--text-primary",
+      "--v100",
+      "--v200",
+      "--v300",
+      "--v400",
+      "--v50",
+      "--v500",
+      "--v600",
+      "--v700",
+      "--v800",
+      "--v900",
+      "--v950",
+      "--v975",
+      "--void",
+      "--warn"
+    ],
+    "tokenKinds": {
+      "--void": "color",
+      "--abyss": "color",
+      "--base": "color",
+      "--inset": "spacing",
+      "--panel": "color",
+      "--panel-hi": "color",
+      "--raised": "color",
+      "--v50": "color",
+      "--v100": "color",
+      "--v200": "color",
+      "--v300": "color",
+      "--v400": "color",
+      "--v500": "color",
+      "--v600": "color",
+      "--v700": "color",
+      "--v800": "color",
+      "--v900": "color",
+      "--v950": "color",
+      "--v975": "color",
+      "--glow-ice": "color",
+      "--glow-soft": "color",
+      "--glow-core": "color",
+      "--glow-hot": "color",
+      "--text-bright": "font",
+      "--text-primary": "font",
+      "--text-heading": "font",
+      "--text-body": "font",
+      "--text-muted": "font",
+      "--text-faint": "font",
+      "--text-disabled": "font",
+      "--line-faint": "color",
+      "--line-dim": "color",
+      "--line-base": "color",
+      "--line-bright": "color",
+      "--bevel-hi": "color",
+      "--bevel-lo": "color",
+      "--grid": "color",
+      "--data1": "color",
+      "--data2": "color",
+      "--data3": "color",
+      "--data4": "color",
+      "--data5": "color",
+      "--data6": "color",
+      "--ok": "color",
+      "--warn": "color",
+      "--crit": "color",
+      "--info": "color",
+      "--font-mono": "font",
+      "--font-display": "font",
+      "--fs-panel-title": "spacing",
+      "--fw-panel-title": "font",
+      "--fs-label": "spacing",
+      "--fw-label": "font",
+      "--fs-value": "spacing",
+      "--fw-value": "font",
+      "--fs-body": "spacing",
+      "--fw-body": "font",
+      "--fs-bar": "spacing",
+      "--fw-bar": "font",
+      "--fs-micro": "spacing",
+      "--fw-micro": "font",
+      "--radius-panel": "radius",
+      "--radius-chip": "radius",
+      "--radius-bar": "radius",
+      "--pad-panel": "spacing",
+      "--pad-header-x": "spacing",
+      "--pad-row-y": "spacing",
+      "--gap": "spacing",
+      "--border-panel": "spacing",
+      "--border-focus": "spacing",
+      "--corner-tick": "radius",
+      "--header-h": "spacing",
+      "--bar-h": "spacing",
+      "--lozenge-h": "spacing",
+      "--mon-h": "spacing"
+    },
+    "fontFamilies": [
+      "JetBrains Mono",
+      "Xirod"
+    ]
+  }
+}
