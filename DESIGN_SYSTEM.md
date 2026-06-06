@@ -1056,7 +1056,7 @@ opacity = 0.85
 | `radical_wm/radical_bar.lua` `left_bar.lua` `right_bar.lua` | **SUBSTITUIR** powerline por barras/colunas com chrome de painel. Remover tint `#ff8c00`. |
 | `radical_wm/center_bar.lua` | Re-skin ou aposentar; centro fica livre p/ janelas. |
 | `radical_wm/dock.lua` | **APOSENTAR o dock macOS** (app dock estilo `plano_gif`; a referência não tem). **Não** confundir com a MonitorBar (§7.3.1), que é um dock de **telemetria** novo. |
-| `src/organisms/monitor_bar.lua` (+ `mon_module`, `mon_rail`) | **CRIAR** a MonitorBar de telemetria do rodapé (§7.3.1), espelhando `ui_kits/radical-hud/monitorbar.jsx`. Montar na tela primária em `radical_wm/init.lua`. *(Lua a implementar — follow-up.)* |
+| `src/widgets/monitor_bar.lua` (organismo `monitor_bar`; builders internos `mon_module`/`mon_rail`) | **IMPLEMENTADO** — MonitorBar de telemetria do rodapé (§7.3.1), espelhando `ui_kits/radical-hud/monitorbar.jsx`; montada na tela primária em `radical_wm/init.lua` (`s.monitor_bar`). Amostragem async (cpu/mem/net 1s; gpu/temp/vol 2s). Realocar p/ `src/organisms/` na migração Atomic Design. |
 | `src/widgets/system_monitor_chart.lua` | **DECOMPOR** em painéis menores (INFO/USAGE/GRAPH/…) OU re-skinar p/ violeta. **Trocar a `palette` interna laranja** por: `accent=#8b5cf6, cpu=#a855f7, mem=#c084fc, gpu=#7c3aed, net=#d946ef, grid=#3a1f63, text=#cbb6ff, overlay=#0c0617, glow=#b794ff`. Remover título japonês/fotos se quiser fidelidade à referência. **Manter coletores.** |
 | `src/widgets/taglist.lua` | Trocar hexes hardcoded por tokens (`v975`, `v500`, `glow_hot`, `v50`, hovers). |
 | `src/widgets/world_clock.lua` | Reusar lógica; trocar `segment_bg` por chrome de painel. |

@@ -62,7 +62,7 @@ Many later modules assume the globals (`user_vars`, `Theme`, `Theme_path`, `Hove
 Runs `awful.screen.connect_for_each_screen` for every screen, then branches on `s == screen.primary`:
 
 - **Every screen** gets: 4 named tags (`PLANO-WEB3`, `VIBE-STUDING`, `GHOST-SIGN`, `NEW-ICHIMOKU`), powermenu, volume/brightness OSDs, titlebar, volume controller, layoutlist, taglist.
-- **Primary screen only** gets the full violet-HUD composition: the top `radical_bar` (taglist + `tag_controls` + `control_center` clickable stat lozenges + clock/systray/power), the on-click dashboard popups (`info_panel` / `usage_panel` / `process_panel` / `net_graph_panel` / `connections_panel` / `protocols_donut` / `calendar_panel`), `status_dock`, the `app_launcher`, and the bottom **MonitorBar** telemetry dock (DESIGN_SYSTEM.md §7.3.1 — Lua to come).
+- **Primary screen only** gets the full violet-HUD composition: the top `radical_bar` (taglist + `tag_controls` + `control_center` clickable stat lozenges + clock/systray/power), the on-click dashboard popups (`info_panel` / `usage_panel` / `process_panel` / `net_graph_panel` / `connections_panel` / `protocols_donut` / `calendar_panel`), `status_dock`, the `app_launcher`, and the bottom **MonitorBar** telemetry dock (`src/widgets/monitor_bar.lua`, DESIGN_SYSTEM.md §7.3.1).
 
 Note: `mappings/bind_to_tags.lua` binds keys for tags 1..9 even though only 4 tags exist. Treat tag-count changes as a coordinated edit across both files.
 
