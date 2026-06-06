@@ -101,6 +101,9 @@ awful.screen.connect_for_each_screen(
 
     -- ----- LAUNCHER: botão GIF circular no canto inferior-direito + menu de apps -----
     s.app_launcher = require("src.widgets.app_launcher")(s)
+
+    -- ----- MONITORBAR: dock de telemetria persistente no rodapé (DESIGN_SYSTEM §7.3.1) -----
+    s.monitor_bar = require("src.widgets.monitor_bar")(s)
   end
 end
 )
