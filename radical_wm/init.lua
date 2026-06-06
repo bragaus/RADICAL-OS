@@ -34,7 +34,7 @@ awful.screen.connect_for_each_screen(
   awful.tag(
     { "PLANO-WEB3", "VIBE-STUDING", "GHOST-SIGN", "NEW-ICHIMOKU" },
     s,
-    user_vars.layouts[12]
+    user_vars.layouts[1] -- suit.tile (was [12] = suit.magnifier)
   )
 --[[ uma das coisas mais tristes na vida e chegar ao fim e olhar oara traz com remorso, sabendo que voce poderia teer sido feito e tido muito mais --]]
   -- Tela secundária (vertical) fica limpa: só tags, sem barras/widgets/menus/OSDs.

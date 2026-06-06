@@ -28,6 +28,7 @@ local p = require("src.theme.palette")
 require("src.core.signals")
 
 local launcher_gif_path = gfs.get_configuration_dir() .. "src/assets/logo.gif"
+local usage_script      = gfs.get_configuration_dir() .. "src/scripts/app_usage.py"
 
 local function desktop_entry_command(app_id, exec_line)
   if app_id and app_id ~= "" then
@@ -327,51 +328,11 @@ return function(s)
   load_gif_frames()
 
   -- ============================ Scan dos apps ============================
+  -- Lista vem do app_usage.py, JÁ ordenada do mais-usado p/ o menos-usado
+  -- (mesmo store que o rofi usa). Formato: name\tapp_id\texec\ticon.
   local function scan_apps()
-    awful.spawn.easy_async_with_shell([[
-python3 - <<'PY'
-from pathlib import Path
-import configparser
-
-paths = [Path('/usr/share/applications'), Path.home() / '.local/share/applications']
-entries = []
-seen = set()
-
-for root in paths:
-    if not root.exists():
-        continue
-    for desktop_file in sorted(root.glob('*.desktop')):
-        app_id = desktop_file.name
-        if app_id in seen:
-            continue
-        seen.add(app_id)
-        parser = configparser.ConfigParser(interpolation=None, strict=False)
-        try:
-            parser.read(desktop_file, encoding='utf-8')
-        except Exception:
-            continue
-        if 'Desktop Entry' not in parser:
-            continue
-        entry = parser['Desktop Entry']
-        if entry.get('Type') != 'Application':
-            continue
-        if entry.get('NoDisplay', 'false').lower() == 'true':
-            continue
-        if entry.get('Hidden', 'false').lower() == 'true':
-            continue
-        name = entry.get('Name', '').strip()
-        exec_line = entry.get('Exec', '').strip()
-        icon = entry.get('Icon', '').strip()
-        if not name or not exec_line:
-            continue
-        entries.append((name.lower(), name, app_id, exec_line, icon))
-
-def clean(v):
-    return v.replace('\t', ' ').replace('\n', ' ')
-
-for _, name, app_id, exec_line, icon in sorted(entries):
-    print(f"{clean(name)}\t{app_id}\t{clean(exec_line)}\t{clean(icon)}")
-PY]],
+    awful.spawn.easy_async_with_shell(
+      string.format("python3 %q list-tsv", usage_script),
       function(stdout)
         local list = {}
         for line in stdout:gmatch('[^\r\n]+') do
@@ -379,7 +340,7 @@ PY]],
           if name and app_id and exec_line then
             local command = desktop_entry_command(app_id, exec_line)
             if command then
-              list[#list + 1] = { name = name, cmd = command, icon_name = icon }
+              list[#list + 1] = { name = name, cmd = command, icon_name = icon, app_id = app_id }
             end
           end
         end
@@ -492,6 +453,13 @@ PY]],
       local cog = cog_at(lx, ly)
       if cog then
         awful.spawn.with_shell(cog.app.cmd)
+        if cog.app.app_id then
+          -- conta o uso no store compartilhado e re-ordena p/ a próxima abertura
+          awful.spawn.easy_async_with_shell(
+            string.format("python3 %q bump %q", usage_script, cog.app.app_id),
+            function() scan_apps() end
+          )
+        end
         expanded = false
         hide_tip()
         set_input_shape()
