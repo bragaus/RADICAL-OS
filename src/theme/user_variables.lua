@@ -48,7 +48,8 @@ user_vars = {
     regular = "JetBrainsMono Nerd Font, 14",
     bold = "JetBrainsMono Nerd Font, bold 14",
     extrabold = "JetBrainsMono Nerd Font, ExtraBold 14",
-    specify = "JetBrainsMono Nerd Font"
+    specify = "JetBrainsMono Nerd Font",
+    display = "Xirod" -- fonte de marca/display (MonitorBar, wordmark) — DESIGN_SYSTEM §4
   },
 
   -- This is your default Terminal

@@ -33,7 +33,7 @@ local MON_H    = dpi(80)               -- token --mon-h: 80px (§7.3.1)
 local SAMPLES  = 40                    -- profundidade do histórico de cada série
 local INTERVAL = 1                     -- segundos entre amostras (gráfico vivo)
 
-local XIROD   = "Xirod 15"                              -- rótulo de módulo (marca/display, §4)
+local XIROD   = ((user_vars.font and user_vars.font.display) or "Xirod") .. " 15" -- rótulo de módulo (marca/display, §4)
 local READOUT = "JetBrainsMono Nerd Font ExtraBold 20"  -- leitura grande
 local MICRO   = "JetBrainsMono Nerd Font Bold 8"        -- células de rodapé / micro
 local SUB     = "JetBrainsMono Nerd Font Bold 9"        -- sub-label
