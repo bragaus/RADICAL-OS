@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<!-- @dsCard group="Colors" name="Backgrounds — violet-blacks" subtitle="void → raised: panel surfaces" viewport="700x130" -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html,body{margin:0;background:var(--abyss);font-family:var(--font-mono)}
+  .wrap{padding:16px;display:flex;gap:8px}
+  .sw{flex:1;border:1px solid var(--line-base);border-radius:var(--radius-chip);overflow:hidden;
+      box-shadow:inset 1px 1px 0 rgba(157,111,246,.4), inset -1px -1px 0 rgba(22,12,40,.9)}
+  .chip{height:64px}
+  .meta{padding:6px 7px;background:rgba(19,10,36,.7)}
+  .name{font-size:10px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--text-heading)}
+  .hex{font-size:10px;font-weight:500;color:var(--text-muted);margin-top:2px}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="sw"><div class="chip" style="background:var(--void)"></div><div class="meta"><div class="name">void</div><div class="hex">#000000</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--abyss)"></div><div class="meta"><div class="name">abyss</div><div class="hex">#070310</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--base)"></div><div class="meta"><div class="name">base</div><div class="hex">#0c0617</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--inset)"></div><div class="meta"><div class="name">inset</div><div class="hex">#0a0514</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--panel)"></div><div class="meta"><div class="name">panel</div><div class="hex">#130a24</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--panel-hi)"></div><div class="meta"><div class="name">panel_hi</div><div class="hex">#1b1030</div></div></div>
+    <div class="sw"><div class="chip" style="background:var(--raised)"></div><div class="meta"><div class="name">raised</div><div class="hex">#241640</div></div></div>
+  </div>
+</body>
+</html>

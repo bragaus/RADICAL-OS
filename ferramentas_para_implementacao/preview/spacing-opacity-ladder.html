@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<!-- @dsCard group="Spacing" name="Opacity ladder" subtitle="8-step alpha for more/less opaque" viewport="700x130" -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html,body{margin:0;background:var(--base);font-family:var(--font-mono)}
+  .wrap{padding:16px}
+  .checker{background:
+    linear-gradient(45deg,#1b1030 25%,transparent 25%),
+    linear-gradient(-45deg,#1b1030 25%,transparent 25%),
+    linear-gradient(45deg,transparent 75%,#1b1030 75%),
+    linear-gradient(-45deg,transparent 75%,#1b1030 75%);
+    background-size:14px 14px;background-position:0 0,0 7px,7px -7px,-7px 0;
+    border:1px solid var(--line-base);border-radius:var(--radius-chip);padding:10px;display:flex;gap:4px}
+  .sw{flex:1;text-align:center}
+  .chip{height:50px;border-radius:var(--radius-bar);background:var(--v500)}
+  .pct{font-size:10px;font-weight:800;color:var(--text-bright);margin-top:5px}
+  .aa{font-size:8.5px;color:var(--text-muted);margin-top:1px}
+</style>
+</head>
+<body>
+  <div class="wrap"><div class="checker" id="row"></div></div>
+  <script>
+    const steps=[['100','ff',1],['90','e6',.9],['80','cc',.8],['70','b3',.7],['60','99',.6],
+      ['50','80',.5],['40','66',.4],['30','4d',.3],['20','33',.2],['10','1a',.1]];
+    document.getElementById('row').innerHTML=steps.map(([p,aa,o])=>`
+      <div class="sw"><div class="chip" style="opacity:${o}"></div>
+      <div class="pct">${p}%</div><div class="aa">${aa}</div></div>`).join('');
+  </script>
+</body>
+</html>
