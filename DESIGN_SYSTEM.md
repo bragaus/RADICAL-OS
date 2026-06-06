@@ -22,6 +22,25 @@
 5. **Validação técnica:** `awesome -k rc.lua` a partir da raiz (checa sintaxe/carga). Não
    valida visual — para isso compare com a referência.
 
+### 0.1 Fonte de verdade do design system — `ferramentas_para_implementacao/`
+
+Este documento é o **espelho Lua** do toolkit em **`ferramentas_para_implementacao/`** (RADICAL
+Violet HUD), a referência canônica de tokens / tipografia / ícones / componentes:
+
+- `_ds_manifest.json` — registro de **todos** os tokens (cores, tipografia, espaçamento).
+  `src/theme/palette.lua` é a porta em Lua desses tokens (valores 1:1).
+- `colors_and_type.css` — os mesmos tokens como CSS custom properties + classes semânticas
+  (`.hud-title`, `.hud-value`, `.hud-label`, `.hud-body`, `.hud-micro`, `.hud-panel`…).
+- `_adherence.oxlintrc.json` — regras de aderência (para os artefatos CSS): proíbe hex/px crus
+  (use token via `var()`) e permite **só** as famílias `Xirod` e `JetBrains Mono`.
+- `ui_kits/radical-hud/` — kit de componentes (Panel, TagTabs, TagControls, StatLozenges,
+  MonitorBar/MonModule/MonRail, dashboards System/Network/Time/Volume, ContextMenu, PowerMenu,
+  AppLauncher, LineGraph, Donut…) + `RADICAL Violet HUD.html` (mockup interativo): a referência
+  de **como** cada componente se parece e se comporta.
+- `fonts/Xirod.otf` — a fonte de marca/display (ver §4).
+
+Ao divergir do toolkit, **o toolkit vence** para aparência; ajuste este doc, não o inverso.
+
 ---
 
 ## 1. Visão geral da estética
@@ -52,7 +71,7 @@ construindo toda a hierarquia por **luminosidade e opacidade**.
 |---|---|---|
 | `system_monitor_chart.lua` — paleta laranja, layout monolítico, fotos grandes, texto japonês | Não parece a referência | Coletores `sample_cpu/mem/gpu/net/wifi/battery/audio` |
 | Segmentos **powerline** (`radical_bar/left_bar/right_bar`) e o tint `#ff8c00` | Referência não usa powerline nem laranja | Mecânica de composição por `awful.popup` |
-| **Dock** inferior (`dock.lua`) | Referência não tem dock macOS | — (substituir por barra/painel) |
+| **Dock** macOS inferior (`dock.lua` / app dock `plano_gif`) | Referência não tem dock macOS | Substituir pela **MonitorBar** de telemetria (§7.3.1) |
 | **Titlebar** lateral estilo "semáforo" macOS (Red/Yellow/Green) | Referência é tiling minimalista | Lógica de botões close/max/min se quiser titlebar |
 | `border_width = 11`, fundos `Grey900`, fg `White` | Bordas grossas cinzas destoam | — |
 
@@ -502,19 +521,31 @@ Campos de `shapes[]`:
 ## 4. Tipografia
 
 A referência usa um **monoespaçado bitmap** apertado. Mantemos `JetBrainsMono Nerd Font`
-(já no repo), mas você **pode** trocar por um bitmap p/ máxima fidelidade.
+(já no repo) p/ **todo dado de UI**; você **pode** trocar por um bitmap p/ máxima fidelidade.
+O toolkit define **duas** famílias — e a aderência (`_adherence.oxlintrc.json`) só permite essas
+duas: a monoespaçada acima e **`Xirod`** como **face de marca/display** (linha "Marca" abaixo).
 
 | Papel | Família | Tamanho | Peso | Caso |
 |---|---|---|---|---|
 | Título de painel | JetBrainsMono Nerd Font | 11 | ExtraBold | **CAIXA-ALTA**, tracking +1 |
 | Rótulo (label) | JetBrainsMono Nerd Font | 10 | Bold | CAIXA-ALTA |
-| Valor/número | JetBrainsMono Nerd Font | 11–12 | ExtraBold | — |
+| Valor/número | JetBrainsMono Nerd Font | 12 | ExtraBold | — |
 | Corpo | JetBrainsMono Nerd Font | 11 | Regular/Medium | — |
 | Barra superior | JetBrainsMono Nerd Font | 11 | Bold | CAIXA-ALTA |
 | Micro (legendas) | JetBrainsMono Nerd Font | 9 | Bold | CAIXA-ALTA |
+| **Marca / wordmark (display)** | **Xirod** | grande (variável) | normal | CAIXA-ALTA, tracking +2 |
 
 - **Títulos sempre em caixa-alta** e em `text_heading` (`#b794ff`).
 - **Números à direita**, rótulos à esquerda.
+- **`Xirod` = APENAS marca/display:** wordmark/logotipo (o "R" do launcher, `logo.gif`) e
+  **rótulos de display grandes** (nomes dos módulos da MonitorBar: GPU/CPU/MEM/NET — §7.3.1).
+  **NUNCA** em dado numérico, valor, label ou corpo — esses ficam sempre em `JetBrainsMono Nerd Font`.
+  Arquivo: `ferramentas_para_implementacao/fonts/Xirod.otf` → copie p/ `src/assets/fonts/Xirod.otf`
+  e instale via fontconfig p/ o `beautiful` resolver a família `Xirod`.
+- **Nome da família por domínio:** os artefatos CSS do toolkit usam `'JetBrains Mono'`; no
+  Lua/`beautiful` deste repo a família instalada é `'JetBrainsMono Nerd Font'` (variante Nerd p/
+  os glyphs). É a mesma fonte-base — a regra de aderência (que só vale p/ CSS) permite exatamente
+  `Xirod` + `JetBrains Mono`.
 - Para fidelidade total à referência, fontes bitmap recomendadas (opcional):
   `Terminus`, `Tamzen`, `Cozette`, `Spleen`, `ProggyTiny`.
 
@@ -528,6 +559,7 @@ font = {
   label     = "JetBrainsMono Nerd Font, Bold 10",
   micro     = "JetBrainsMono Nerd Font, Bold 9",
   specify   = "JetBrainsMono Nerd Font",
+  display   = "Xirod",  -- marca/wordmark + rótulos display grandes (MonitorBar); NUNCA dado
 }
 ```
 
@@ -536,19 +568,23 @@ font = {
 ## 5. Layout & composição — **barra superior + DASHBOARDS ON-CLICK (Image #6/#8/#12)**
 
 > **MODELO DE INTERAÇÃO (ATUALIZADO — substitui o grid de 3 colunas estáticas).**
-> **NÃO** há colunas de painéis ocupando a tela o tempo todo. A única coisa sempre visível é
-> uma **barra superior fina** com widgets clicáveis. Cada grupo de painéis de dado **só aparece
-> num popup (dropdown) quando o usuário CLICA** no widget correspondente da barra, e some ao
-> clicar de novo / abrir outro. Os popups são **GRANDES (≈2× o tamanho dos painéis antigos)** e
-> ancorados logo abaixo da barra. Sem `system_monitor_chart` monolítico, sem dock, sem colunas estáticas.
+> **NÃO** há colunas de painéis ocupando a tela o tempo todo. As únicas coisas sempre visíveis são
+> a **barra superior fina** (widgets clicáveis) e a **MonitorBar** de telemetria no rodapé (§7.3.1).
+> Cada grupo de painéis de dado **só aparece num popup (dropdown) quando o usuário CLICA** no
+> widget correspondente da barra, e some ao clicar de novo / abrir outro. Os popups são
+> **GRANDES (≈2× o tamanho dos painéis antigos)** e ancorados logo abaixo da barra. Sem
+> `system_monitor_chart` monolítico, sem dock macOS, sem colunas estáticas.
 
-### 5.1 Barra superior (única coisa sempre visível)
+### 5.1 Barra superior (sempre visível)
 
 Da esquerda p/ a direita:
 - **Tags** — abas com **seta afiada de UMA direção** (Image #11; ver §7.2) + cluster `+ − ‹ ›` (`tag_controls`).
 - **STATUS DO MEIO** — lozenges **clicáveis** (§7.2.1): `〈 cpu% 〉〈 mem% 〉〈 gpu% 〉〈 net ↑↓ 〉〈 vol% 〉`
   + **relógio** `HH:MM  Mês DD`. É o miolo da barra.
 - **Power** à direita.
+
+> Além da barra superior, a **MonitorBar** (§7.3.1) fica fixa no **rodapé** da tela primária —
+> também sempre visível (telemetria persistente), coexistindo com os dashboards on-click.
 
 ### 5.2 Dashboards on-click (dropdown popups, ≈2×) — Image #6
 
@@ -576,8 +612,9 @@ ancorado abaixo da barra. **Só um aberto por vez** (abrir um fecha os outros); 
 - **Popups:** `awful.popup { ontop = true, visible = false, ... }`; toggle no `button::press` do
   lozenge; `placement` abaixo da barra (`awful.placement.top`, margin ~`dpi(40)`); ao abrir um,
   esconder os demais. Opcional: fechar ao focar um cliente.
-- **APOSENTADOS** da composição: `side_panels` estático, `system_monitor_chart` monolítico, `dock`.
-  Reaproveite os **coletores** nos painéis (sempre **async**).
+- **APOSENTADOS** da composição: `side_panels` estático, `system_monitor_chart` monolítico,
+  `dock` macOS (app dock `plano_gif`). **Não** confundir com a MonitorBar (§7.3.1), que é um dock
+  de **telemetria** novo, sempre visível no rodapé. Reaproveite os **coletores** (sempre **async**).
 
 ---
 
@@ -616,7 +653,9 @@ ex. `src/tools/panel.lua`, com a assinatura `panel({ title=, body=, accent=, w=,
    - (Opcional) micro-ícone à direita (`text_muted`, glyph Nerd Font como `` `` `` ou `` `` ``).
 2. **Linha divisória:** 1px, gradiente horizontal `accent → accent@22% → transparente`
    (igual ao `section_line` que já existe no chart — reaproveite a ideia).
-3. **Corpo** (`panel` com alpha `e6`): padding `pad_panel`, conteúdo do widget.
+3. **Corpo** (`panel` com alpha `e6`): padding `6px` no topo / `8px` laterais+baixo (≈ `pad_panel`
+   nas laterais e base, topo levemente menor — igual a `.hud-panel__body` em `colors_and_type.css`),
+   conteúdo do widget.
 4. **Borda:** 1px `line_base` (ou `line_bright` se foco/ativo).
 5. **Bevel:** linha extra `bevel_hi` no topo+esquerda, `bevel_lo` no baixo+direita (desenhada
    no `:draw` via `cr:move_to/line_to`), para o efeito inset da referência.
@@ -729,11 +768,42 @@ Os stats, na ordem da Image #7:
   do grupo: CPU/MEM/GPU → SYSTEM, NET → NETWORK, VOL → controlador de volume, relógio → TIME
   (calendário+fusos, Image #12). Só um popup aberto por vez; cursor `hand1` no hover.
 
-### 7.3 Barra inferior / colunas laterais
+### 7.3 Barra inferior (MonitorBar) / colunas laterais
 
 - **Colunas:** `awful.popup` vertical com painéis (§7.1). Largura sugerida `dpi(260)`.
-- **Barra inferior:** mesma estética da superior; pode hospedar `CONNECTIONS`, now-playing,
-  status de rede. Substitui o dock atual.
+- **Barra inferior = MonitorBar (sempre visível):** o dock de **telemetria persistente** do
+  toolkit (`ui_kits/radical-hud/monitorbar.jsx` + `kit.css`). Substitui o antigo dock macOS
+  (§1.2) — spec completa em §7.3.1.
+
+### 7.3.1 MonitorBar — dock de telemetria inferior (`ferramentas_para_implementacao`)
+
+Barra **fixa no rodapé**, sempre visível (coexiste com a barra superior e os dashboards on-click
+da §5; **não** os substitui). Espelha o `MonitorBar` do kit (`monitorbar.jsx`).
+
+- **Altura:** `mon_h = dpi(80)` (token `--mon-h: 80px`); estética de chrome de painel (§7.1),
+  fundo `panel@cc`, baseline `line_base` no topo.
+- **Fita de telemetria (esquerda):** ponto **REC** piscando (`crit`) + texto
+  `LIVE TELEMETRY · RADICAL-WM // SYSMON` em `text_muted` CAIXA-ALTA + listras de perigo (hazard)
+  + ID hex + indicador **NODE STATUS** (`ok` quando online).
+- **4 MonModules** (esquerda→direita), cada um = `MonModule`:
+  - **GPU / RTX** — séries `data1` + `data4`.
+  - **CPU / AMD** — séries `glow_core` + `data2` + `v400`.
+  - **MEM / MEMORY** — séries `data2` + `data5`.
+  - **NET / WWW** — séries `data4` + `glow_hot`.
+  - Anatomia do módulo: gráfico de **área sobreposta** (blend) ao fundo + **rótulo grande em
+    `Xirod`** (nome do módulo) + sub-label + **leitura grande** (número) + **4 células de rodapé**
+    (ex.: GPU = USE%/TEMP/CLK/VRAM/FAN; CPU = LOAD/TEMP/CLK/CORES/1m). Valor ≥ 90% → `glow_hot`;
+    temperatura ≥ 80 °C → `crit`.
+- **MonRail (direita):** `NODE // STATUS` (ONLINE) + slider de **VOLUME** + **AGGREGATE LOAD**
+  (número grande).
+- **Amostragem sempre assíncrona** (nunca `io.popen`/sync); reaproveite os coletores existentes.
+- **Composição (ARCHITECTURE.md §2/§5):** organismo `monitor_bar` (com molécula `mon_module` e
+  organismo `mon_rail`), montado no rodapé da **tela primária** em `radical_wm/init.lua`.
+
+### 7.3.2 Barra inferior (uso livre)
+
+- Fora a MonitorBar, qualquer barra inferior extra segue a mesma estética da superior; pode
+  hospedar `CONNECTIONS`, now-playing, status de rede.
 
 ### 7.4 Widgets de dado
 
@@ -985,7 +1055,8 @@ opacity = 0.85
 | `radical_wm/init.lua` | **REORGANIZAR** composição p/ o grid da §5 (colunas de painéis + barras finas). Manter padrão por-tela. |
 | `radical_wm/radical_bar.lua` `left_bar.lua` `right_bar.lua` | **SUBSTITUIR** powerline por barras/colunas com chrome de painel. Remover tint `#ff8c00`. |
 | `radical_wm/center_bar.lua` | Re-skin ou aposentar; centro fica livre p/ janelas. |
-| `radical_wm/dock.lua` | **APOSENTAR** (referência não tem dock). |
+| `radical_wm/dock.lua` | **APOSENTAR o dock macOS** (app dock estilo `plano_gif`; a referência não tem). **Não** confundir com a MonitorBar (§7.3.1), que é um dock de **telemetria** novo. |
+| `src/organisms/monitor_bar.lua` (+ `mon_module`, `mon_rail`) | **CRIAR** a MonitorBar de telemetria do rodapé (§7.3.1), espelhando `ui_kits/radical-hud/monitorbar.jsx`. Montar na tela primária em `radical_wm/init.lua`. *(Lua a implementar — follow-up.)* |
 | `src/widgets/system_monitor_chart.lua` | **DECOMPOR** em painéis menores (INFO/USAGE/GRAPH/…) OU re-skinar p/ violeta. **Trocar a `palette` interna laranja** por: `accent=#8b5cf6, cpu=#a855f7, mem=#c084fc, gpu=#7c3aed, net=#d946ef, grid=#3a1f63, text=#cbb6ff, overlay=#0c0617, glow=#b794ff`. Remover título japonês/fotos se quiser fidelidade à referência. **Manter coletores.** |
 | `src/widgets/taglist.lua` | Trocar hexes hardcoded por tokens (`v975`, `v500`, `glow_hot`, `v50`, hovers). |
 | `src/widgets/world_clock.lua` | Reusar lógica; trocar `segment_bg` por chrome de painel. |
@@ -996,12 +1067,18 @@ opacity = 0.85
 | `src/modules/powermenu.lua` | Re-skin: botões chip `v700`, ícones recoloridos. |
 | `src/assets/icons/**` | Recolorir SVGs p/ `text_primary`/`v400` quando aplicável (via `gears.color.recolor_image`). |
 | `~/.config/alacritty/alacritty.toml` | Aplicar paleta §7.8 (fora do repo, documentar). |
+| `src/assets/fonts/Xirod.otf` | **ADICIONAR** a fonte de marca (copiar de `ferramentas_para_implementacao/fonts/Xirod.otf`); instalar via fontconfig p/ o `beautiful` resolver a família `Xirod`. Uso: **só** marca/display (§4). |
 | `src/tools/icons.lua` | **EXISTE + EM USO** — helper `Icon(name, {color, size})` carrega `icons/svg/<name>.svg` (recolor opcional) → `imagebox` (§3.13). Retorna a função direto. |
 | `icons/` (svg + png + icondata.json) | **ASSETS presentes** (set VIOLET HUD): 41 SVG + 41×5 PNG + `icondata.json` (§3.13.2). Fonte de ícones de hardware/controles; **preferir** sobre glyphs Nerd-Font (§3.13.1). |
 | consumidores de ícone | **MIGRAÇÃO FEITA** (36/41 wired). Arquivos tocados: `control_center.lua` `status_dock.lua` `tag_controls.lua` `taglist.lua` `process_panel.lua` `apps_panel.lua` `usage_panel.lua` `net_graph_panel.lua` `ip_panel.lua` `connections_panel.lua` `protocols_donut.lua` `info_panel.lua` `calendar_panel.lua` `clock.lua` `powermenu.lua` `volume_osd.lua` `brightness_osd.lua` `core/notifications.lua` `modules/titlebar.lua`. Detalhe por elemento em §3.13.1. **Reservados:** `battery` `dnd` `gpu_temp` `wifi` `doc`. |
 
 > **Nota de globais:** `user_vars`, `Theme`, `Theme_path`, `Hover_signal` são globais por
 > design (ver AGENTS.md). Não os transforme em locals.
+
+> **Ícones — local canônico:** `icons/` (raiz do repo) é a fonte **viva** consumida pelo código
+> (`src/tools/icons.lua`); `ferramentas_para_implementacao/assets/icons/` é a **cópia do
+> design-package** (referência). Mantenha as duas em sincronia — ou regenere os `.svg` a partir
+> de `icons/icondata.json` (§3.13.2).
 
 ### 9.1 Plano de implementação (ordem)
 
@@ -1056,6 +1133,8 @@ end
 - [ ] Existe pelo menos: line graph, bar meters, rosca/pizza, calendário, relógios, lista de processos — todos roxos.
 - [ ] Tags: inativa `v975`, foco `v500`, urgente `glow_hot`.
 - [ ] Foco de janela: borda fina `glow_core`.
+- [ ] **MonitorBar** no rodapé da tela primária (telemetria persistente, `mon_h = dpi(80)`, 4 módulos + rail) — §7.3.1.
+- [ ] **`Xirod`** usada **só** em marca/wordmark + rótulos display grandes (MonitorBar); dado/valor/label sempre em `JetBrainsMono Nerd Font`.
 - [ ] Menus com faixa-título em gradiente violeta + submenu Send Signal.
 - [ ] Terminais translúcidos com a paleta 16-cores violeta.
 - [ ] Sem dock macOS, sem powerline, sem titlebar semáforo.

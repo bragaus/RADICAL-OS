@@ -1,3 +1,21 @@
+## Doc map (read in this order)
+- **CLAUDE.md** (this file) — boot, load order, verify, external-command contracts.
+  Authoritative for *how the config boots*.
+- **ARCHITECTURE.md** — composition/structure (Atomic Design) + the in-progress restructure.
+  **Authoritative for the target file layout.** When the "High-level architecture" section
+  below disagrees, ARCHITECTURE.md wins.
+- **DESIGN_SYSTEM.md** — palette/tokens, typography, component looks. Authoritative for *appearance*.
+- **`ferramentas_para_implementacao/`** — the **RADICAL Violet HUD design toolkit** the redesign is
+  derived from (`_ds_manifest.json` tokens, `colors_and_type.css`, `_adherence.oxlintrc.json`,
+  `ui_kits/radical-hud/` component kit, `fonts/Xirod.otf`, the `RADICAL Violet HUD.html` mockup).
+  **Source of truth for appearance**; DESIGN_SYSTEM.md mirrors it and `src/theme/palette.lua` is
+  the Lua port of its tokens.
+
+> The repo is mid-migration to the ARCHITECTURE.md layout (`src/widgets/` →
+> `src/molecules/` + `src/organisms/`). Treat the paths below as the *current* state,
+> not a target to preserve.
+
+
 # CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
@@ -44,9 +62,11 @@ Many later modules assume the globals (`user_vars`, `Theme`, `Theme_path`, `Hove
 Runs `awful.screen.connect_for_each_screen` for every screen, then branches on `s == screen.primary`:
 
 - **Every screen** gets: 4 named tags (`PLANO-WEB3`, `VIBE-STUDING`, `GHOST-SIGN`, `NEW-ICHIMOKU`), powermenu, volume/brightness OSDs, titlebar, volume controller, layoutlist, taglist.
-- **Primary screen only** gets: `system_monitor_chart` (cyber_chart), tasklist, kblayout, powerbutton, four `world_clock` widgets (BR/FR/JP/US), and the composed `radical_bar` + `center_bar` + `right_bar` + `dock`.
+- **Primary screen only** gets the full violet-HUD composition: the top `radical_bar` (taglist + `tag_controls` + `control_center` clickable stat lozenges + clock/systray/power), the on-click dashboard popups (`info_panel` / `usage_panel` / `process_panel` / `net_graph_panel` / `connections_panel` / `protocols_donut` / `calendar_panel`), `status_dock`, the `app_launcher`, and the bottom **MonitorBar** telemetry dock (DESIGN_SYSTEM.md §7.3.1 — Lua to come).
 
 Note: `mappings/bind_to_tags.lua` binds keys for tags 1..9 even though only 4 tags exist. Treat tag-count changes as a coordinated edit across both files.
+
+> **Retired in the redesign (do not re-add):** `system_monitor_chart`/`cyber_chart` (decomposed into the panels above), `center_bar`, and the macOS app `dock`. The MonitorBar (telemetry) is the *only* sanctioned bottom bar. See DESIGN_SYSTEM.md §1.2 / §7.3.1 / §9.
 
 ## Floating-window rules
 
