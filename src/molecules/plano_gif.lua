@@ -8,7 +8,10 @@ local wibox = require("wibox")
 local M = {}
 
 local gif_path = gfs.get_configuration_dir() .. "src/assets/logo.gif"
-local frames_root = "/tmp/awesome_plano_gif_frames_v4"
+-- Cache PERSISTENTE (era /tmp, limpo a cada reboot → re-rodava convert no 1º boot).
+-- Sufixo _v4 = invalidação manual: bump p/ _v5 se trocar logo.gif.
+local cache_home = os.getenv("XDG_CACHE_HOME") or ((os.getenv("HOME") or "/tmp") .. "/.cache")
+local frames_root = cache_home .. "/awesome/plano_gif_frames_v4"
 local caches = {}
 
 local DEFAULT_RADIUS = dpi(14)
