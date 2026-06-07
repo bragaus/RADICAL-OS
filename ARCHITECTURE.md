@@ -137,5 +137,5 @@ Procedure — small, verifiable steps; **`awesome -k rc.lua` after each**:
 - [x] no hardcoded color/size in molecules/organisms (2 hex violations tokenized to `p.a(p.base/p.bevel_lo, …)`)
 - [x] no blocking IO anywhere (`gpt.lua`, `sysBackup.lua` quarantined to `src/_attic/`)
 - [x] `awesome -k rc.lua` passes
-- [ ] live boot in Xephyr: bar/panels on primary, clean vertical secondary
+- [x] live boot in Xephyr: primary HUD renders (top bar + lozenges + clock, bottom MonitorBar, launcher), main loop responsive, **0 runtime errors** (the pre-existing calendar UTF-8 crash was root-caused to an upstream `wibox.widget.calendar` byte-truncation bug and fixed via ASCII `LC_TIME`). Secondary-screen "tags only" not exercised — single-screen Xephyr.
 - [x] swap files removed, `.gitignore` updated
