@@ -54,7 +54,9 @@ return function(s)
   local VIS_HI   = math.rad(184)
 
   local GIF_PX     = 110
-  local frames_dir = string.format("/tmp/awesome_launcher_gif_v2_%d/", GIF_PX)
+  -- Cache PERSISTENTE (era /tmp, limpo a cada reboot → re-rodava convert no 1º boot).
+  local _cache_home = os.getenv("XDG_CACHE_HOME") or ((os.getenv("HOME") or "/tmp") .. "/.cache")
+  local frames_dir = string.format("%s/awesome/launcher_gif_v2_%d/", _cache_home, GIF_PX)
 
   local CANVAS = math.ceil(GIF_R + ORBIT_R + FOCUS_R + dpi(14))
   local CX = CANVAS - GIF_R - dpi(6)
@@ -268,6 +270,8 @@ return function(s)
         if mousegrabber and mousegrabber.isrunning and mousegrabber.isrunning() then
           return -- não anima durante move/resize de janela
         end
+        local h = s._app_launcher_host
+        if h and not h.visible then return end -- não redesenha o GIF com o launcher oculto (ex.: fullscreen)
         current_surface = gif_surfaces[current_frame]
         current_frame   = (current_frame % #gif_surfaces) + 1
         canvas:emit_signal("widget::redraw_needed")
