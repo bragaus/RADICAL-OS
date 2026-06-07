@@ -116,24 +116,26 @@ Procedure — small, verifiable steps; **`awesome -k rc.lua` after each**:
 - `src/core/rules.lua` reads `src/assets/rules.txt` (runtime-mutable, semicolon-separated).
 
 ## 6. Known issues / debt to fix alongside the migration
-- **Blocking-IO violations of §3.3:** `src/widgets/gpt.lua` (module-level `io.open`/`io.popen`,
-  `/proc` reads) and `src/widgets/sysBackup.lua` (many `io.popen`). Convert to async, or
-  quarantine if dead code.
-- **Committed editor swap files:** `.app_launcher.lua.swp`, `.system_monitor_chart.lua.swo`.
-  Remove; add `*.sw?` to `.gitignore`.
-- **Leftovers** from the discarded `system_monitor_chart` (per `DESIGN_SYSTEM.md §1.2`): purge.
+- **Blocking-IO violations of §3.3 (RESOLVED):** `gpt.lua` and `sysBackup.lua` were dead
+  (zero require sites) and synchronous-IO-heavy, so per the "quarantine if dead code" branch
+  they were moved to `src/_attic/` (not a layer, never required). Revive only after async
+  conversion — see `src/_attic/README.md`.
+- **Committed editor swap files (RESOLVED):** `.init.lua.swp`, `.app_launcher.lua.swp`,
+  `.system_monitor_chart.lua.swo` removed; `.gitignore` now ignores `*.sw?`.
+- **Leftovers** from the discarded `system_monitor_chart` (per `DESIGN_SYSTEM.md §1.2`): no
+  `.lua` source remained in the tree after the migration (only the swap file, now gone).
 - **Doc sprawl (resolved):** `AGENTS.md` is **kept and reconciled** against CLAUDE.md /
   DESIGN_SYSTEM.md (CLAUDE.md wins on conflict), not merged. `ONBOARDING.md` (a team template,
   irrelevant to a solo config) was **repurposed into `README.md`** — project overview + doc map
   + boot/verify.
 
 ## 7. Acceptance checklist
-- [ ] every `src/widgets/*.lua` reclassified into `molecules/` or `organisms/` per §2
-- [ ] `src/modules/*` folded into `organisms/`
-- [ ] `monitor_bar` organism present + mounted on the primary screen's bottom (DESIGN_SYSTEM.md §7.3.1)
-- [ ] no upward `require` (verified by grep / a require-graph pass)
-- [ ] no hardcoded color/size in molecules/organisms (tokens only)
-- [ ] no blocking IO anywhere (`gpt.lua`, `sysBackup.lua` fixed)
-- [ ] `awesome -k rc.lua` passes
+- [x] every `src/widgets/*.lua` reclassified into `molecules/` (14) or `organisms/` (19) per §2; `src/widgets/` removed
+- [x] `src/modules/*` folded into `organisms/` (6: powermenu, volume_osd, brightness_osd, titlebar, volume_controller, notification-center)
+- [x] `monitor_bar` organism present + mounted on the primary screen's bottom (DESIGN_SYSTEM.md §7.3.1)
+- [x] no upward `require` (verified by a require-graph audit pass — 0 violations)
+- [x] no hardcoded color/size in molecules/organisms (2 hex violations tokenized to `p.a(p.base/p.bevel_lo, …)`)
+- [x] no blocking IO anywhere (`gpt.lua`, `sysBackup.lua` quarantined to `src/_attic/`)
+- [x] `awesome -k rc.lua` passes
 - [ ] live boot in Xephyr: bar/panels on primary, clean vertical secondary
-- [ ] swap files removed, `.gitignore` updated
+- [x] swap files removed, `.gitignore` updated

@@ -29,8 +29,8 @@ access, but they are recorded here so they can explore further:
     components). Mirrored throughout this README.
   - `src/theme/palette.lua` — the violet token table.
   - `src/tools/panel.lua` — the panel-chrome factory (the central motif).
-  - `src/widgets/taglist.lua` — the sharp powerline arrow tabs.
-  - `src/widgets/process_panel.lua`, `status_dock.lua`, `control_center.lua` — bar + dashboards.
+  - `src/organisms/taglist.lua` — the sharp powerline arrow tabs.
+  - `src/organisms/process_panel.lua`, `status_dock.lua`, `control_center.lua` — bar + dashboards.
   - `icons/icondata.json` + `icons/svg/*` — the 41-icon VIOLET HUD set (imported, see below).
 - **Reference image:** `assets/imagem_de_referencia.png` — the blue rice this HUD recreates in
   violet. **The image is the visual source of truth; the WM only reuses the *data-collection
@@ -42,7 +42,7 @@ Related repos by the same author (context only, not used directly):
 [`bragaus/AwesomeWm-Files`](https://github.com/bragaus/AwesomeWm-Files).
 
 **To do a better job building designs for this product, explore `bragaus/RADICAL-WM` directly** —
-especially `DESIGN_SYSTEM.md` and the `src/widgets/` panels.
+especially `DESIGN_SYSTEM.md` and the `src/organisms/` panels.
 
 ---
 

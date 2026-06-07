@@ -18,8 +18,9 @@
 ## Structure
 - `src/core/`: startup behavior, rules, notifications, shared signals.
 - `src/theme/`: theme globals and user-tunable settings. `.luarc.json` targets Lua 5.3 and points language tooling at `/usr/share/awesome/lib`.
-- `src/widgets/`: leaf widgets; many shell out to external Linux desktop tools. **Mid-migration** to Atomic Design — being reclassified into `src/molecules/` + `src/organisms/` per ARCHITECTURE.md §5.
-- `src/modules/`: popups, OSDs, controllers.
+- `src/molecules/`: leaf widgets (one job each); many shell out to external Linux desktop tools. (Atomic Design restructure per ARCHITECTURE.md §5 is **complete** — `src/widgets/` is gone.)
+- `src/organisms/`: panels, lists, popups, OSDs, controllers, menus, the bottom `monitor_bar` (the former `src/widgets/` panels + all of the former `src/modules/`).
+- `src/_attic/`: quarantined dead blocking-IO code (`gpt.lua`, `sysBackup.lua`); not a layer, never required.
 - `mappings/`: root/client key and mouse bindings.
 - `radical_wm/`: actual bar/popup composition. Edit the non-backup files that `radical_wm/init.lua` requires; ignore `*_backup.lua` and `*.backup.lua` unless the user explicitly wants them touched.
 
@@ -29,6 +30,6 @@
 - `mappings/bind_to_tags.lua` binds keys for tags 1..9, but `radical_wm/init.lua` currently creates 4 named tags (`PLANO-WEB3`, `VIBE-STUDING`, `GHOST-SIGN`, `NEW-ICHIMOKU`). Treat tag-count changes as coordinated edits across both files.
 - Floating rules are partly data-driven: `src/core/rules.lua` loads `src/assets/rules.txt`, and `mappings/global_keys.lua` appends/removes classes in that same file at runtime.
 - Path handling is mixed. Most assets use `awful.util.getdir("config")` or `gears.filesystem.get_configuration_dir()`, but some shell snippets hardcode `~/.config/awesome`.
-- `src/widgets/plano_gif.lua` preloads `src/assets/logo.gif` at startup and caches extracted frames under `/tmp/awesome_plano_gif_frames/`. Stale cache can affect GIF-related changes.
+- `src/molecules/plano_gif.lua` preloads `src/assets/logo.gif` at startup and caches extracted frames under `/tmp/awesome_plano_gif_frames/`. Stale cache can affect GIF-related changes.
 - `radical_wm/radical_bar.lua` recolors child widgets unless they set `_preserve_colors` or `_preserve_segment`. Set one of those flags for widgets that must keep their own colors.
 - Widget behavior depends on external desktop commands such as `rofi`, `pactl`, `playerctl`, `iw`, `ping`, `pkexec xfpm-power-backlight-helper`, and ImageMagick `convert`. Preserve those shell command contracts when editing related widgets.

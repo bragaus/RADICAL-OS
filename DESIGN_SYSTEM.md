@@ -606,7 +606,7 @@ ancorado abaixo da barra. **Só um aberto por vez** (abrir um fecha os outros); 
 
 - **Barra superior:** tags (`radical_bar`, top-left) · **`control_center.lua`** (popup fino top-center
   com os lozenges clicáveis) · power (top-right).
-- **`src/widgets/control_center.lua`** constrói a fita de lozenges clicáveis (com amostragem async
+- **`src/organisms/control_center.lua`** constrói a fita de lozenges clicáveis (com amostragem async
   de cpu/mem/gpu/net/vol) **e** os popups de dashboard, e faz o toggle. Recebe de `init.lua` os
   painéis já criados, agrupados por dashboard (system / network / time).
 - **Popups:** `awful.popup { ontop = true, visible = false, ... }`; toggle no `button::press` do
@@ -701,7 +701,7 @@ ex. `src/tools/panel.lua`, com a assinatura `panel({ title=, body=, accent=, w=,
   (`panel` → `panel_hi` → `raised` → `v950`), texto/ícone em `text_bright`/`v400`.
   *(Esta diretriz substitui — só para a barra superior — a antiga nota de "sem powerline / chevron sutil".)*
 - **Cluster de controle de tags (fim da taglist, idêntico à Image #2):** logo após as abas,
-  um grupo de botões-glyph (`src/widgets/tag_controls.lua`) para **gerenciar áreas de trabalho**:
+  um grupo de botões-glyph (`src/organisms/tag_controls.lua`) para **gerenciar áreas de trabalho**:
   - `` **adicionar** tag (`awful.tag.add(...):view_only()`)
   - `` **remover** a tag atual (`s.selected_tag:delete()`, protegido p/ não zerar `#s.tags`)
   - `` / `` **mover** a tag atual p/ a esquerda/direita entre as áreas (`awful.tag.move`)
@@ -710,7 +710,7 @@ ex. `src/tools/panel.lua`, com a assinatura `panel({ title=, body=, accent=, w=,
 - **Centro — STATUS DO MEIO (lozenges, idêntico à Image #7):** ver **§7.2.1**. Uma fita de
   **cápsulas com ponta de seta côncava** `〈 valor 〉`, cada uma com um stat do sistema
   (CPU/MEM/NET/VOL) + relógio à direita, ocupando o **miolo** da barra superior, **entre** a
-  taglist (esquerda) e o relógio/systray (direita). Arquivo `src/widgets/status_dock.lua`.
+  taglist (esquerda) e o relógio/systray (direita). Arquivo `src/organisms/status_dock.lua`.
 - **Direita:** systray (`bg_systray = panel`, `systray_icon_spacing = dpi(6)`), mini-relógio
   `%H:%M` em `text_bright`, e indicadores compactos (layoutbox, kb layout) em `text_muted`.
 
@@ -761,7 +761,7 @@ Os stats, na ordem da Image #7:
 - À direita do grupo (na barra, fora das lozenges): **relógio** `HH:MM` + **data** `Mês DD`
   em `text_bright`/`text_muted` (como o `01:42  Jan 02` da Image #7).
 - Alerta opcional: valor ≥ 90% → `glow_hot`; caso contrário sempre violeta.
-- Arquivo: `src/widgets/status_dock.lua`. **Amostragem sempre assíncrona** (nunca `io.popen`/sync).
+- Arquivo: `src/organisms/status_dock.lua`. **Amostragem sempre assíncrona** (nunca `io.popen`/sync).
 - **Posição:** miolo da barra superior; nunca à direita junto dos relógios mundiais. Se o centro
   estiver ocupado por outra coisa, essa outra coisa cede o centro — o status do meio tem prioridade.
 - **CLICÁVEIS (dashboards on-click, §5.2):** cada lozenge é um botão. Clique abre/fecha o popup
@@ -917,7 +917,7 @@ A referência tem menus densos com **faixa-título em gradiente**.
 > app usar o próprio menu (tmux, terminais, navegadores) sem o menu do awesome por cima. Resize
 > de janela = `modkey` + clique-direito; mover = `modkey` + clique-esquerdo.
 > ⚠️ Em terminais o botão-do-meio normalmente cola a seleção primária — aqui ele é capturado p/
-> o menu (trade-off escolhido). `src/widgets/context_menu.lua` é um popup ÚNICO (sem submenus
+> o menu (trade-off escolhido). `src/organisms/context_menu.lua` é um popup ÚNICO (sem submenus
 > aninhados) com `current` global (um por vez); dismiss ao sair do ponteiro ou clicar num item.
 
 - **Faixa-título** (cabeçalho da seção): gradiente horizontal `line_bright (#7c3aed) → v950
@@ -939,7 +939,7 @@ A referência tem menus densos com **faixa-título em gradiente**.
 
 ### 7.6 Menu de apps (launcher)
 
-> **Launcher GIF (canto inferior-direito):** `src/widgets/app_launcher.lua` — botão circular
+> **Launcher GIF (canto inferior-direito):** `src/organisms/app_launcher.lua` — botão circular
 > `dpi(72)` com o `src/assets/logo.gif` ANIMADO, fixado no canto inferior-direito
 > (`awful.placement.bottom_right`, margem `dpi(16)`). GIF desenhado direto em Cairo recortado
 > num círculo; disco escuro `panel@d9` + anel `line_base` p/ visibilidade sobre o wallpaper.
@@ -1056,15 +1056,15 @@ opacity = 0.85
 | `radical_wm/radical_bar.lua` `left_bar.lua` `right_bar.lua` | **SUBSTITUIR** powerline por barras/colunas com chrome de painel. Remover tint `#ff8c00`. |
 | `radical_wm/center_bar.lua` | Re-skin ou aposentar; centro fica livre p/ janelas. |
 | `radical_wm/dock.lua` | **APOSENTAR o dock macOS** (app dock estilo `plano_gif`; a referência não tem). **Não** confundir com a MonitorBar (§7.3.1), que é um dock de **telemetria** novo. |
-| `src/widgets/monitor_bar.lua` (organismo `monitor_bar`; builders internos `mon_module`/`mon_rail`) | **IMPLEMENTADO** — MonitorBar de telemetria do rodapé (§7.3.1), espelhando `ui_kits/radical-hud/monitorbar.jsx`; montada na tela primária em `radical_wm/init.lua` (`s.monitor_bar`). Amostragem async (cpu/mem/net 1s; gpu/temp/vol 2s). Realocar p/ `src/organisms/` na migração Atomic Design. |
-| `src/widgets/system_monitor_chart.lua` | **DECOMPOR** em painéis menores (INFO/USAGE/GRAPH/…) OU re-skinar p/ violeta. **Trocar a `palette` interna laranja** por: `accent=#8b5cf6, cpu=#a855f7, mem=#c084fc, gpu=#7c3aed, net=#d946ef, grid=#3a1f63, text=#cbb6ff, overlay=#0c0617, glow=#b794ff`. Remover título japonês/fotos se quiser fidelidade à referência. **Manter coletores.** |
-| `src/widgets/taglist.lua` | Trocar hexes hardcoded por tokens (`v975`, `v500`, `glow_hot`, `v50`, hovers). |
-| `src/widgets/world_clock.lua` | Reusar lógica; trocar `segment_bg` por chrome de painel. |
-| `src/widgets/cpu_info.lua` `gpu_info.lua` `ram_info.lua` `network.lua` `audio.lua` `battery.lua` | Re-skin como info-rows/bar-meters (§7.4). |
-| `src/modules/titlebar.lua` | **REESCREVER** conforme §7.7 (sem semáforo macOS). |
-| `src/modules/volume_osd.lua` `brightness_osd.lua` | Re-skin (§7.10). |
-| `src/modules/notification-center/init.lua`, `src/core/notifications.lua` | Re-skin (§7.9). |
-| `src/modules/powermenu.lua` | Re-skin: botões chip `v700`, ícones recoloridos. |
+| `src/organisms/monitor_bar.lua` (organismo `monitor_bar`; builders internos `mon_module`/`mon_rail`) | **IMPLEMENTADO** — MonitorBar de telemetria do rodapé (§7.3.1), espelhando `ui_kits/radical-hud/monitorbar.jsx`; montada na tela primária em `radical_wm/init.lua` (`s.monitor_bar`). Amostragem async (cpu/mem/net 1s; gpu/temp/vol 2s). Já realocada p/ `src/organisms/` (migração Atomic Design concluída). |
+| `system_monitor_chart.lua` (RETIRADO) | **DECOMPOSTO** — virou os organismos `info_panel`/`usage_panel`/`process_panel`/`net_graph_panel`/`protocols_donut` (§5). O arquivo monolítico foi removido na migração Atomic Design; não recriar (ver CLAUDE.md "Retired in the redesign"). Tokens violeta já vivem em `src/theme/palette.lua`. |
+| `src/organisms/taglist.lua` | Trocar hexes hardcoded por tokens (`v975`, `v500`, `glow_hot`, `v50`, hovers). |
+| `src/molecules/world_clock.lua` | Reusar lógica; trocar `segment_bg` por chrome de painel. |
+| `src/molecules/cpu_info.lua` `gpu_info.lua` `ram_info.lua` `network.lua` `audio.lua` `battery.lua` | Re-skin como info-rows/bar-meters (§7.4). |
+| `src/organisms/titlebar.lua` | **REESCREVER** conforme §7.7 (sem semáforo macOS). |
+| `src/organisms/volume_osd.lua` `brightness_osd.lua` | Re-skin (§7.10). |
+| `src/organisms/notification-center/init.lua`, `src/core/notifications.lua` | Re-skin (§7.9). |
+| `src/organisms/powermenu.lua` | Re-skin: botões chip `v700`, ícones recoloridos. |
 | `src/assets/icons/**` | Recolorir SVGs p/ `text_primary`/`v400` quando aplicável (via `gears.color.recolor_image`). |
 | `~/.config/alacritty/alacritty.toml` | Aplicar paleta §7.8 (fora do repo, documentar). |
 | `src/assets/fonts/Xirod.otf` | **ADICIONAR** a fonte de marca (copiar de `ferramentas_para_implementacao/fonts/Xirod.otf`); instalar via fontconfig p/ o `beautiful` resolver a família `Xirod`. Uso: **só** marca/display (§4). |

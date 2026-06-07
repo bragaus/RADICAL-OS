@@ -11,9 +11,12 @@
   **Source of truth for appearance**; DESIGN_SYSTEM.md mirrors it and `src/theme/palette.lua` is
   the Lua port of its tokens.
 
-> The repo is mid-migration to the ARCHITECTURE.md layout (`src/widgets/` →
-> `src/molecules/` + `src/organisms/`). Treat the paths below as the *current* state,
-> not a target to preserve.
+> The Atomic Design restructure (ARCHITECTURE.md §5) is **complete**: the old
+> `src/widgets/` is gone — leaf widgets now live in `src/molecules/`, and panels /
+> lists / OSDs / menus (the former `src/widgets/` panels + all of `src/modules/`)
+> live in `src/organisms/`. Two dead blocking-IO files (`gpt.lua`, `sysBackup.lua`)
+> were quarantined to `src/_attic/` (not required, not a layer). The paths below
+> reflect this current layout.
 
 
 # CLAUDE.md
@@ -33,10 +36,10 @@ Personal AwesomeWM (Lua 5.3) configuration. No package manifest, no tests, no li
 
 `rc.lua` is the real entry point and its `require` order is load-bearing:
 
-1. `src.widgets.plano_gif` (preloaded with a sized hint before theme init so frames are cached for the dock).
+1. `src.molecules.plano_gif` (preloaded with a sized hint before theme init so frames are cached for the dock).
 2. `src.theme.user_variables` → defines the global `user_vars` table.
 3. `src.theme.init` → defines globals `Theme` and `Theme_path`, calls `beautiful.init(Theme)`.
-4. `src.widgets.alacritty_lain_overlay`, `src.core.error_handling`.
+4. `src.molecules.alacritty_lain_overlay`, `src.core.error_handling`.
 5. `src.core.signals` → defines global `Hover_signal(widget, bg, fg)`.
 6. `src.core.notifications`, `src.core.rules`.
 7. `mappings.global_buttons`, `mappings.bind_to_tags`.
@@ -49,8 +52,9 @@ Many later modules assume the globals (`user_vars`, `Theme`, `Theme_path`, `Hove
 
 - `src/core/` — startup glue: error handler, client rules, notifications, shared signals (focus, hover, transparency).
 - `src/theme/` — `user_variables.lua` (user-tunable config: modkey, terminal, autostart, network ifaces, dock programs, transparency, fonts, wallpaper, layouts), `init.lua` (builds the `Theme` table consumed by `beautiful`), `theme_variables.lua`, `colors.lua`.
-- `src/widgets/` — leaf widgets. Many shell out to external Linux tools (see "External command contracts" below).
-- `src/modules/` — popups / OSDs / controllers (powermenu, volume_osd, brightness_osd, titlebar, volume_controller).
+- `src/molecules/` — leaf widgets (one job each): `alacritty_lain_overlay`, `audio`, `battery`, `bluetooth`, `clock`, `cpu_info`, `date`, `gpu_info`, `kblayout`, `network`, `plano_gif`, `power`, `ram_info`, `world_clock`. Many shell out to external Linux tools (see "External command contracts" below).
+- `src/organisms/` — panels / lists / popups / OSDs / menus: the dashboard panels (`info_panel`, `usage_panel`, `process_panel`, `net_graph_panel`, `connections_panel`, `protocols_donut`, `ip_panel`, `apps_panel`, `calendar_panel`), `control_center`, `status_dock`, `monitor_bar`, `taglist`, `tasklist`, `systray`, `tag_controls`, `layout_list`, `app_launcher`, `context_menu`, plus the former `src/modules/`: `powermenu`, `volume_osd`, `brightness_osd`, `titlebar`, `volume_controller`, `notification-center/`.
+- `src/_attic/` — quarantined dead code (`gpt.lua`, `sysBackup.lua`): blocking-IO, unmounted, not a layer. See its README.
 - `src/tools/` — `auto_starter.lua` (runs `user_vars.autostart`), `icon_handler.lua`.
 - `src/scripts/` — shell helpers invoked by widgets (`vol.sh`, `mic.sh`, `bt.sh`, `pfp.sh`, `display_setup.sh`).
 - `src/assets/` — icons, layout glyphs, wallpaper, `logo.gif`, and `rules.txt` (runtime-mutable list of floating-window classes).
@@ -62,7 +66,7 @@ Many later modules assume the globals (`user_vars`, `Theme`, `Theme_path`, `Hove
 Runs `awful.screen.connect_for_each_screen` for every screen, then branches on `s == screen.primary`:
 
 - **Every screen** gets: 4 named tags (`PLANO-WEB3`, `VIBE-STUDING`, `GHOST-SIGN`, `NEW-ICHIMOKU`), powermenu, volume/brightness OSDs, titlebar, volume controller, layoutlist, taglist.
-- **Primary screen only** gets the full violet-HUD composition: the top `radical_bar` (taglist + `tag_controls` + `control_center` clickable stat lozenges + clock/systray/power), the on-click dashboard popups (`info_panel` / `usage_panel` / `process_panel` / `net_graph_panel` / `connections_panel` / `protocols_donut` / `calendar_panel`), `status_dock`, the `app_launcher`, and the bottom **MonitorBar** telemetry dock (`src/widgets/monitor_bar.lua`, DESIGN_SYSTEM.md §7.3.1).
+- **Primary screen only** gets the full violet-HUD composition: the top `radical_bar` (taglist + `tag_controls` + `control_center` clickable stat lozenges + clock/systray/power), the on-click dashboard popups (`info_panel` / `usage_panel` / `process_panel` / `net_graph_panel` / `connections_panel` / `protocols_donut` / `calendar_panel`), `status_dock`, the `app_launcher`, and the bottom **MonitorBar** telemetry dock (`src/organisms/monitor_bar.lua`, DESIGN_SYSTEM.md §7.3.1).
 
 Note: `mappings/bind_to_tags.lua` binds keys for tags 1..9 even though only 4 tags exist. Treat tag-count changes as a coordinated edit across both files.
 
@@ -75,7 +79,7 @@ Note: `mappings/bind_to_tags.lua` binds keys for tags 1..9 even though only 4 ta
 ## Bar composition gotchas
 
 - `radical_wm/radical_bar.lua` recolors child widgets unless they carry `_preserve_colors` or `_preserve_segment`. Widgets that own their palette (e.g. `world_clock` with a custom `segment_bg`) must set one of those flags.
-- `src/widgets/plano_gif.lua` preloads `src/assets/logo.gif` and caches extracted frames under `/tmp/awesome_plano_gif_frames/`. If GIF behavior looks stale, clear that directory.
+- `src/molecules/plano_gif.lua` preloads `src/assets/logo.gif` and caches extracted frames under `/tmp/awesome_plano_gif_frames/`. If GIF behavior looks stale, clear that directory.
 - Path handling is mixed: most code uses `awful.util.getdir("config")` or `gears.filesystem.get_configuration_dir()`, but some shell snippets hardcode `~/.config/awesome`. Don't assume one convention.
 
 ## External command contracts
