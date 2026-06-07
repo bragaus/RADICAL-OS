@@ -65,7 +65,7 @@ screen.connect_signal("removed", schedule_restart_on_screen_change)
 client.connect_signal(
   "manage",
   function(c)
-    if awesome.startup and not c.size_hints.user_porition and not c.size_hints.program_position then
+    if awesome.startup and not c.size_hints.user_position and not c.size_hints.program_position then
       awful.placement.no_offscreen(c)
     end
     c.shape = function(cr, width, height)
