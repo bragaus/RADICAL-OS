@@ -99,7 +99,29 @@ user_vars = {
     },
     blur = {
       enabled = true,
-      strength = 7,
+      strength = 4, -- canônico: alinhado ao picom.conf (era 7, drift). Fonte: performance.compositor.blur_strength
+    },
+  },
+
+  -- ─────────────────────────────────────────────────────────────────────────
+  -- PERFORMANCE / hardware tuning — fonte única para compositor + display.
+  -- Phase 11 templa ~/.config/picom.conf e display_setup.sh a partir daqui.
+  -- Realidade single-thread: saturar a GPU, manter o loop Lua quase ocioso.
+  -- ─────────────────────────────────────────────────────────────────────────
+  performance = {
+    refresh_rate = 165,                     -- DP-0 nativo (xrandr-confirmado) → orçamento ~6.06ms/frame
+    primary_output = "DP-0",
+    primary_mode = "3440x1440",
+    force_full_composition_pipeline = true, -- vsync no driver NVIDIA (tear-free). Se false, picom vsync TEM de ser true.
+    powermizer_max = true,                  -- GPUPowerMizerMode=1: trava clocks no máx, mata ramp-stutter (desktop, sem bateria)
+    compositor = {                          -- picom em NVIDIA + glx. Regras DURAS:
+      backend = "glx",
+      vsync = false,                        -- FFCP já faz vsync; vsync duplo = lag de move/resize. Flipar SÓ junto com FFCP.
+      use_damage = false,                   -- HARD DO-NOT: true SEGFAULTA o picom em nvidia+glx
+      glx_no_stencil = true,                -- ~15% de ganho
+      blur_enabled = true,
+      blur_strength = 4,                    -- iterações dual_kawase (valor canônico)
+      unredir_if_possible = true,           -- fullscreen (jogo/vídeo) bypassa o compositor → GPU inteira
     },
   },
 
