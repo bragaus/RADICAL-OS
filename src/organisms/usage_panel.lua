@@ -224,22 +224,39 @@ return function(args)
     end
   end
 
-  gears.timer {
+  local function sample()
+    awful.spawn.easy_async_with_shell(SAMPLE_CMD, function(stdout)
+      refresh(stdout)
+    end)
+  end
+
+  local sample_timer = gears.timer {
     timeout   = args.timeout or 2,
-    call_now  = true,
-    autostart = true,
-    callback  = function()
-      awful.spawn.easy_async_with_shell(SAMPLE_CMD, function(stdout)
-        refresh(stdout)
-      end)
-    end,
+    call_now  = false,
+    autostart = false,
+    callback  = sample,
   }
 
-  return panel({
+  local outer = panel({
     title      = "USAGE",
     body       = body,
     accent     = p.v500,
     w          = args.w or dpi(260),
     right_icon = Icon("cpu_temp", { size = dpi(14), color = p.text_muted }),
   })
+
+  -- Sampling gated por visibilidade (control_center liga ao abrir / desliga ao fechar o
+  -- dashboard): não amostra CPU/temp por core nem redesenha enquanto o popup está oculto (perf).
+  function outer:start_sampling()
+    if self._sampling then return end
+    self._sampling = true
+    sample()
+    sample_timer:start()
+  end
+  function outer:stop_sampling()
+    self._sampling = false
+    sample_timer:stop()
+  end
+
+  return outer
 end

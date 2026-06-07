@@ -140,21 +140,38 @@ return function(args)
     )
   end
 
-  gears.timer {
+  local function sample()
+    update_v4()
+    update_v6()
+  end
+
+  local sample_timer = gears.timer {
     timeout   = args.timeout or 30,
-    call_now  = true,
-    autostart = true,
-    callback  = function()
-      update_v4()
-      update_v6()
-    end,
+    call_now  = false,
+    autostart = false,
+    callback  = sample,
   }
 
-  return panel({
+  local outer = panel({
     title      = "IP",
     body       = body,
     accent     = p.v500,
     w          = args.w or dpi(260),
     right_icon = Icon("net", { size = dpi(14), color = p.text_muted }),
   })
+
+  -- Sampling gated por visibilidade (control_center liga ao abrir / desliga ao fechar o
+  -- dashboard): não consulta IP enquanto o popup está oculto (perf).
+  function outer:start_sampling()
+    if self._sampling then return end
+    self._sampling = true
+    sample()
+    sample_timer:start()
+  end
+  function outer:stop_sampling()
+    self._sampling = false
+    sample_timer:stop()
+  end
+
+  return outer
 end

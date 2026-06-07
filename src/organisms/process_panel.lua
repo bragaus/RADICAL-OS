@@ -259,23 +259,40 @@ return function(args)
     render_window() -- mantém o offset entre ticks (clampado ao novo total)
   end
 
-  local timer = gears.timer {
+  local function sample()
+    awful.spawn.easy_async_with_shell(SAMPLE_CMD, function(stdout)
+      refresh(stdout)
+    end)
+  end
+
+  local sample_timer = gears.timer {
     timeout   = args.timeout or 3,
-    call_now  = true,
-    autostart = true,
-    callback  = function()
-      awful.spawn.easy_async_with_shell(SAMPLE_CMD, function(stdout)
-        refresh(stdout)
-      end)
-    end,
-  } -- call_now = true já dispara a 1ª amostragem na construção (não re-emitir aqui)
+    call_now  = false,
+    autostart = false,
+    callback  = sample,
+  }
 
   local panel = require("src.tools.panel")
-  return panel({
+  local outer = panel({
     title      = "PROCESS",
     body       = body,
     accent     = p.v500,
     w          = args.w or dpi(300),
     right_icon = Icon("kill_all", { size = dpi(14), color = p.text_muted }),
   })
+
+  -- Sampling gated por visibilidade (control_center liga ao abrir / desliga ao fechar o
+  -- dashboard): não roda `ps` nem redesenha enquanto o popup está oculto (perf).
+  function outer:start_sampling()
+    if self._sampling then return end
+    self._sampling = true
+    sample()
+    sample_timer:start()
+  end
+  function outer:stop_sampling()
+    self._sampling = false
+    sample_timer:stop()
+  end
+
+  return outer
 end

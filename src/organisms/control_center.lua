@@ -270,16 +270,39 @@ return function(s, opts)
   }
   s._cc_dashboards = dashboards
 
+  -- Grupos de painéis por dashboard, p/ ligar/desligar a amostragem conforme a visibilidade.
+  local panel_groups = {
+    system  = opts.system_panels,
+    network = opts.network_panels,
+    time    = opts.time_panels,
+  }
+  -- Liga (on=true) ou desliga (on=false) a amostragem de todos os painéis de um grupo.
+  -- Painéis sem :start_sampling/:stop_sampling (ex.: calendar, world_clocks, apps) são ignorados.
+  local function set_group_sampling(name, on)
+    local list = panel_groups[name]
+    if not list then return end
+    for _, pnl in ipairs(list) do
+      if pnl then
+        local fn = on and pnl.start_sampling or pnl.stop_sampling
+        if fn then fn(pnl) end
+      end
+    end
+  end
+
   -- toggle(name): se o popup nomeado já está visível, esconde-o; senão esconde TODOS e
-  -- mostra apenas esse (só um aberto por vez).
+  -- mostra apenas esse (só um aberto por vez). Liga a amostragem do grupo aberto e desliga
+  -- a dos fechados — assim os painéis de dashboard NÃO amostram (ss/proc/nvidia-smi/pactl)
+  -- enquanto ocultos. Maior ganho de perf: loop ocioso quando nenhum dashboard está aberto.
   local function toggle(name)
     local target = dashboards[name]
     if not target then return end
     local was_visible = target.visible
-    for _, dash in pairs(dashboards) do
+    for gname, dash in pairs(dashboards) do
+      if dash.visible then set_group_sampling(gname, false) end
       dash.visible = false
     end
     target.visible = not was_visible
+    set_group_sampling(name, target.visible)
   end
 
   ----------------------------------------------------------------------------------------
