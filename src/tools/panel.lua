@@ -18,10 +18,8 @@ local gears = require("gears")
 local dpi = require("beautiful.xresources").apply_dpi
 local p = require("src.theme.palette")
 
--- "#RRGGBB" + alpha(0..1) -> "#RRGGBBAA"
-local function a(hex, alpha)
-  return string.format("%s%02x", hex, math.floor((alpha or 1) * 255 + 0.5))
-end
+-- alpha helper reutilizado da palette (DRY — não redefinir o mesmo a() local)
+local a = p.a
 
 -- Constrói um painel com chrome. Opções:
 --   title        (string)            título caixa-alta no header
