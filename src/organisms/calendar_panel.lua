@@ -19,12 +19,17 @@ local p = require("src.theme.palette")
 local panel = require("src.tools.panel")
 local Icon = require("src.tools.icons") -- ícones SVG do set icons/ (§3.13)
 
--- wibox.widget.calendar gera nomes de mês/dia via os.date no LC_TIME ativo. Se o LC_TIME
--- não for UTF-8, acentos ("sábado", "março") saem como bytes inválidos e o set_markup interno
--- da lib falha ("Texto … codificado em UTF-8 inválido"), abortando o painel. Forçamos um
--- LC_TIME UTF-8 válido: mantém português se pt_BR existir; senão cai p/ C UTF-8 / ASCII
--- (sempre UTF-8 válido). Categoria "time" só — não mexe em números/moeda.
-for _, loc in ipairs({ "pt_BR.UTF-8", "pt_BR.utf8", "C.UTF-8", "C.utf8", "C" }) do
+-- ⚠️ BUG UPSTREAM (wibox.widget.calendar, calendar.lua:433-434): com `long_weekdays=false`
+-- a lib trunca o nome abreviado do dia com `string.sub(os.date("%a"), 1, 2)` — corte por
+-- BYTE, não por caractere. Em LC_TIME pt_BR.UTF-8 o sábado vem "sáb" = 73 c3 a1 62, e
+-- sub(.,1,2) = 73 c3 (o "á" multibyte cortado ao meio) = UTF-8 inválido → o set_markup
+-- interno aborta TODO o painel ("Texto … codificado em UTF-8 inválido"). Não dá p/ corrigir
+-- em fn_embed (a falha é ANTES dele) nem escolhendo um pt_BR "melhor" (é justamente o UTF-8
+-- pt_BR que dispara). Solução: formatar o calendário num LC_TIME ASCII (nomes em inglês,
+-- sempre seguros sob o corte de 2 bytes). Combina com o resto do HUD, que já é em inglês.
+-- Categoria "time" só — não mexe em números/moeda. (long_weekdays=true evitaria o sub, mas
+-- nomes completos não cabem nas 7 colunas.)
+for _, loc in ipairs({ "C.UTF-8", "C.utf8", "C" }) do
   if os.setlocale(loc, "time") then break end
 end
 
