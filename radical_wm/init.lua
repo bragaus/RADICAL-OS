@@ -59,7 +59,7 @@ awful.screen.connect_for_each_screen(
     -- ----- BARRA SUPERIOR -----
     s.tag_controls = require("src.widgets.tag_controls")(s)
     s.tag_controls._preserve_colors = true
-    s.powerbutton  = require("src.widgets.power")()
+    s.powerbutton  = require("src.molecules.power")()
     require("radical_wm.radical_bar")(s, { s.layoutlist, s.taglist, s.tag_controls })
 
     -- ----- PAINÉIS (2× — vivem DENTRO dos dashboards on-click) -----
@@ -73,10 +73,10 @@ awful.screen.connect_for_each_screen(
     s.protocols_donut   = require("src.widgets.protocols_donut") { w = W }
     s.apps_panel        = require("src.widgets.apps_panel") { w = W }
     s.calendar_panel    = require("src.widgets.calendar_panel") { w = W }
-    s.clock_br = require("src.widgets.world_clock") { city = "BRASIL", timezone = "America/Sao_Paulo", country = "br", width = dpi(504) }
-    s.clock_fr = require("src.widgets.world_clock") { city = "FRANCA", timezone = "Europe/Paris", country = "fr", width = dpi(504) }
-    s.clock_jp = require("src.widgets.world_clock") { city = "JAPAO", timezone = "Asia/Tokyo", country = "jp", width = dpi(504) }
-    s.clock_us = require("src.widgets.world_clock") { city = "EUA", timezone = "America/New_York", country = "us", width = dpi(504) }
+    s.clock_br = require("src.molecules.world_clock") { city = "BRASIL", timezone = "America/Sao_Paulo", country = "br", width = dpi(504) }
+    s.clock_fr = require("src.molecules.world_clock") { city = "FRANCA", timezone = "Europe/Paris", country = "fr", width = dpi(504) }
+    s.clock_jp = require("src.molecules.world_clock") { city = "JAPAO", timezone = "Asia/Tokyo", country = "jp", width = dpi(504) }
+    s.clock_us = require("src.molecules.world_clock") { city = "EUA", timezone = "America/New_York", country = "us", width = dpi(504) }
     s.international_panel = panel({
       title = "INTERNATIONAL",
       w = W,
