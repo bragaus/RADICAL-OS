@@ -1,0 +1,7 @@
+# Vim/editor swap files (ARCHITECTURE.md §6)
+*.sw?
+*.swo
+*.swp
+
+# plano_gif frame cache (CLAUDE.md — extracted under /tmp, never in-tree)
+/tmp/awesome_plano_gif_frames/
