@@ -242,7 +242,7 @@ return function(s, opts)
       ontop     = true,
       visible   = false,
       screen    = s,
-      bg        = "#0c0617e6", -- base@e6
+      bg        = p.a(p.base, 0.9), -- base@e6
       placement = place or function(c)
         awful.placement.top(c, { margins = { top = dpi(62) } })
       end,
@@ -322,7 +322,7 @@ return function(s, opts)
     ontop     = false,
     visible   = true,
     screen    = s,
-    bg        = "#0c0617cc", -- base@cc
+    bg        = p.a(p.base, 0.8), -- base@cc
     placement = recenter_bar,
   }
   s._control_center_bar = bar
@@ -350,7 +350,7 @@ return function(s, opts)
     ontop     = false,
     visible   = true,
     screen    = s,
-    bg        = "#0c0617cc",
+    bg        = p.a(p.base, 0.8), -- base@cc
     placement = function(c)
       awful.placement.top_right(c, { margins = { top = dpi(8), right = dpi(10) } })
     end,
