@@ -1,5 +1,5 @@
 ------------------------------------------------------------------------------------------
--- src/widgets/process_panel.lua — Painel "PROCESS" (VIOLET HUD §7.4.7)                    --
+-- src/organisms/process_panel.lua — Painel "PROCESS" (VIOLET HUD §7.4.7)                    --
 --                                                                                        --
 -- TODOS os processos por uso de CPU. Cada linha: PID (text_muted) · NOME (text_primary,  --
 -- esquerda, ~10 chars) · CPU% (text_bright, direita) · MEM% (text_muted) · KILL (skull,  --

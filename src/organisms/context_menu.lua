@@ -1,5 +1,5 @@
 ------------------------------------------------------------------------------------------
--- src/widgets/context_menu.lua — Menu de contexto "VIOLET HUD" (clique-direito)           --
+-- src/organisms/context_menu.lua — Menu de contexto "VIOLET HUD" (clique-direito)           --
 --                                                                                        --
 -- §7.5 do DESIGN_SYSTEM: menu denso com FAIXA-TÍTULO em gradiente (line_bright -> v950,  --
 -- texto v50 CAIXA-ALTA), itens h24 (text_primary; hover bg v700 / fg v50), perigosos em  --

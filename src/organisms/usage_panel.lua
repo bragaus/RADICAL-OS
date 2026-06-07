@@ -1,5 +1,5 @@
 ------------------------------------------------------------------------------------------
--- src/widgets/usage_panel.lua — Painel "USAGE" (VIOLET HUD §5.1 / §7.4)                   --
+-- src/organisms/usage_panel.lua — Painel "USAGE" (VIOLET HUD §5.1 / §7.4)                   --
 --                                                                                        --
 -- Tabela por núcleo de CPU (Image #6, coluna esquerda). Cabeçalho:                       --
 --   "  GHz  TEMP  USED%"  e uma linha por core (C1..Cn, cap em 8).                       --

@@ -1,5 +1,5 @@
 ------------------------------------------------------------------------------------------
--- src/widgets/control_center.lua — Barra superior de LOZENGES clicáveis + DASHBOARDS      --
+-- src/organisms/control_center.lua — Barra superior de LOZENGES clicáveis + DASHBOARDS      --
 --                                  on-click (VIOLET HUD · DESIGN_SYSTEM §5.1 §5.2 §7.2.1). --
 --                                                                                        --
 -- Constrói a fita TOP-CENTER de lozenges (pílulas com pontas de seta côncava, mesmo      --

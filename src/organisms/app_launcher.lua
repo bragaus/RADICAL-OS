@@ -1,5 +1,5 @@
 ------------------------------------------------------------------------------------------
--- src/widgets/app_launcher.lua — Launcher GIF + ENGRENAGEM de apps (canto inf-direito)      --
+-- src/organisms/app_launcher.lua — Launcher GIF + ENGRENAGEM de apps (canto inf-direito)      --
 --                                                                                        --
 -- Disco central com o logo.gif ANIMADO (fundo transparente). Clicar no centro ABRE/FECHA   --
 -- a engrenagem: os programas instalados (.desktop) aparecem como "cogs" (círculos com o     --
@@ -13,7 +13,7 @@
 --                                                                                        --
 -- Apps lidos 1x via Python. Ícones via menubar.utils.lookup_icon (SVG/PNG), cacheados.      --
 -- Frames do GIF recortados na figura e cacheados em /tmp/awesome_launcher_gif_v2_<px>/.     --
--- Chamar:  require("src.widgets.app_launcher")(s)                                           --
+-- Chamar:  require("src.organisms.app_launcher")(s)                                           --
 ------------------------------------------------------------------------------------------
 
 local awful = require("awful")

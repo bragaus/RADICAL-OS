@@ -1,5 +1,5 @@
 ------------------------------------------------------------------------------------------
--- src/widgets/connections_panel.lua — Painel "CONNECTIONS" (VIOLET HUD §7.4.8)            --
+-- src/organisms/connections_panel.lua — Painel "CONNECTIONS" (VIOLET HUD §7.4.8)            --
 --                                                                                        --
 -- Lista TODAS as conexões de rede via `ss -tunH`. Cada linha:                            --
 --   PROTO (text_muted) | peer addr encurtado (text_primary) | ESTADO (colorido à direita) --

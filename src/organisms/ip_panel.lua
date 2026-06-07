@@ -1,5 +1,5 @@
 ------------------------------------------------------------------------------------------
--- src/widgets/ip_panel.lua — Painel "IP" (VIOLET HUD §7.4.1 / §7.4.x, coluna do meio)      --
+-- src/organisms/ip_panel.lua — Painel "IP" (VIOLET HUD §7.4.1 / §7.4.x, coluna do meio)      --
 --                                                                                        --
 -- Duas info-rows key/value (§7.4.1):                                                     --
 --   IPv4  <addr>   |   IPv6  <addr>                                                       --

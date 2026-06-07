@@ -1,5 +1,5 @@
 ------------------------------------------------------------------------------------------
--- src/widgets/net_graph_panel.lua — Painel "GRAPH" (VIOLET HUD §5.1 col. meio, §7.4.3)    --
+-- src/organisms/net_graph_panel.lua — Painel "GRAPH" (VIOLET HUD §5.1 col. meio, §7.4.3)    --
 --                                                                                        --
 -- Coluna do meio da Image #6. Corpo = dois mini line-graphs empilhados:                  --
 --   "↑ UPLOAD"   (acento p.data4)   rótulo text_muted em cima, taxa atual à direita      --
