@@ -329,18 +329,33 @@ return function(args)
     )
   end
 
-  gears.timer {
+  local sample_timer = gears.timer {
     timeout = INTERVAL,
-    autostart = true,
-    call_now = true,
+    autostart = false,
+    call_now = false,
     callback = update,
   }
 
-  return panel({
+  local outer = panel({
     title = "GRAPH",
     body = body,
     accent = p.v500,
     w = args.w or dpi(260),
     right_icon = Icon("net", { size = dpi(14), color = p.text_muted }),
   })
+
+  -- Sampling gated por visibilidade (control_center liga ao abrir / desliga ao fechar o
+  -- dashboard): não lê /proc/net/dev nem redesenha enquanto o popup está oculto (perf).
+  function outer:start_sampling()
+    if self._sampling then return end
+    self._sampling = true
+    update()
+    sample_timer:start()
+  end
+  function outer:stop_sampling()
+    self._sampling = false
+    sample_timer:stop()
+  end
+
+  return outer
 end

@@ -413,18 +413,33 @@ return function(args)
 
   render_window() -- 1º frame coerente (estado vazio) antes do 1º resultado assíncrono do ss
 
-  gears.timer {
+  local sample_timer = gears.timer {
     timeout = 5,
-    autostart = true,
-    call_now = true,
+    autostart = false,
+    call_now = false,
     callback = update,
-  } -- call_now = true já dispara a 1ª amostragem na construção
+  }
 
-  return panel({
+  local outer = panel({
     title      = "CONNECTIONS",
     body       = body,
     accent     = p.v500,
     w          = args.w or dpi(300),
     right_icon = Icon("send_signal", { size = dpi(14), color = p.text_muted }),
   })
+
+  -- Sampling gated por visibilidade (control_center liga ao abrir / desliga ao fechar o
+  -- dashboard): não roda `ss` nem redesenha enquanto o popup está oculto (perf).
+  function outer:start_sampling()
+    if self._sampling then return end
+    self._sampling = true
+    update()
+    sample_timer:start()
+  end
+  function outer:stop_sampling()
+    self._sampling = false
+    sample_timer:stop()
+  end
+
+  return outer
 end
