@@ -1,5 +1,5 @@
 ------------------------------------------------------------------------------------------
--- src/widgets/protocols_donut.lua — "PROTOCOLS" (VIOLET HUD, §7.4.4)                      --
+-- src/organisms/protocols_donut.lua — "PROTOCOLS" (VIOLET HUD, §7.4.4)                      --
 --                                                                                        --
 -- Donut (arcchart) das contagens de conexão de rede por estado:                          --
 --   ESTABLISHED (data1) · LISTEN (data3) · OTHER (v950).                                 --

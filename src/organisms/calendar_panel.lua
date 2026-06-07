@@ -1,5 +1,5 @@
 ------------------------------------------------------------------------------------------
--- src/widgets/calendar_panel.lua — "VIOLET HUD" month calendar (§7.4.5)                  --
+-- src/organisms/calendar_panel.lua — "VIOLET HUD" month calendar (§7.4.5)                  --
 --                                                                                        --
 -- Body = wibox.widget.calendar (type "month") restyled through fn_embed:                 --
 --   month/year header   -> centered, text_heading, UPPERCASE                             --

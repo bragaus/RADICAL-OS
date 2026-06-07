@@ -1,5 +1,5 @@
 ------------------------------------------------------------------------------------------
--- src/widgets/tag_controls.lua — Cluster de controle de tags (VIOLET HUD)                 --
+-- src/organisms/tag_controls.lua — Cluster de controle de tags (VIOLET HUD)                 --
 --                                                                                        --
 -- Pequeno grupo de botões no FIM da barra de tags (Image #2): adiciona/remove tags e     --
 -- move a tag atual entre os workspaces. Quatro botões clicáveis (glyphs ASCII p/ render   --

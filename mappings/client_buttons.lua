@@ -22,6 +22,6 @@ return gears.table.join(
   -- ele é capturado p/ o menu. Resize de janela = modkey + clique-direito.)
   awful.button({}, 2, function(c)
     c:emit_signal("request::activate", "mouse_click", { raise = true })
-    require("src.widgets.context_menu")(c)
+    require("src.organisms.context_menu")(c)
   end)
 )

@@ -1,5 +1,5 @@
 ------------------------------------------------------------------------------------------
--- src/widgets/apps_panel.lua — Painel "APPLICATIONS" (VIOLET HUD §5.1 / §7.4.x)            --
+-- src/organisms/apps_panel.lua — Painel "APPLICATIONS" (VIOLET HUD §5.1 / §7.4.x)            --
 --                                                                                        --
 -- Lista os CLIENTES abertos (janelas), não processos de shell. Cada linha:               --
 --   [ícone] NOME/CLASSE (text_primary, encurtado)  ················  KILL (skull)         --

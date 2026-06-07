@@ -1,5 +1,5 @@
 ------------------------------------------------------------------------------------------
--- src/widgets/monitor_bar.lua — MonitorBar (dock de telemetria inferior, VIOLET HUD §7.3.1) --
+-- src/organisms/monitor_bar.lua — MonitorBar (dock de telemetria inferior, VIOLET HUD §7.3.1) --
 --                                                                                          --
 -- Barra FIXA no rodapé da tela primária, sempre visível (coexiste com a barra superior e   --
 -- os dashboards on-click — não os substitui). Espelha o `MonitorBar` do toolkit            --

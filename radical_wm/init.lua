@@ -48,8 +48,8 @@ awful.screen.connect_for_each_screen(
     require("src.modules.volume_controller")(s)
 
     -- Widgets
-    s.layoutlist = require("src.widgets.layout_list")(s)
-    s.taglist = require("src.widgets.taglist")(s)
+    s.layoutlist = require("src.organisms.layout_list")(s)
+    s.taglist = require("src.organisms.taglist")(s)
     -- =====================================================================================
     -- BARRA SUPERIOR + DASHBOARDS ON-CLICK (DESIGN_SYSTEM §5).
     -- Sem colunas estáticas, sem chart monolítico, sem dock: os painéis aparecem em popups
@@ -57,22 +57,22 @@ awful.screen.connect_for_each_screen(
     -- =====================================================================================
 
     -- ----- BARRA SUPERIOR -----
-    s.tag_controls = require("src.widgets.tag_controls")(s)
+    s.tag_controls = require("src.organisms.tag_controls")(s)
     s.tag_controls._preserve_colors = true
     s.powerbutton  = require("src.molecules.power")()
     require("radical_wm.radical_bar")(s, { s.layoutlist, s.taglist, s.tag_controls })
 
     -- ----- PAINÉIS (2× — vivem DENTRO dos dashboards on-click) -----
     local W = dpi(520)
-    s.info_panel        = require("src.widgets.info_panel") { w = W }
-    s.usage_panel       = require("src.widgets.usage_panel") { w = W }
-    s.process_panel     = require("src.widgets.process_panel") { w = W }
-    s.net_graph_panel   = require("src.widgets.net_graph_panel") { w = W }
-    s.ip_panel          = require("src.widgets.ip_panel") { w = W }
-    s.connections_panel = require("src.widgets.connections_panel") { w = W }
-    s.protocols_donut   = require("src.widgets.protocols_donut") { w = W }
-    s.apps_panel        = require("src.widgets.apps_panel") { w = W }
-    s.calendar_panel    = require("src.widgets.calendar_panel") { w = W }
+    s.info_panel        = require("src.organisms.info_panel") { w = W }
+    s.usage_panel       = require("src.organisms.usage_panel") { w = W }
+    s.process_panel     = require("src.organisms.process_panel") { w = W }
+    s.net_graph_panel   = require("src.organisms.net_graph_panel") { w = W }
+    s.ip_panel          = require("src.organisms.ip_panel") { w = W }
+    s.connections_panel = require("src.organisms.connections_panel") { w = W }
+    s.protocols_donut   = require("src.organisms.protocols_donut") { w = W }
+    s.apps_panel        = require("src.organisms.apps_panel") { w = W }
+    s.calendar_panel    = require("src.organisms.calendar_panel") { w = W }
     s.clock_br = require("src.molecules.world_clock") { city = "BRASIL", timezone = "America/Sao_Paulo", country = "br", width = dpi(504) }
     s.clock_fr = require("src.molecules.world_clock") { city = "FRANCA", timezone = "Europe/Paris", country = "fr", width = dpi(504) }
     s.clock_jp = require("src.molecules.world_clock") { city = "JAPAO", timezone = "Asia/Tokyo", country = "jp", width = dpi(504) }
@@ -92,7 +92,7 @@ awful.screen.connect_for_each_screen(
     })
 
     -- ----- CONTROL CENTER: lozenges clicáveis (topo-centro) + dashboards on-click -----
-    require("src.widgets.control_center")(s, {
+    require("src.organisms.control_center")(s, {
       right_widget   = s.powerbutton, -- power vai p/ a barra do canto superior-direito (junto do relógio)
       system_panels  = { s.info_panel, s.usage_panel, s.process_panel },
       network_panels = { s.net_graph_panel, s.ip_panel, s.connections_panel, s.protocols_donut, s.apps_panel },
@@ -100,10 +100,10 @@ awful.screen.connect_for_each_screen(
     })
 
     -- ----- LAUNCHER: botão GIF circular no canto inferior-direito + menu de apps -----
-    s.app_launcher = require("src.widgets.app_launcher")(s)
+    s.app_launcher = require("src.organisms.app_launcher")(s)
 
     -- ----- MONITORBAR: dock de telemetria persistente no rodapé (DESIGN_SYSTEM §7.3.1) -----
-    s.monitor_bar = require("src.widgets.monitor_bar")(s)
+    s.monitor_bar = require("src.organisms.monitor_bar")(s)
   end
 end
 )

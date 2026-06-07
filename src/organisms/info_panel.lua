@@ -1,5 +1,5 @@
 ------------------------------------------------------------------------------------------
--- src/widgets/info_panel.lua — Painel "INFO" (VIOLET HUD §5.1 col. esquerda / §7.4.1)      --
+-- src/organisms/info_panel.lua — Painel "INFO" (VIOLET HUD §5.1 col. esquerda / §7.4.1)      --
 --                                                                                        --
 -- Info-rows key/value (§7.4.1): rótulo à esquerda (text_muted, CAIXA-ALTA) · valor à    --
 -- direita (text_bright). Fundo de linha sutil v500@0.06 + borda v500@0.20, raio bar.     --
