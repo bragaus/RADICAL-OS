@@ -302,8 +302,11 @@ return gears.table.join(
         [[xprop | grep WM_CLASS | awk '{gsub(/"/, "", $4); print $4}']],
         function(stdout)
           if stdout then
+            local cls = stdout:gsub("\n", "")
+            -- mesma regra de match do boot loader (src/core/rules.lua): exato + escapado
+            local exact = "^" .. cls:gsub("[%-%.%+%[%]%(%)%%%?%*%^%$]", "%%%1") .. "$"
             ruled.client.append_rule {
-              rule = { class = stdout:gsub("\n", "") },
+              rule = { class = exact },
               properties = {
                 floating = true
               },
@@ -338,8 +341,11 @@ return gears.table.join(
         [[xprop | grep WM_CLASS | awk '{gsub(/"/, "", $4); print $4}']],
         function(stdout)
           if stdout then
+            local cls = stdout:gsub("\n", "")
+            -- mesma regra de match do boot loader (src/core/rules.lua): exato + escapado
+            local exact = "^" .. cls:gsub("[%-%.%+%[%]%(%)%%%?%*%^%$]", "%%%1") .. "$"
             ruled.client.append_rule {
-              rule = { class = stdout:gsub("\n", "") },
+              rule = { class = exact },
               properties = {
                 floating = false
               },
