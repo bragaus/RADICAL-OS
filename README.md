@@ -11,8 +11,9 @@ Repo: `bragaus/RADICAL-WM`.
   headers, bevel borders, line/donut/bar charts, calendar, world clocks, process/connections
   lists, a clickable top bar with stat lozenges + on-click dashboards, and a bottom MonitorBar
   telemetry dock — driven by a single design toolkit.
-- Mid-migration to an Atomic Design code layout (`src/widgets/` → `src/molecules/` +
-  `src/organisms/`); see ARCHITECTURE.md.
+- An Atomic Design code layout: leaf widgets in `src/molecules/`, panels / lists / popups /
+  OSDs / menus in `src/organisms/` (the old `src/widgets/` + `src/modules/` are gone); see
+  ARCHITECTURE.md.
 
 ## Doc map (read in this order)
 
