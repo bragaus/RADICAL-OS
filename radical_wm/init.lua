@@ -39,13 +39,13 @@ awful.screen.connect_for_each_screen(
 --[[ uma das coisas mais tristes na vida e chegar ao fim e olhar oara traz com remorso, sabendo que voce poderia teer sido feito e tido muito mais --]]
   -- Tela secundária (vertical) fica limpa: só tags, sem barras/widgets/menus/OSDs.
   if s == resolve_primary() then
-    require("src.modules.powermenu")(s)
+    require("src.organisms.powermenu")(s)
     -- TODO: rewrite calendar osd, maybe write an own inplementation
-    -- require("src.modules.calendar_osd")(s)
-    require("src.modules.volume_osd")(s)
-    require("src.modules.brightness_osd")(s)
-    require("src.modules.titlebar")
-    require("src.modules.volume_controller")(s)
+    -- require("src.organisms.calendar_osd")(s)
+    require("src.organisms.volume_osd")(s)
+    require("src.organisms.brightness_osd")(s)
+    require("src.organisms.titlebar")
+    require("src.organisms.volume_controller")(s)
 
     -- Widgets
     s.layoutlist = require("src.organisms.layout_list")(s)
