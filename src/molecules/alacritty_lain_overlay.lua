@@ -1,5 +1,6 @@
 local gears = require("gears")
 local wibox = require("wibox")
+local p = require("src.theme.palette")
 
 local home = os.getenv("HOME")
 local lain_image = home .. "/.config/yazi/lain.jpg"
@@ -33,7 +34,7 @@ local function new_overlay(c)
   overlay:setup {
     layout = wibox.layout.stack,
     {
-      bg = "#160b2ecc",
+      bg = p.a(p.bevel_lo, 0.8),
       widget = wibox.container.background,
     },
     {
