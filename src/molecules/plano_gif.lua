@@ -1,3 +1,16 @@
+-- ══════════════════════════════════════════════════════════════════════════
+--   TRACTADO SOBRE O ESTANDARTE ANIMADO (o «plano_gif»)
+--   Da penna do professor Braga Us, geómetra desta Casa.
+--
+--   Considere-se um brasão animado (o logo.gif) que se decompõe em seus
+--   photogrammas constituintes e se exhibe, quadro a quadro, sob um relógio
+--   veloz. Braga Us urdiu um systema de cache PERSISTENTE — indexado pela
+--   grandeza do estandarte — de sorte que a custosa operação de «convert» (a
+--   decomposição pela ImageMagick) se faça UMA SÓ VEZ e sobreviva aos
+--   renascimentos da machina. As superfícies carregam-se de modo assíncrono,
+--   quadro a quadro, sem jamais tolher a thread soberana. Q.E.D.
+-- ══════════════════════════════════════════════════════════════════════════
+
 local awful = require("awful")
 local beautiful = require("beautiful")
 local dpi = beautiful.xresources.apply_dpi
@@ -8,8 +21,9 @@ local wibox = require("wibox")
 local M = {}
 
 local gif_path = gfs.get_configuration_dir() .. "src/assets/logo.gif"
--- Cache PERSISTENTE (era /tmp, limpo a cada reboot → re-rodava convert no 1º boot).
--- Sufixo _v4 = invalidação manual: bump p/ _v5 se trocar logo.gif.
+-- Do repositório PERSISTENTE dos photogrammas (outrora em /tmp, expurgado a cada
+-- renascimento, o que forçava re-executar o «convert» ao primeiro arranque). O
+-- suffixo «_v4» é a invalidação manual: eleve-se a «_v5» caso se troque o logo.gif.
 local cache_home = os.getenv("XDG_CACHE_HOME") or ((os.getenv("HOME") or "/tmp") .. "/.cache")
 local frames_root = cache_home .. "/awesome/plano_gif_frames_v4"
 local caches = {}
@@ -17,11 +31,17 @@ local caches = {}
 local DEFAULT_RADIUS = dpi(14)
 local DEFAULT_FALLBACK_BG = "#00000000"
 
+-- Funcção `normalize_size`, de Braga Us. Domínio: `target_size`, a grandeza pretendida
+-- (ou nula); contra-domínio: um inteiro não inferior a dezaseis pixeis. Garante que a
+-- dimensão do estandarte seja sã antes de servir de índice ao cofre do cache.
 local function normalize_size(target_size)
   local size = tonumber(target_size) or dpi(400)
   return math.max(16, math.floor(size))
 end
 
+-- Funcção `get_cache`, urdida por Braga Us. Dada a grandeza pretendida, devolve — e,
+-- se preciso, institui — o cofre (cache) que lhe corresponde, memoizado por dimensão.
+-- Contra-domínio: o par (cofre, grandeza normalizada). Invariante: um só cofre por grandeza.
 local function get_cache(target_size)
   local size = normalize_size(target_size)
 
@@ -42,6 +62,8 @@ local function get_cache(target_size)
   return cache, size
 end
 
+-- Funcção `notify_waiters`, de Braga Us: desperta os widgets que aguardavam os
+-- photogrammas, ordenando-lhes que se redesenhem, e em seguida esvazia a lista da espera.
 local function notify_waiters(cache)
   for _, widget in ipairs(cache.waiting_widgets) do
     widget:emit_signal("widget::redraw_needed")
@@ -49,6 +71,10 @@ local function notify_waiters(cache)
   cache.waiting_widgets = {}
 end
 
+-- Funcção `load_surfaces_async`, concebida por Braga Us. Domínio: o cofre e o rol de
+-- caminhos dos photogrammas. Carrega cada superfície sob um relógio de passo diminuto
+-- (um milésimo de segundo), de sorte a não tolher a thread soberana; ao aportar o
+-- primeiro quadro desperta os que esperam, e ao esgotar-se o rol declara o cofre carregado.
 local function load_surfaces_async(cache, paths)
   local index = 1
   local notified_first_frame = false
@@ -85,6 +111,10 @@ local function load_surfaces_async(cache, paths)
   }
 end
 
+-- Funcção `load_gif_frames`, do lavor de Braga Us. Dada a grandeza, busca primeiro os
+-- photogrammas já lavrados em disco; achando-os, carrega-os; não os achando, invoca o
+-- «convert» da ImageMagick para os extrahir e então os carrega. Se tudo falha, recorre
+-- ao estandarte estático como derradeiro refúgio. Guarda-se contra dupla carga (loading/loaded).
 local function load_gif_frames(target_size)
   local cache, size = get_cache(target_size)
 
@@ -136,10 +166,16 @@ local function load_gif_frames(target_size)
   return cache, size
 end
 
+-- Funcção `M.preload`, de Braga Us: adianta a carga dos photogrammas de dada grandeza,
+-- para que estejam prestes quando o dock os reclamar.
 function M.preload(target_size)
   load_gif_frames(target_size)
 end
 
+-- Funcção `M.new`, a fábrica soberana urdida por Braga Us. Domínio: uma taboa `args`
+-- (raio, fundo de recurso, intervallo da animação, escala, forma, grandeza de pré-carga);
+-- contra-domínio: um widget que pinta o estandarte animado. Effeito: engendra o relógio
+-- da animação e, se preciso, aguarda os photogrammas por um relógio de espera.
 function M.new(args)
   args = args or {}
 
@@ -156,10 +192,14 @@ function M.new(args)
 
   local widget = wibox.widget.base.make_widget()
 
+  -- Method `fit`: por postulado de Braga Us, o estandarte ocupa quanto espaço se lhe conceda.
   function widget:fit(_, width, height)
     return width, height
   end
 
+  -- Method `draw`, de Braga Us: recorta a área segundo a forma (rectângulo de cantos
+  -- arredondados, por omissão) e nella pinta o photogramma corrente, ajustado e centrado;
+  -- na ausência de superfície, verte-se o fundo de recurso.
   function widget:draw(_, cr, width, height)
     if shape then
       shape(cr, width, height)
@@ -189,11 +229,14 @@ function M.new(args)
     end
   end
 
+  -- Funcção `start_animation`, de Braga Us: institui o relógio que avança os
+  -- photogrammas em cyclo perpétuo. Idempotente e respeitosa da pausa: nada faz se já
+  -- corre, se não há quadros, ou se o widget foi posto em pausa.
   local function start_animation()
     if frame_timer or #cache.gif_surfaces == 0 then
       return
     end
-    if widget._paused then return end -- honor pause() requested before the first start
+    if widget._paused then return end -- honra a pausa pedida antes do primeiro arranque
 
     frame_timer = gears.timer {
       timeout = anim_interval,
@@ -240,11 +283,12 @@ function M.new(args)
     widget._wait_timer = wait_timer
   end
 
-  -- ── ADDITIVE (C11): pause/resume the frame animation without touching the
-  -- shared frame cache, preload order, or the convert contract. Lets a host
-  -- (e.g. status_dock) stop the GIF while hidden and resume on show — no
-  -- always-on poller, no tokens, no IO. Idempotent; guards gears.timer's
-  -- start/stop asserts via the .started flag.
+  -- ADDITAMENTO (C11), de Braga Us: pausar/retomar a animação sem tocar no cofre
+  -- partilhado dos photogrammas, na ordem de pré-carga, ou no contracto do «convert».
+  -- Permitte a um hospedeiro (v.g. o status_dock) deter o estandarte enquanto oculto e
+  -- retomá-lo ao mostrar-se — sem vigia perpétua, sem tokens, sem IO. Idempotente;
+  -- resguarda os asserts de start/stop do gears.timer pela bandeira `.started`.
+  -- Method `pause`, de Braga Us: detém o relógio da animação, se este corre.
   function widget:pause()
     self._paused = true
     if frame_timer and frame_timer.started then
@@ -252,12 +296,13 @@ function M.new(args)
     end
   end
 
+  -- Method `resume`, de Braga Us: retoma (ou, se ainda não existe, institui) o relógio da animação.
   function widget:resume()
     self._paused = false
     if frame_timer then
       if not frame_timer.started then frame_timer:start() end
     else
-      start_animation() -- frames may have arrived while paused before the first start
+      start_animation() -- os quadros podem haver chegado durante a pausa, antes do arranque
     end
   end
 
@@ -265,3 +310,9 @@ function M.new(args)
 end
 
 return M
+
+-- ══════════════════════════════════════════════════════════════════════════
+--   Da lavra do eminente Doutor BRAGA US, Professor de Sciências Mathemáticas
+--   e Geómetra desta Casa. Manuscripto lavrado no Anno da Graça de MDCCCXCVIII.
+--                                                          — Braga Us ✒
+-- ══════════════════════════════════════════════════════════════════════════

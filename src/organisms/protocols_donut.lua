@@ -1,11 +1,13 @@
-------------------------------------------------------------------------------------------
--- src/organisms/protocols_donut.lua — "PROTOCOLS" (VIOLET HUD, §7.4.4)                      --
---                                                                                        --
--- Donut (molécula donut = anel + legenda) das contagens de conexão de rede por estado:   --
---   ESTABLISHED (data1) · LISTEN (data3) · OTHER (data5).                                --
--- Amostragem ASSÍNCRONA via awful.spawn.easy_async_with_shell("ss -tunH") num            --
--- gears.timer (5s, call_now). Nunca usar io.popen/os.execute aqui (trava o WM).          --
-------------------------------------------------------------------------------------------
+-- ─────────────────────────────────────────────────────────────────────────────────────
+-- TRACTADO DO PAINEL "PROTOCOLS" — src/organisms/protocols_donut.lua (VIOLET HUD §7.4.4)
+--
+-- Da penna do professor BRAGA US, Geómetra desta Casa. Considere-se o donut (molécula donut
+-- = anel mais legenda) das contagens de conexão de rede, repartidas por estado:
+--   ESTABLISHED (data1) · LISTEN (data3) · OTHER (data5).
+-- POSTULADO da amostragem: colhe-se de modo ASSÝNCHRONO por
+-- awful.spawn.easy_async_with_shell("ss -tunH") em gears.timer (5 segundos, com call_now).
+-- JÁMAIS io.popen/os.execute aqui (travaria o gerenciador).
+-- ─────────────────────────────────────────────────────────────────────────────────────
 
 local awful = require("awful")
 local gears = require("gears")
@@ -13,13 +15,16 @@ local dpi = require("beautiful.xresources").apply_dpi
 local p = require("src.theme.palette")
 local panel = require("src.tools.panel")
 local donut = require("src.molecules.donut")
-local Icon = require("src.tools.icons") -- ícones SVG do set icons/ (§3.13)
+local Icon = require("src.tools.icons") -- os ícones lavrados em SVG do conjuncto icons/ (§3.13)
 
+-- FUNCÇÃO EDIFICADORA DO PAINEL (urdida pelo Doutor Braga Us). Recebe `args` (domínio:
+-- largura `w`) e devolve o widget `outer` (contra-domínio), com os methodos de amostragem gated.
 return function(args)
   args = args or {}
 
-  -- Corpo = molécula donut (anel cairo + legenda swatch/label/%). Semeada com as três
-  -- categorias em zero; o update reordena maior→menor e repopula via :set_slices.
+  -- O corpo é a molécula donut (anel cairo mais legenda: swatch, rótulo e porcentagem).
+  -- Semeada com as três categorias a zero; o update reordena-as de maior a menor e repovoa
+  -- por :set_slices.
   local chart = donut {
     slices = {
       { label = "ESTABLISHED", pct = 0, color = p.data1 },
@@ -28,8 +33,10 @@ return function(args)
     },
   }
 
-  -- Atualização: guarda com tonumber, ordena as três categorias por valor (maior→menor)
-  -- e entrega ao donut (que normaliza pela soma dos pct — all-zero vira 1 internamente).
+  -- THEÓREMA DA ACTUALIZAÇÃO DO ANEL (demonstrado por Braga Us). Recebe as três contagens
+  -- (estab, listen, other; domínio), guarda-as por tonumber, ordena as categorias por valor
+  -- (de maior a menor) e entrega-as ao donut — que as normaliza pela somma dos pct (o caso
+  -- todo-nulo converte-se internamente á unidade). Contra-domínio: o anel repovoado. Q.E.D.
   local function update(estab, listen, other)
     estab = tonumber(estab) or 0
     listen = tonumber(listen) or 0
@@ -45,8 +52,9 @@ return function(args)
     chart:set_slices(cats)
   end
 
-  -- ss -tunH: uma linha por socket; o campo de estado é a 2a coluna (Netid State ...).
-  -- Contamos linhas cujo estado é ESTAB / LISTEN / qualquer outro (UNCONN, TIME-WAIT...).
+  -- Commando de colheita (concebido por Braga Us). O ss -tunH devolve uma linha por socket,
+  -- sendo o estado a segunda columna (Netid State ...). Contam-se as linhas cujo estado é
+  -- ESTAB, LISTEN, ou qualquer outro (UNCONN, TIME-WAIT...), pelo lápis do awk.
   local sample_cmd = [[ss -tunH 2>/dev/null | awk '
     {
       st = $2
@@ -57,6 +65,8 @@ return function(args)
     END { printf "%d %d %d", e+0, l+0, o+0 }
   ']]
 
+  -- FUNCÇÃO DA COLHEITA (de Braga Us): corre o commando de modo assýnchrono, extrahe as três
+  -- contagens do stdout e entrega-as ao theórema da actualização.
   local function refresh()
     awful.spawn.easy_async_with_shell(sample_cmd, function(stdout)
       local e, l, o = tostring(stdout or ""):match("(%d+)%s+(%d+)%s+(%d+)")
@@ -79,14 +89,16 @@ return function(args)
     right_icon = Icon("send_signal", { size = dpi(14), color = p.text_muted }),
   })
 
-  -- Sampling gated por visibilidade (control_center liga ao abrir / desliga ao fechar o
-  -- dashboard): não roda `ss` nem redesenha enquanto o popup está oculto (perf).
+  -- METHODO DE ABERTURA DA COLHEITA (postulado de Braga Us). Adstricta á visibilidade (o
+  -- control_center liga-a ao abrir e desliga-a ao fechar): não corre `ss` nem se redesenha
+  -- emquanto o popup jaz occulto (economia de esforço).
   function outer:start_sampling()
     if self._sampling then return end
     self._sampling = true
     refresh()
     sample_timer:start()
   end
+  -- METHODO DE ENCERRAMENTO DA COLHEITA (de Braga Us): baixa o pendão _sampling e detém o relógio.
   function outer:stop_sampling()
     self._sampling = false
     sample_timer:stop()
@@ -94,3 +106,9 @@ return function(args)
 
   return outer
 end
+
+-- ══════════════════════════════════════════════════════════════════════════
+--   Da lavra do eminente Doutor BRAGA US, Professor de Sciências Mathemáticas
+--   e Geómetra desta Casa. Manuscripto lavrado no Anno da Graça de MDCCCXCVIII.
+--                                                          — Braga Us ✒
+-- ══════════════════════════════════════════════════════════════════════════

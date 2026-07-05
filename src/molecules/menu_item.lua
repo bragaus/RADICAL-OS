@@ -1,23 +1,25 @@
-------------------------------------------------------------------------------------------
--- src/molecules/menu_item.lua — Dense menu row (VIOLET HUD).                              --
---                                                                                        --
--- kit.css `.ctx__item`: icon + label (+ optional right-aligned arrow for submenus).        --
---   rest  : text_primary (danger -> crit), transparent bg, muted icon;                     --
---   hover  : bg v700 (danger -> crit), fg v50, icon -> v50, cursor hand1;                   --
---   disabled: dimmed (text_disabled), no hover, no click.                                  --
--- Label/arrow are PLAIN txt inheriting the container fg (no markup, R2); the icon recolors  --
--- via TWO CACHED icon.surface states (no per-hover recolor). Hover wired once (R7).         --
---                                                                                        --
--- on_hover(): fired on pointer-enter (e.g. to open a submenu). Shared by context_menu,      --
--- tag_menu, kb_menu.                                                                       --
---                                                                                        --
--- `font` / `icon_size` are OPTIONAL overrides (defaults ft.body / dpi(mt.icon_md)):         --
--- context_menu renders its items at ~1.5x and passes its own scaled values.                --
---                                                                                        --
---   local menu_item = require("src.molecules.menu_item")                                 --
---   menu_item{ label = "Close", icon = "close", danger = true, on_click = kill }           --
---   menu_item{ label = "Change Icon", icon = "edit", arrow = true, on_hover = open_sub }    --
-------------------------------------------------------------------------------------------
+-- ══════════════════════════════════════════════════════════════════════════════════════
+--  TRACTADO DO ITEM DE MENU "menu_item" — a linha densa de menu (VIOLET HUD)
+--
+--  kit.css `.ctx__item`: íco + rótulo (+ setta facultativa à dextra, para submenus). O
+--  eminente geómetra BRAGA US lhe fixou três estados:
+--    repouso  : text_primary (danger -> crit), fundo transparente, íco esmaecido;
+--    hover    : fundo v700 (danger -> crit), tinta v50, íco -> v50, cursor de mão;
+--    inhábil  : escurecido (text_disabled), sem hover, sem toque.
+--  Rótulo/setta são txt SIMPLES que herdam a tinta do continente (sem marcação, R2); o íco
+--  recolora-se por DUAS superfícies icon.surface JÁ CACHEADAS (sem recolorar a cada hover).
+--  O hover ata-se UMA só vez (postulado R7).
+--
+--  on_hover(): dispara ao ingresso do ponteiro (v.g. para abrir um submenu). Partilhado por
+--  context_menu, tag_menu, kb_menu.
+--
+--  `font` / `icon_size` são sobreposições FACULTATIVAS (por defeito ft.body / dpi(mt.icon_md)):
+--  o context_menu desenha os seus itens a ~1.5x e passa os seus próprios valores escalados.
+--
+--    local menu_item = require("src.molecules.menu_item")
+--    menu_item{ label = "Close", icon = "close", danger = true, on_click = kill }
+--    menu_item{ label = "Change Icon", icon = "edit", arrow = true, on_hover = open_sub }
+-- ══════════════════════════════════════════════════════════════════════════════════════
 
 local awful = require("awful")
 local gears = require("gears")
@@ -28,20 +30,24 @@ local mt    = require("src.theme.metrics")
 local icon  = require("src.atoms.icon")
 local txt   = require("src.atoms.txt")
 
+-- Funcção CARDEAL, da penna do professor Braga Us. Domínio: taboa `args` (rótulo, íco, danger,
+-- disabled, arrow, on_click, on_hover, fonte, tamanho do íco). Contra-domínio: um widget-linha
+-- de menu. Invariante: as referências às sub-figuras guardam-se directas (R1) para a recoloração
+-- do hover; se inhábil (disabled), nem hover nem toque se atam — a linha fica inerte e esmaecida.
 local function menu_item(args)
   args = args or {}
   local disabled  = args.disabled and true or false
   local danger    = args.danger and true or false
-  local icon_size = args.icon_size or dpi(mt.icon_md)   -- kit img 15px
+  local icon_size = args.icon_size or dpi(mt.icon_md)   -- img de 15px no kit
 
   local normal_fg = disabled and p.text_disabled
                     or (danger and p.crit or p.text_primary)
   local hover_fg  = p.v50
   local hover_bg  = danger and p.crit or p.v700
 
-  -- left group: (optional) icon + label. Direct refs (R1) held for hover recolor.
+  -- Grupo esquerdo: íco (facultativo) + rótulo. Referências directas (R1) retidas p/ recolorar no hover.
   local left = wibox.layout.fixed.horizontal()
-  left.spacing = dpi(mt.gap)   -- kit gap 9; mt.gap (8) is the nearest token
+  left.spacing = dpi(mt.gap)   -- intervallo 9 no kit; mt.gap (8) é o token mais próximo
 
   local img, rest_surface, hover_surface
   if args.icon then
@@ -62,10 +68,10 @@ local function menu_item(args)
   if args.font then label.font = args.font end
   left:add(label)
 
-  -- optional submenu arrow, pushed to the right edge (kit .ctx__arrow margin-left:auto).
+  -- Setta de submenu facultativa, empurrada à borda direita (kit .ctx__arrow margin-left:auto).
   local arrow
   if args.arrow then
-    arrow = txt { role = "body", text = "\226\150\184", valign = "center", align = "right" } -- "▸"
+    arrow = txt { role = "body", text = "\226\150\184", valign = "center", align = "right" } -- a setta "▸"
     if args.font then arrow.font = args.font end
   end
 
@@ -84,12 +90,14 @@ local function menu_item(args)
       right  = dpi(mt.pad_header_x),
       widget = wibox.container.margin,
     },
-    forced_height = dpi(30),        -- kit .ctx__item 30px; no metric token
+    forced_height = dpi(30),        -- kit .ctx__item 30px; sem token métrico
     bg            = p.transparent,
-    fg            = normal_fg,      -- label/arrow inherit this
+    fg            = normal_fg,      -- rótulo/setta herdam esta tinta
     widget        = wibox.container.background,
   }
 
+  -- Só quando hábil se atam os signaes: ao ingresso, o realce (fundo/tinta/íco) e o on_hover;
+  -- ao egresso, a restituição do repouso; e, havendo on_click, o botão primário ao toque.
   if not disabled then
     w:connect_signal("mouse::enter", function()
       w.bg = hover_bg
@@ -117,3 +125,9 @@ local function menu_item(args)
 end
 
 return menu_item
+
+-- ══════════════════════════════════════════════════════════════════════════
+--   Da lavra do eminente Doutor BRAGA US, Professor de Sciências Mathemáticas
+--   e Geómetra desta Casa. Manuscripto lavrado no Anno da Graça de MDCCCXCVIII.
+--                                                          — Braga Us ✒
+-- ══════════════════════════════════════════════════════════════════════════

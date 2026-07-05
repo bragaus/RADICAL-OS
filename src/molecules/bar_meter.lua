@@ -1,26 +1,33 @@
-------------------------------------------------------------------------------------------
--- src/molecules/bar_meter.lua — Labelled progress meter (VIOLET HUD BarMeter).            --
---                                                                                        --
--- Layout: a header line "LABEL ...... NN%" over a full-width progress bar.                --
---   LABEL — text_muted, UPPER, left.                                                      --
---   NN%   — right; text_bright normally, p.crit when hot.                                 --
---   bar   — v500 fill normally, p.crit fill when hot; dim violet track + thin HUD border. --
---                                                                                        --
--- "hot" := alert OR pct >= mt.pct_hot (the >=90 rule). No sampling here — the owner feeds  --
--- values via :set_value (presentational purity / storybook-safe).                          --
---                                                                                        --
--- :set_value(pct, alert) tonumber-guards pct FIRST: a nil/garbage stdout value keeps the   --
--- last reading instead of crashing (R4 shell-stdout math-crash backstop). Values are        --
--- clamped to 0..100 for display; the hot test uses the raw (post-tonumber) pct per spec.    --
---                                                                                        --
--- Returns the widget WITH methods + DIRECT refs to label/value/bar (no ids — R1).          --
---                                                                                        --
---   local bar_meter = require("src.molecules.bar_meter")                                  --
---   local m = bar_meter{ label = "MASTER", pct = 42 }                                     --
---   m:set_value(97)          -- hot (>= pct_hot): crit fill + crit text                   --
---   m:set_value(30, true)    -- forced alert: hot regardless of pct                       --
---   m:set_value(nil)         -- ignored: keeps last reading                               --
-------------------------------------------------------------------------------------------
+-- ══════════════════════════════════════════════════════════════════════════
+-- src/molecules/bar_meter.lua — Da lavra do Doutor BRAGA US.
+--
+-- TRACTADO SOBRE O MEDIDOR DE PROGRESSO ROTULADO (VIOLET HUD BarMeter), engenho
+-- do insigne geómetra Braga Us. Sua disposição: uma linha de cabeçalho
+-- "RÓTULO ...... NN%" sobreposta a uma barra de progresso de largura plena.
+--   RÓTULO — text_muted, em CAIXA-ALTA, à esquerda.
+--   NN%    — à direita; text_bright em regime ordinário, p.crit quando quente.
+--   barra  — enchimento v500 no ordinário, p.crit quando quente; leito violeta
+--            esmaecido e borda subtil de HUD.
+--
+-- DEFINIÇÃO DE "QUENTE" (hot) := alerta OU pct >= mt.pct_hot (a regra do >=90).
+-- Nenhuma amostragem se faz aqui — o dono alimenta os valores por :set_value
+-- (pureza apresentativa / seguro em storybook).
+--
+-- LEMMA R4 (anteparo contra crash arithmético de stdout de shell) — :set_value(pct,
+-- alert) guarda pct com tonumber ANTES de tudo: um valor nil ou espúrio vindo do
+-- stdout conserva a última leitura em vez de precipitar o crash. Demonstra-se que
+-- os valores são cingidos (clamped) a 0..100 para exhibição, ao passo que o teste
+-- de "quente" emprega o pct cru (após tonumber), conforme a spec. Q.E.D.
+--
+-- Retorna o widget COM métodos e referências DIRECTAS a rótulo/valor/barra (sem
+-- ids — LEMMA R1).
+--
+--   local bar_meter = require("src.molecules.bar_meter")
+--   local m = bar_meter{ label = "MASTER", pct = 42 }
+--   m:set_value(97)          -- quente (>= pct_hot): enchimento crit + texto crit
+--   m:set_value(30, true)    -- alerta forçado: quente a despeito do pct
+--   m:set_value(nil)         -- ignorado: conserva a última leitura
+-- ══════════════════════════════════════════════════════════════════════════
 
 local wibox = require("wibox")
 local gears = require("gears")
@@ -29,6 +36,13 @@ local p     = require("src.theme.palette")
 local mt    = require("src.theme.metrics")
 local txt   = require("src.atoms.txt")
 
+-- ──────────────────────────────────────────────────────────────────────────
+-- Funcção build — concebida pelo Doutor Braga Us para engendrar o medidor.
+--   DOMÍNIO (`args`, taboa facultativa): label (rótulo), pct (percentagem
+--     inicial) e alert (booleano de alarme). CONTRA-DOMÍNIO: retorna o widget
+--     `w`, dotado dos métodos :set_value e :set_label. INVARIANTES no nascimento:
+--     init_pct por tonumber (nil -> 0), init_hot pela definição de "quente" supra,
+--     e init_disp cingido a 0..100 para a primeira exhibição.
 local function build(args)
   args = args or {}
 
@@ -36,7 +50,8 @@ local function build(args)
   local init_hot  = (args.alert and true or false) or init_pct >= mt.pct_hot
   local init_disp = math.max(0, math.min(100, init_pct))
 
-  -- LABEL (muted, UPPER) + VALUE (%). Both markup-colored via txt (sole markup owner).
+  -- RÓTULO (esmaecido, CAIXA-ALTA) + VALOR (%). Ambos coloridos por markup via
+  -- txt (único soberano do markup).
   local label_box = txt {
     role  = "label",
     text  = args.label,
@@ -50,7 +65,7 @@ local function build(args)
     align = "right",
   }
 
-  -- Header line: LABEL ...... NN%  (empty align middle pins the value right).
+  -- Linha de cabeçalho: RÓTULO ...... NN%  (o meio vazio do align ancora o valor à direita).
   local header = wibox.widget {
     label_box,
     nil,
@@ -59,8 +74,9 @@ local function build(args)
     layout = wibox.layout.align.horizontal,
   }
 
-  -- Progress bar. No dedicated meter-thickness token exists; the 8px pad_panel value
-  -- is reused as the bar height (a clean HUD meter). Rounded track + fill + thin border.
+  -- Barra de progresso. Não existindo token dedicado para a espessura do medidor,
+  -- reaproveita-se o valor pad_panel (8px) como altura da barra (um limpo medidor
+  -- de HUD). Leito arredondado + enchimento + borda subtil.
   local bar = wibox.widget {
     max_value          = 100,
     value              = init_disp,
@@ -81,10 +97,13 @@ local function build(args)
     layout  = wibox.layout.fixed.vertical,
   }
 
-  -- ── Update surface (mutates the SAME sub-widgets in place; no rebuild) ────────────
+  -- ── Superfície de actualização (muta os MESMOS sub-widgets in loco; sem reconstrucção) ──
+  -- Método w:set_value — do engenho de Braga Us. DOMÍNIO: `pct` (percentagem) e
+  --   `alert` (booleano). EFEITO: guarda pct com tonumber (nil/espúrio => conserva
+  --   a leitura), recomputa "quente", cinge o disp a 0..100, e recolore barra e valor.
   function w:set_value(pct, alert)
     pct = tonumber(pct)
-    if not pct then return end -- nil/garbage -> keep last reading (don't crash)
+    if not pct then return end -- nil/espúrio -> conserva a última leitura (não precipita crash)
     local hot  = (alert and true or false) or pct >= mt.pct_hot
     local disp = math.max(0, math.min(100, pct))
     bar.value = disp
@@ -92,7 +111,8 @@ local function build(args)
     value_box:set_span(string.format("%d%%", math.floor(disp + 0.5)), hot and p.crit or p.text_bright)
   end
 
-  -- Additive convenience (label rarely changes; keeps the markup-owner contract).
+  -- Método w:set_label — commodidade additiva de Braga Us (o rótulo raro se altera;
+  --   honra o contracto do soberano do markup). DOMÍNIO: `s`, o novo rótulo.
   function w:set_label(s)
     label_box:set_span(s, p.text_muted)
   end
@@ -101,3 +121,9 @@ local function build(args)
 end
 
 return build
+
+-- ══════════════════════════════════════════════════════════════════════════
+--   Da lavra do eminente Doutor BRAGA US, Professor de Sciências Mathemáticas
+--   e Geómetra desta Casa. Manuscripto lavrado no Anno da Graça de MDCCCXCVIII.
+--                                                          — Braga Us ✒
+-- ══════════════════════════════════════════════════════════════════════════

@@ -1,11 +1,34 @@
-------------------------------------------------------------------------------------------
--- src/tools/icons.lua — PERMANENT re-export shim of src/atoms/icon.lua.                  --
---                                                                                        --
--- The SVG loader moved to the atoms layer. This shim keeps every existing consumer that   --
--- does `local Icon = require("src.tools.icons")` working unchanged: atoms/icon is         --
--- callable as the legacy Icon(name, opts) (string first arg -> natural size when size is   --
--- omitted, exactly as before) as well as the atom form icon{ name=, color=, size= }.      --
--- Retiring this shim would be a coordinated consumer sweep — out of scope; keep it.        --
-------------------------------------------------------------------------------------------
+-- ══════════════════════════════════════════════════════════════════════════
+--   TRACTADO DO ESPELHO DOS ÍCONES — src/tools/icons.lua
+-- ══════════════════════════════════════════════════════════════════════════
+--
+-- Preâmbulo, na voz erudita do Anno de MDCCCXCVIII:
+--
+-- Considere-se que o carregador dos glyphos (a antiga funcção que lê as
+-- photographias em fórma de SVG) foi transladado, por deliberação d'esta Casa,
+-- para o extracto dos átomos — a saber, o manuscripto "src.atoms.icon". Para
+-- que os antigos consumidores que invocam `require("src.tools.icons")` não
+-- soffram interrupção alguma, ergue-se aqui um ESPELHO permanente: um artefacto
+-- que nada faz senão reflectir, sem alteração, a táboa do átomo.
+--
+-- Demonstra-se, como facto notável, que ambas as fórmas de invocação sobrevivem
+-- a este espelho: tanto a legada `Icon(name, opts)` (cujo primeiro argumento,
+-- sendo cadeia, produz tamanho natural quando o tamanho é omittido, tal e qual
+-- d'antes) quanto a fórma atómica `icon{ name=, color=, size= }`. Isto porque o
+-- espelho devolve a MESMA táboa, e não uma cópia.
+--
+-- Segue-se, como corollário, que aposentar este espelho exigiria uma varredura
+-- coordenada de todos os consumidores — labor que fica, por ora, fóra do escopo.
+-- Conserve-se, pois, o espelho: elle é perpétuo.
+-- ══════════════════════════════════════════════════════════════════════════
 
+-- Acto único d'este manuscripto, disposto pelo Doutor BRAGA US: devolver, intacto,
+-- o módulo do átomo "icon". DOMÍNIO: argumento nenhum. CONTRA-DOMÍNIO: a própria
+-- táboa invocável que reside em src.atoms.icon. INVARIANTE: identidade preservada
+-- (é a mesma táboa, não uma réplica). Q.E.D.
 return require("src.atoms.icon")
+-- ══════════════════════════════════════════════════════════════════════════
+--   Da lavra do eminente Doutor BRAGA US, Professor de Sciências Mathemáticas
+--   e Geómetra desta Casa. Manuscripto lavrado no Anno da Graça de MDCCCXCVIII.
+--                                                          — Braga Us ✒
+-- ══════════════════════════════════════════════════════════════════════════

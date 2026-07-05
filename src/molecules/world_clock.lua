@@ -1,22 +1,26 @@
-------------------------------------
--- This is the world_clock widget --
-------------------------------------
--- VIOLET HUD: rebuilt on shared building blocks.
---   * FLAG  -> src/atoms/flag (the ~80-line inline cairo make_flag_widget is gone;
---              the atom is a verbatim extraction, same national-color island).
---   * ROW   -> src/molecules/info_row{ variant = "rule" } — the "CITY ....... HH:MM"
---              expanding label/value rule. The time is fed via :set_value on a 30s
---              tick using the SAME GLib DateTime/TimeZone calls wibox.widget.textclock
---              uses internally, so the per-timezone / DST behavior is preserved
---              (refresh 30 == the retired textclock's refresh).
---   * SELF-set _preserve_colors: this widget OWNS its palette (muted city, bright
---     time) — it must survive the radical_bar recolor pass (R6). It previously did
---     NOT set the flag; now it does.
+-- ══════════════════════════════════════════════════════════════════════════
+--   TRACTADO SOBRE O RELÓGIO-MUNDIAL (VIOLET HUD)
+--   Da penna do professor Braga Us, geómetra desta Casa.
 --
--- Public API unchanged: function(args{ city, timezone, country, width, text_color })
--- -> widget.
+--   Reconstruído sobre blocos partilhados:
+--     * BANDEIRA -> src/atoms/flag (o inline cairo make_flag_widget, de umas 80
+--                   linhas, foi supprimido; o átomo é extracção verbatim, mesma
+--                   ilha de côres nacionaes).
+--     * RÉGUA    -> src/molecules/info_row{ variant = "rule" } — a régua expansível
+--                   «CIDADE ....... HH:MM». A hora nutre-se por :set_value num
+--                   relógio de 30s, usando as MESMAS chamadas GLib DateTime/TimeZone
+--                   que wibox.widget.textclock emprega internamente, de sorte que se
+--                   preserva o comportamento por-fuso / horário-de-verão (a
+--                   actualização de 30 == a do retirado textclock).
+--     * _preserve_colors auto-içado: este widget DETÉM a sua paleta (cidade amortecida,
+--       hora brilhante) — cumpre sobreviver ao passe de recoloração do radical_bar
+--       (defeito R6). Outrora NÃO içava a bandeira; agora, por mão de Braga Us, iça.
+--
+--   Interface pública inalterada:
+--     function(args{ city, timezone, country, width, text_color }) -> widget.
+-- ══════════════════════════════════════════════════════════════════════════
 
--- Awesome Libs
+-- Das bibliothecas do systema Awesome, invocadas por necessidade da arte.
 local awful    = require("awful")
 local dpi      = require("beautiful").xresources.apply_dpi
 local gears    = require("gears")
@@ -27,6 +31,9 @@ local flag     = require("src.atoms.flag")
 local info_row = require("src.molecules.info_row")
 local glib     = require("lgi").GLib
 
+-- Funcção soberana, da penna de Braga Us. Domínio: a taboa `args` (cidade, fuso, paiz,
+-- largura, côr do texto); contra-domínio: o widget do relógio-mundial. Effeito: institui
+-- o relógio de 30 segundos que perpetuamente actualiza a hora exhibida.
 return function(args)
   args = args or {}
 
@@ -36,28 +43,32 @@ return function(args)
   local label_width = args.width or dpi(82)
   local text_color  = args.text_color or p.text_bright
 
-  -- Timezone-correct clock string (identical mechanism to wibox.widget.textclock).
+  -- Da cadeia horária corrigida pelo fuso (mechanismo idêntico ao de wibox.widget.textclock).
   local tz = glib.TimeZone.new(timezone)
+  -- Funcção `now_str`, de Braga Us: devolve a hora presente do fuso, formatada em «HH:MM»,
+  -- ou nulo caso o oráculo GLib falhe (e então info_row:set_value preserva o último valor).
   local function now_str()
     local dt = glib.DateTime.new_now(tz)
-    return dt and dt:format("%H:%M") or nil -- nil -> info_row:set_value keeps last (no blank)
+    return dt and dt:format("%H:%M") or nil -- nulo -> info_row:set_value preserva o último (sem vazio)
   end
 
   local flag_w = flag { country = country }
 
-  -- "CITY ....... HH:MM" rule. info_row uppercases + mutes the key and right-aligns
-  -- the colored value for life via atoms/txt :set_span (R2 markup-owner).
+  -- Régua «CIDADE ....... HH:MM». O info_row eleva a maiúsculas e amortece a chave, e
+  -- alinha à direita, ad vitam, o valor colorido, por meio de atoms/txt :set_span
+  -- (o dono da marcação, defeito R2).
   local row = info_row {
     variant     = "rule",
     key         = city,
     value       = now_str() or "--:--",
     value_color = text_color,
   }
-  -- Fill the width left of the flag + gap so the time still pins to the far right.
-  -- dpi(24) == atoms/flag intrinsic width (no metric token); dpi(mt.gap) == 8px gap.
+  -- Preenche-se a largura à esquerda da bandeira mais o intervallo, de sorte que a hora
+  -- ainda se fixe à extrema direita. dpi(24) == a largura intrínseca de atoms/flag (sem
+  -- token de métrica); dpi(mt.gap) == o intervallo de 8 pixeis.
   row.forced_width = label_width - dpi(24) - dpi(mt.gap)
 
-  -- Row: FLAG  [ CITY ........ HH:MM ]
+  -- Fileira: BANDEIRA  [ CIDADE ........ HH:MM ]
   local widget = wibox.widget {
     {
       flag_w,
@@ -71,11 +82,12 @@ return function(args)
     layout       = wibox.layout.fixed.horizontal,
   }
 
-  -- Owns its palette — do NOT let radical_bar recolor it (R6).
+  -- Detém a sua própria paleta — NÃO se consinta que o radical_bar a recolora (defeito R6).
   widget._preserve_colors = true
 
-  -- 30s tick (mirrors the ex-textclock refresh). NOT a control_center-gated poller
-  -- — world_clocks are explicitly ungated (they carry no start/stop methods).
+  -- Relógio de 30 segundos (espelha a actualização do antigo textclock). NÃO é um vigia
+  -- comportado pelo control_center — os world_clocks são, por deliberação de Braga Us,
+  -- explicitamente livres de comporta (carecem de methodos start/stop).
   gears.timer {
     timeout   = 30,
     call_now  = true,
@@ -93,3 +105,9 @@ return function(args)
 
   return widget
 end
+
+-- ══════════════════════════════════════════════════════════════════════════
+--   Da lavra do eminente Doutor BRAGA US, Professor de Sciências Mathemáticas
+--   e Geómetra desta Casa. Manuscripto lavrado no Anno da Graça de MDCCCXCVIII.
+--                                                          — Braga Us ✒
+-- ══════════════════════════════════════════════════════════════════════════

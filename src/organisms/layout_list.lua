@@ -1,8 +1,14 @@
-----------------------------------
--- This is the layoutbox widget --
-----------------------------------
+-- ══════════════════════════════════════════════════════════════════════════
+--   TRACTADO ACERCA DA CAIXA DE DISPOSIÇÕES (layoutbox)
+--
+--   Seja dada, em cada tela, a disposição corrente das janelas (o "layout"). Este
+--   manuscripto edifica um pequeno emblema que exhibe, por glypho, qual disposição
+--   reina no momento. Ao clique esquerdo avança-se à disposição seguinte; ao direito
+--   recua-se à anterior; e a roda do mouse as percorre em ciclo. Obra concebida e
+--   demonstrada pelo eminente Doutor BRAGA US, Geómetra d'esta Casa.
+-- ══════════════════════════════════════════════════════════════════════════
 
--- Awesome Libs
+-- Das bibliothecas do Awesome
 local awful = require("awful")
 local dpi = require("beautiful").xresources.apply_dpi
 local gears = require("gears")
@@ -12,10 +18,16 @@ local p = require("src.theme.palette")
 local mt = require("src.theme.metrics")
 require("src.core.signals")
 
+-- Duas tinturas fixadas pelo Doutor Braga Us para os glyphos: a de repouso
+-- (glyph_color) e a de realce quando activa (glyph_active).
 local glyph_color = p.text_primary
 local glyph_active = p.v400
 
--- Returns the layoutbox widget
+-- Funcção-fábrica concebida pelo Doutor Braga Us. Recebe a tela (s) por domínio e
+-- devolve por contra-domínio o emblema da disposição: uma imagebox encerrada em fundo
+-- de fórma de comprimido. Firma-se o invariante _preserve_colors; atam-se os botões
+-- (esquerdo/roda avançam, direito/roda recuam) e escuta-se property::layout para
+-- repintar o glypho a cada mudança de disposição na tag eleita.
 return function(s)
   local layout_icon = wibox.widget {
     resize = true,
@@ -45,6 +57,8 @@ return function(s)
 
   layout._preserve_colors = true
 
+  -- Táboa de correspondência disposta pelo Doutor Braga Us: ao nome de cada
+  -- disposição associa-se o ficheiro SVG do seu glypho.
   local layout_icon_map = {
     floating = "floating.svg",
     tile = "tile.svg",
@@ -60,6 +74,10 @@ return function(s)
     dwindle = "dwindle.svg"
   }
 
+  -- Procedimento demonstrado pelo Doutor Braga Us. Não recebe argumento (colhe a tela
+  -- do fecho léxico). Effeito: inquire a disposição corrente, busca-lhe o nome e, por
+  -- elle, o ficheiro do glypho na táboa supra; havendo-o, recolore a imagem com a
+  -- tintura de repouso e a assenta no emblema. Nada retorna; opera pelo effeito.
   local function update_layout_icon()
 
     local current_layout = awful.layout.get(s)
@@ -72,12 +90,14 @@ return function(s)
     end
   end
 
-  -- Signals
+  -- Dos signaes
   Hover_signal(layout, p.raised, glyph_active)
 
-  -- Botões por-botão (antes: button::press em QUALQUER botão fazia sempre inc(-1), então
-  -- clique-esquerdo voltava o layout e scroll/direito também — rearranjava as janelas ao
-  -- contrário do esperado). Agora: esquerdo = próximo, direito = anterior, scroll = cicla.
+  -- Botões discriminados um a um, segundo emenda do Doutor Braga Us (outr'ora, o
+  -- button::press sobre QUALQUER botão applicava sempre inc(-1); assim o clique
+  -- esquerdo recuava a disposição, e a roda e o direito também — desordenando as
+  -- janelas ao invés do esperado). Ora: esquerdo = seguinte, direito = anterior,
+  -- roda = cicla em ambos os sentidos.
   layout:buttons(gears.table.join(
     awful.button({}, 1, function() awful.layout.inc( 1, s); update_layout_icon() end),
     awful.button({}, 3, function() awful.layout.inc(-1, s); update_layout_icon() end),
@@ -98,3 +118,9 @@ return function(s)
 
   return layout
 end
+
+-- ══════════════════════════════════════════════════════════════════════════
+--   Da lavra do eminente Doutor BRAGA US, Professor de Sciências Mathemáticas
+--   e Geómetra desta Casa. Manuscripto lavrado no Anno da Graça de MDCCCXCVIII.
+--                                                          — Braga Us ✒
+-- ══════════════════════════════════════════════════════════════════════════

@@ -1,22 +1,26 @@
-------------------------------------------------------------------------------------------
--- src/organisms/usage_panel.lua — Painel "USAGE" (VIOLET HUD §5.1 / §7.4)                   --
---                                                                                        --
--- Tabela por núcleo de CPU (Image #6, coluna esquerda). Cabeçalho:                       --
---   "  GHz  TEMP  USED%"  e uma linha por core (C1..Cn, cap em 8).                       --
---   · GHz    — "cpu MHz" de /proc/cpuinfo por processor (MHz/1000).                      --
---   · TEMP   — "Core N:" de `sensors` (°C); ausente -> "--". >= mt.temp_hot -> p.crit.    --
---   · USED%  — busy% por núcleo via delta de (total-idle)/total de /proc/stat.           --
---             >= mt.pct_hot -> p.glow_hot (alert threshold §7.4.2).                       --
---                                                                                        --
--- Rótulos em text_muted, números right-aligned em text_bright. Cabeçalho + linhas usam    --
--- a molécula compartilhada table_row: um POOL FIXO de MAX_CORES linhas construído uma vez --
--- e atualizado com :set_cells IN PLACE (sem :reset()/rebuild por tick); cores acima da    --
--- contagem atual são apenas escondidos (.visible=false). Refs diretas às linhas (R1).     --
---                                                                                        --
--- Amostragem ASSÍNCRONA (awful.spawn.easy_async_with_shell em gears.timer 2s, call_now). --
--- NUNCA io.popen/os.execute/sync em timer — congela o WM (deadlock conhecido neste repo).--
--- prev[core] = {total, idle} guardado no closure p/ os deltas de USED% entre ticks.       --
-------------------------------------------------------------------------------------------
+-- ─────────────────────────────────────────────────────────────────────────────────────
+-- TRACTADO DO PAINEL "USAGE" — src/organisms/usage_panel.lua (VIOLET HUD §5.1 / §7.4)
+--
+-- Da penna do professor BRAGA US, Geómetra desta Casa. Considere-se a tabella por núcleo
+-- de processador (Image #6, columna sinistra). Preside-lhe um cabeçalho "  GHz  TEMP  USED%"
+-- e, abaixo, uma linha por núcleo (C1..Cn, cota máxima de oito):
+--   · GHz    — o "cpu MHz" de /proc/cpuinfo por processador (MHz dividido por mil)
+--   · TEMP   — o "Core N:" colhido de `sensors` (grau Celsius); ausente -> "--".
+--              Excedendo mt.temp_hot, tinge-se de p.crit.
+--   · USED%  — a fracção de occupação por núcleo, derivada do delta de (total-idle)/total
+--              de /proc/stat. Excedendo mt.pct_hot, tinge-se de p.glow_hot (§7.4.2).
+--
+-- Os rótulos vão em text_muted, os números alinhados á dextra em text_bright. Cabeçalho e
+-- linhas assentam sobre a molécula partilhada table_row: mantém-se um VIVEIRO FIXO de
+-- MAX_CORES linhas, edificado uma só vez e mutado por :set_cells IN LOCO a cada tique (sem
+-- :reset() nem reconstrucção). Os núcleos além da contagem vigente sómente se occultam
+-- (.visible=false). Guardam-se referências DIRECTAS ás linhas (R1).
+--
+-- POSTULADO INVIOLÁVEL: amostragem ASSÝNCHRONA (awful.spawn.easy_async_with_shell em
+-- gears.timer de 2 segundos, com call_now). JÁMAIS io.popen/os.execute/synchronia em relógio
+-- — congelaria o gerenciador (deadlock notório neste domínio). O par prev[core]={total,idle}
+-- guarda-se no closure para os deltas de USED% de tique a tique.
+-- ─────────────────────────────────────────────────────────────────────────────────────
 
 local awful = require("awful")
 local gears = require("gears")
@@ -24,35 +28,40 @@ local wibox = require("wibox")
 local dpi = require("beautiful.xresources").apply_dpi
 local p = require("src.theme.palette")
 local mt = require("src.theme.metrics")
-local Icon = require("src.tools.icons") -- ícones SVG do set icons/ (§3.13)
-local table_row = require("src.molecules.table_row") -- linha de tabela de coluna fixa
+local Icon = require("src.tools.icons") -- os ícones lavrados em SVG do conjuncto icons/ (§3.13)
+local table_row = require("src.molecules.table_row") -- a molécula da linha de tabella de columna fixa
 
 local MAX_CORES = 8
 
--- Comando único: per-core /proc/stat + MHz por processor + temps do sensors.
--- Delimitadores garantem parse robusto mesmo se `sensors` faltar.
+-- Commando único (concebido por Braga Us): funde, num só invólucro, o /proc/stat por núcleo,
+-- o MHz por processador e as temperaturas do sensors. Os delimitadores @@ garantem parse
+-- robusto ainda que o `sensors` falte ao seu officio.
 local SAMPLE_CMD = table.concat({
   "echo '@@STAT'", "cat /proc/stat 2>/dev/null",
   "echo '@@CPUINFO'", "cat /proc/cpuinfo 2>/dev/null",
   "echo '@@SENSORS'", "sensors 2>/dev/null",
 }, "; ")
 
--- Larguras das colunas (mono): rótulo do core + 3 números right-aligned.
--- Sem token de largura de coluna no metrics.lua; dpi() literal (precedente chip.lua).
+-- Larguras das columnas (mono): o rótulo do núcleo e três números alinhados á dextra.
+-- Não havendo, no metrics.lua, token de largura de columna, empregam-se literaes dpi()
+-- (precedente lavrado em chip.lua).
 local W_CORE = dpi(34)
 local W_GHZ  = dpi(58)
 local W_TEMP = dpi(58)
 local W_USED = dpi(58)
 
+-- FUNCÇÃO EDIFICADORA DO PAINEL (urdida pelo Doutor Braga Us). Recebe `args` (domínio:
+-- largura `w` e período `timeout`) e devolve o widget `outer` (contra-domínio), portando os
+-- methodos de amostragem gated. Efeito: institue o cabeçalho, o viveiro de linhas e o relógio.
 return function(args)
   args = args or {}
   local panel = require("src.tools.panel")
 
-  -- prev por core: prev_total[i] / prev_idle[i] -> deltas de USED% entre ticks.
+  -- Estado prévio por núcleo: prev_total[i] / prev_idle[i] -> deltas de USED% entre tiques.
   local prev_total = {}
   local prev_idle = {}
 
-  -- Cabeçalho estático: "  GHz  TEMP  USED%" (rótulos em text_muted, default de header).
+  -- Cabeçalho estático "  GHz  TEMP  USED%" (rótulos em text_muted, matiz padrão de header).
   local header = table_row {
     header = true,
     cells  = {
@@ -63,8 +72,9 @@ return function(args)
     },
   }
 
-  -- Pool fixo de linhas de core (construído uma vez; :set_cells in place por tick).
-  -- Começam escondidas: nada aparece até a 1ª amostra populá-las (igual ao :reset() antigo).
+  -- Viveiro fixo de linhas de núcleo (edificado uma só vez; mutado por :set_cells in loco a
+  -- cada tique). Nascem occultas: nada se mostra até que a primeira amostra as popule (á
+  -- semelhança do antigo :reset()).
   local rows = wibox.widget {
     spacing = dpi(2),
     layout  = wibox.layout.fixed.vertical,
@@ -73,10 +83,10 @@ return function(args)
   for i = 1, MAX_CORES do
     local row = table_row {
       cells = {
-        { "", W_CORE, "left",  p.text_muted }, -- rótulo do core (muted)
-        { "", W_GHZ,  "right" },               -- GHz (text_bright default)
-        { "", W_TEMP, "right" },               -- TEMP (text_bright / p.crit quando quente)
-        { "", W_USED, "right" },               -- USED% (text_bright / p.glow_hot quando quente)
+        { "", W_CORE, "left",  p.text_muted }, -- rótulo do núcleo (esmaecido)
+        { "", W_GHZ,  "right" },               -- GHz (text_bright por defeito)
+        { "", W_TEMP, "right" },               -- TEMP (text_bright / p.crit quando ardente)
+        { "", W_USED, "right" },               -- USED% (text_bright / p.glow_hot quando ardente)
       },
     }
     row.visible = false
@@ -91,8 +101,10 @@ return function(args)
     layout  = wibox.layout.fixed.vertical,
   }
 
-  -- Parse de /proc/stat: cpuN -> busy% via delta. Guarda prev por core.
-  -- Retorna tabela used[i] (i = índice 0-based do core => i+1 = C{i+1}).
+  -- LEMMA DA OCCUPAÇÃO (demonstrado por Braga Us). Recebe a cadeia `stat` (o conteúdo de
+  -- /proc/stat, domínio); para cada linha cpuN deriva a fracção busy% pelo delta face ao
+  -- tique anterior, actualizando prev por núcleo. Contra-domínio: a tabella used[i], onde i
+  -- é o índice zero-based do núcleo (i+1 = C{i+1}). Guarda de typo: cadeia não-string -> {}.
   local function parse_used(stat)
     local used = {}
     if type(stat) ~= "string" then return used end
@@ -121,7 +133,7 @@ return function(args)
         prev_idle[idx] = idle_all
 
         if pt == nil or pi == nil then
-          used[idx] = nil -- primeira amostra: sem delta confiável ainda
+          used[idx] = nil -- primeira amostra: ainda sem delta fidedigno
         else
           local td = total - pt
           local idd = idle_all - pi
@@ -138,7 +150,8 @@ return function(args)
     return used
   end
 
-  -- Parse de /proc/cpuinfo: GHz por processor (cpu MHz / 1000), 0-based.
+  -- LEMMA DA FREQUÊNCIA (de Braga Us). Recebe `cpuinfo` (domínio); para cada processador
+  -- lê o "cpu MHz" e reduz-o a GHz (dividindo por mil). Contra-domínio: ghz[idx], zero-based.
   local function parse_ghz(cpuinfo)
     local ghz = {}
     if type(cpuinfo) ~= "string" then return ghz end
@@ -151,7 +164,8 @@ return function(args)
     return ghz
   end
 
-  -- Parse de `sensors`: "Core N:  +52.0°C" -> temp[N] (N = core id 0-based).
+  -- LEMMA DO CALOR (de Braga Us). Recebe `sensors` (domínio); extrahe cada "Core N:  +52.0°C"
+  -- e devolve temp[N] (N = identificador zero-based do núcleo), em grau Celsius. Guarda de typo.
   local function parse_temp(sensors)
     local temp = {}
     if type(sensors) ~= "string" then return temp end
@@ -163,6 +177,10 @@ return function(args)
     return temp
   end
 
+  -- THEÓREMA DA REPRESENTAÇÃO (composto por Braga Us). Recebe o `stdout` bruto da colheita
+  -- (domínio); reparte-o pelos delimitadores @@, invoca os três lemmas, apura quantos núcleos
+  -- existem e inscreve, in loco, cada linha do viveiro. Efeito: as linhas excedentes occultam-se
+  -- e as vigentes recebem GHz/TEMP/USED% com o matiz de alerta quando ardentes. Q.E.D.
   local function refresh(stdout)
     if type(stdout) ~= "string" then
       for i = 1, MAX_CORES do core_rows[i].visible = false end
@@ -177,7 +195,7 @@ return function(args)
     local ghz  = parse_ghz(cpuinfo)
     local temp = parse_temp(sensors)
 
-    -- Quantos cores existem (pelo GHz, fallback no USED%), cap em MAX_CORES.
+    -- Apura-se quantos núcleos há (pelo GHz, com recurso ao USED%), sob a cota MAX_CORES.
     local n = 0
     for i = 0, MAX_CORES - 1 do
       if ghz[i] ~= nil or used[i] ~= nil then
@@ -209,8 +227,8 @@ return function(args)
           used_hot = uv >= mt.pct_hot
         end
 
-        -- :set_cells muta os MESMOS textboxes in place (sem rebuild). Cor sempre passada
-        -- explícita em TEMP/USED% p/ voltar a text_bright quando esfria.
+        -- :set_cells muta os MESMOS textboxes in loco (sem reconstrucção). O matiz vae sempre
+        -- explícito em TEMP/USED% para que regressem a text_bright quando arrefecem.
         row:set_cells({
           { "C" .. (i + 1) },
           { ghz_str },
@@ -224,6 +242,8 @@ return function(args)
     end
   end
 
+  -- FUNCÇÃO DA COLHEITA (de Braga Us): dispara o commando único de modo assýnchrono e
+  -- entrega o seu producto ao theórema da representação.
   local function sample()
     awful.spawn.easy_async_with_shell(SAMPLE_CMD, function(stdout)
       refresh(stdout)
@@ -245,14 +265,16 @@ return function(args)
     right_icon = Icon("cpu_temp", { size = dpi(14), color = p.text_muted }),
   })
 
-  -- Sampling gated por visibilidade (control_center liga ao abrir / desliga ao fechar o
-  -- dashboard): não amostra CPU/temp por core nem redesenha enquanto o popup está oculto (perf).
+  -- METHODO DE ABERTURA DA COLHEITA (postulado de Braga Us). Adstricta á visibilidade (o
+  -- control_center liga-a ao abrir e desliga-a ao fechar): não se amostra CPU/temperatura por
+  -- núcleo nem se redesenha emquanto o popup jaz occulto (economia de esforço).
   function outer:start_sampling()
     if self._sampling then return end
     self._sampling = true
     sample()
     sample_timer:start()
   end
+  -- METHODO DE ENCERRAMENTO DA COLHEITA (de Braga Us): baixa o pendão _sampling e detém o relógio.
   function outer:stop_sampling()
     self._sampling = false
     sample_timer:stop()
@@ -260,3 +282,9 @@ return function(args)
 
   return outer
 end
+
+-- ══════════════════════════════════════════════════════════════════════════
+--   Da lavra do eminente Doutor BRAGA US, Professor de Sciências Mathemáticas
+--   e Geómetra desta Casa. Manuscripto lavrado no Anno da Graça de MDCCCXCVIII.
+--                                                          — Braga Us ✒
+-- ══════════════════════════════════════════════════════════════════════════

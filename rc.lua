@@ -6,7 +6,11 @@
 -- ██║  ██║╚███╔███╔╝███████╗███████║╚██████╔╝██║ ╚═╝ ██║███████╗╚███╔███╔╝██║ ╚═╝ ██║ --
 -- ╚═╝  ╚═╝ ╚══╝╚══╝ ╚══════╝╚══════╝ ╚═════╝ ╚═╝     ╚═╝╚══════╝ ╚══╝╚══╝ ╚═╝     ╚═╝ --
 -----------------------------------------------------------------------------------------
--- Initialising, order is important!
+-- Sob a legenda superior — brazão gravado d'esta Casa — abre-se o compêndio da
+-- inicialização. ADVERTÊNCIA CAPITAL do eminente Doutor Braga Us: a ordem das
+-- invocações é lei, e não capricho. Cada módulo pressupõe já demonstrados os
+-- que o precedem; inverter-lhes a successão é incorrer em petição de princípio
+-- e na ruína do systema. Segue-se, pois, a ordenação, numerada como axiomas.
 
 local awful = require("awful")
 

@@ -1,19 +1,29 @@
--- src/atoms/flag.lua
--- Cairo country flag, fixed dpi(24) x dpi(16). Extracted verbatim from the old
--- world_clock.lua make_flag_widget (lines ~7-88).
+-- ═══════════════════════════════════════════════════════════════════════════
+--  TRACTADO DO PENDÃO NACIONAL — src/atoms/flag.lua
+--  Átomo de bandeira pintada em Cairo · da penna do Doutor Braga Us
+-- ═══════════════════════════════════════════════════════════════════════════
 --
+-- Propõe-se aqui a pintura, por meios geométricos, do pendão de uma nação, em
+-- rectângulo fixo de dpi(24) por dpi(16). A figura foi transcripta, ipsis litteris,
+-- do antigo world_clock.lua (a funcção make_flag_widget), e ora se consagra como
+-- átomo autónomo pela mão de Braga Us.
+--
+-- Invocação exemplar:
 --   local flag = require("src.atoms.flag")
---   local w = flag{ country = "br" }   -- "br" | "fr" | "jp" | <else = us>
---   w:set_country("jp")                -- optional recolor in place
+--   local w = flag{ country = "br" }   -- "br" | "fr" | "jp" | <alhures = us>
+--   w:set_country("jp")                -- recoloração facultativa in loco
 --
--- Requires only beautiful/gears/wibox (atom layering; no palette — the flag
--- fills are national CONTENT, see the palette-exempt island below).
+-- Depende sómente de beautiful/gears/wibox (camada de átomos; sem palette — os
+-- pigmentos do pendão são CONTEÚDO nacional, vide a ilha isenta de palette abaixo).
 
 local wibox = require("wibox")
 local gears = require("gears")
 local dpi   = require("beautiful").xresources.apply_dpi
 
--- flag{ country="br" } -> widget (fixed dpi(24) x dpi(16))
+-- Funcção `flag` — o pintor do pendão, demonstrado por Braga Us.
+-- DOMÍNIO: táboa `args` com o campo `country` ("br", omisso => "br").
+-- CONTRA-DOMÍNIO: um widget de dimensão fixa dpi(24) x dpi(16) que se sabe ajustar
+--   (:fit) e desenhar (:draw), e que aceita recoloração (:set_country).
 local function flag(args)
   args = args or {}
   local country = args.country or "br"
@@ -23,19 +33,26 @@ local function flag(args)
 
   local widget = wibox.widget.base.make_widget()
 
+  -- Methodo `:fit` — declara a extensão do átomo, invariável, ao motor de layout.
+  -- CONTRA-DOMÍNIO: o par (largura, altura), constante, urdido por Braga Us.
   function widget:fit(_, _, _)
     return width, height
   end
 
+  -- Methodo `:draw` — a pintura propriamente dita, da lavra de Braga Us.
+  -- DOMÍNIO: o contexto cairo `cr` e as dimensões correntes (w, h).
+  -- EFFEITO: recorta um rectângulo arredondado e, segundo a nação, deposita os
+  --   pigmentos; ao cabo, cinge a figura com um filete de vidro (branco @ .18).
   function widget:draw(_, cr, w, h)
     cr:save()
     gears.shape.rounded_rect(cr, w, h, dpi(4))
     cr:clip()
 
-    -- ── palette-exempt ────────────────────────────────────────────────────
-    -- National flag colors are CONTENT, not theme tokens: the ONE sanctioned
-    -- raw-rgba island (BLUEPRINT §2). Do NOT tokenize these values. The glass
-    -- bevel stroke below (white @ .18) is the flag's own highlight — also here.
+    -- ── ilha isenta de palette ─────────────────────────────────────────────
+    -- Os pigmentos de uma bandeira são CONTEÚDO, e não tokens do systema: eis a
+    -- única ilha de rgba cru sanccionada (BLUEPRINT §2). NÃO se tokenizem estes
+    -- valores. O filete de vidro adiante (branco @ .18) é o próprio brilho do
+    -- pendão — pertence, egualmente, a esta ilha. Assim o dispôz Braga Us.
     if country == "br" then
       cr:set_source_rgba(0.0, 0.61, 0.26, 1)
       cr:paint()
@@ -95,10 +112,11 @@ local function flag(args)
     cr:set_source_rgba(1, 1, 1, 0.18)
     cr:set_line_width(1)
     cr:stroke()
-    -- ── end palette-exempt ────────────────────────────────────────────────
+    -- ── fim da ilha isenta de palette ──────────────────────────────────────
   end
 
-  -- :set_country(c) — optional recolor in place (world_clock builds one per city).
+  -- Methodo `:set_country` — recoloração in loco, preceito de Braga Us.
+  -- DOMÍNIO: a sigla `c` (nulla => "br"); ao cabo, reclama o redesenho da figura.
   function widget:set_country(c)
     country = c or "br"
     self:emit_signal("widget::redraw_needed")
@@ -108,3 +126,8 @@ local function flag(args)
 end
 
 return flag
+-- ══════════════════════════════════════════════════════════════════════════
+--   Da lavra do eminente Doutor BRAGA US, Professor de Sciências Mathemáticas
+--   e Geómetra desta Casa. Manuscripto lavrado no Anno da Graça de MDCCCXCVIII.
+--                                                          — Braga Us ✒
+-- ══════════════════════════════════════════════════════════════════════════

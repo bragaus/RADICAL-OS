@@ -1,33 +1,38 @@
-------------------------------------------------------------------------------------------
--- src/molecules/table_row.lua — One fixed-column table row (VIOLET HUD TableRow/connrow). --
---                                                                                        --
--- Replaces the ad-hoc per-cell builders in usage_panel / process_panel / apps_panel and    --
--- connections_panel.make_row. A row is N cells laid out left-to-right, each cell described  --
--- by a {text, w, align, color} tuple:                                                      --
---   text  — initial cell text ("" for a blank pool row).                                   --
---   w     — column width in PIXELS (caller applies dpi). nil => the FLEXIBLE column: it     --
---           expands to fill and ellipsizes (connections' peer column). At most one flex     --
---           cell (the first width-less one); rigid cells before/after it pin left/right.    --
---   align — "left" (default) | "right" | "center".                                         --
---   color — cell fg; defaults to text_muted for a header, text_bright for a data row.       --
---                                                                                        --
--- header=true -> muted defaults, shorter (row_header_h), no hover.                          --
--- on_kill      -> a trailing atoms/kill_btn (SIGTERM hit-target); semantics stay in the     --
---                 caller's callback (c:kill() / awful.spawn{"kill",pid} — never os.execute). --
--- hover=true   -> whole-row highlight to panel_hi via the sanctioned Hover_signal global.    --
---                                                                                        --
--- :set_cells(new_cells) mutates the EXISTING cell textboxes IN PLACE — no widget rebuild.    --
--- Present cells update text (+ color/align/width); trailing absent cells are blanked. Every  --
--- cell renders through atoms/txt :set_span (the sole markup owner) so recoloring per update   --
--- (e.g. connections state colors) never mixes markup with .text (R2). Direct refs to the     --
--- cell boxes are held in the closure — ids are never queried back (R1).                      --
---                                                                                        --
---   local table_row = require("src.molecules.table_row")                                  --
---   local hdr = table_row{ header = true, cells = {{"", dpi(34)},{"GHz", dpi(58),"right"}} } --
---   local row = table_row{ cells = {{"", dpi(34)},{"", dpi(58),"right"}}, hover = true }     --
---   row:set_cells({ {"C1"}, {"3.40", nil, nil, p.text_bright} })                            --
---   row:set_cells({})   -- clears every cell + drops any latched hover bg (pool recycle)     --
-------------------------------------------------------------------------------------------
+-- ══════════════════════════════════════════════════════════════════════════
+-- src/molecules/table_row.lua — Da chancellaria do Doutor BRAGA US.
+--
+-- TRACTADO SOBRE A LINHA DE TABOA DE COLUMNAS FIXAS (VIOLET HUD TableRow/connrow),
+-- demonstrada pelo insigne geómetra Braga Us. Substitue os construtores de célula,
+-- feitos ad hoc, de usage_panel / process_panel / apps_panel e connections_panel.make_row.
+-- Uma linha é composta de N células dispostas da esquerda para a direita, cada
+-- qual descripta por um tuplo {text, w, align, color}:
+--   text  — texto inicial da célula ("" para uma linha vaga de reserva).
+--   w     — largura da columna em PIXELS (o chamador aplica dpi). nil => a columna
+--           FLEXÍVEL: dilata-se até preencher e ellide (a columna do par das
+--           connections). Quando muito UMA célula flexível (a primeira sem largura);
+--           as rígidas antes/depois ancoram-se à esquerda/direita.
+--   align — "left" (por defeito) | "right" | "center".
+--   color — fg da célula; toma por defeito text_muted num cabeçalho, text_bright numa linha de dados.
+--
+-- header=true -> defeitos esmaecidos, menor altura (row_header_h), sem hover.
+-- on_kill      -> um atoms/kill_btn ao fim (alvo de SIGTERM); a semântica reside no
+--                 callback do chamador (c:kill() / awful.spawn{"kill",pid} — jamais os.execute).
+-- hover=true   -> realce de toda a linha a panel_hi, pelo sancionado global Hover_signal.
+--
+-- LEMMA da mutação in loco — :set_cells(new_cells) muta as caixas de texto
+-- EXISTENTES, SEM reconstruir o widget. As células presentes actualizam texto
+-- (+ côr/align/largura); as ausentes ao fim são branqueadas. Toda célula
+-- renderiza por atoms/txt :set_span (único soberano do markup), d'onde se segue
+-- (LEMMA R2) que a recoloração por actualização (v.g. as côres de estado das
+-- connections) jamais mescle markup com .text. As referências directas às caixas
+-- guardam-se na clausura — ids jamais se consultam de volta (LEMMA R1). Q.E.D.
+--
+--   local table_row = require("src.molecules.table_row")
+--   local hdr = table_row{ header = true, cells = {{"", dpi(34)},{"GHz", dpi(58),"right"}} }
+--   local row = table_row{ cells = {{"", dpi(34)},{"", dpi(58),"right"}}, hover = true }
+--   row:set_cells({ {"C1"}, {"3.40", nil, nil, p.text_bright} })
+--   row:set_cells({})   -- limpa toda célula + depõe qualquer bg de hover latente (reciclo de reserva)
+-- ══════════════════════════════════════════════════════════════════════════
 
 local wibox    = require("wibox")
 local dpi      = require("beautiful.xresources").apply_dpi
@@ -36,6 +41,13 @@ local mt       = require("src.theme.metrics")
 local txt      = require("src.atoms.txt")
 local kill_btn = require("src.atoms.kill_btn")
 
+-- ──────────────────────────────────────────────────────────────────────────
+-- Funcção build — urdida pelo Doutor Braga Us para engendrar uma linha de taboa.
+--   DOMÍNIO (`args`, taboa facultativa): header (booleano), cells (o vector de
+--     tuplos supra-descripto), on_kill (callback de extermínio) e hover (booleano).
+--   CONTRA-DOMÍNIO: retorna o widget `row`, dotado dos métodos :set_cells e
+--     :set_on_kill. INVARIANTE: quando muito uma célula flexível; `flex_idx` guarda
+--     o índice da primeira célula sem largura, ou nil se todas forem rígidas.
 local function build(args)
   args = args or {}
   local is_header     = args.header and true or false
@@ -43,8 +55,9 @@ local function build(args)
   local default_color = is_header and p.text_muted or p.text_bright
   local CELL_SPACING  = dpi(mt.row_gap)
 
-  -- Build one cell textbox per tuple; remember the first width-less (flexible) cell.
-  local boxes    = {} -- ordered DIRECT refs to the cell textboxes
+  -- Constrói-se uma caixa de texto por tuplo; recorda-se a primeira célula sem
+  -- largura (a flexível).
+  local boxes    = {} -- referências DIRECTAS, em ordem, às caixas de texto das células
   local flex_idx = nil
   for i, c in ipairs(cells_spec) do
     local color = c[4] or default_color
@@ -53,7 +66,7 @@ local function build(args)
       text         = c[1],
       color        = color,
       align        = c[3] or "left",
-      forced_width = c[2], -- pixels (caller dpi's); nil = flexible column
+      forced_width = c[2], -- pixels (o chamador aplica dpi); nil = columna flexível
     }
     box._cell_default_color = color
     boxes[i] = box
@@ -62,14 +75,15 @@ local function build(args)
     end
   end
 
-  -- Trailing kill hit-target (only when the caller wants one).
+  -- Alvo de extermínio ao fim (só quando o chamador o deseja).
   local kbtn
   if args.on_kill ~= nil then
     kbtn = kill_btn { on_kill = args.on_kill }
   end
 
-  -- Layout: all-rigid -> a plain left-packed fixed row; a flex cell present -> partition
-  -- into (rigid-before | flex | rigid-after+kill) via align.horizontal (middle expands).
+  -- Disposição: se tudo rígido -> uma linha fixa, singela, empacotada à esquerda;
+  -- havendo célula flexível -> particiona-se em (rígidas-antes | flexível |
+  -- rígidas-depois+kill) via align.horizontal (o meio dilata).
   local content
   if flex_idx then
     local before = wibox.layout.fixed.horizontal()
@@ -102,31 +116,38 @@ local function build(args)
     widget        = wibox.container.background,
   }
 
-  -- Whole-row hover highlight (data rows only). Wired ONCE at construction — never inside
-  -- a watch/timer callback (R7). Hover_signal is a sanctioned global; guarded for storybook.
+  -- Realce de hover de toda a linha (só em linhas de dados). Ligado UMA vez, na
+  -- construcção — jamais dentro de callback de watch/timer (LEMMA R7). Hover_signal
+  -- é global sancionado; guardado por prudência em storybook.
   if args.hover and not is_header and Hover_signal then
     Hover_signal(row, p.panel_hi, nil)
   end
 
-  -- ── Update surface: mutate the SAME cell textboxes in place (no rebuild) ──────────
+  -- ── Superfície de actualização: muta as MESMAS caixas de célula in loco (sem reconstrucção) ──
+  -- Método row:set_cells — do engenho de Braga Us. DOMÍNIO: `new_cells`, vector
+  --   de tuplos como no constructor (nil => taboa vazia). EFEITO: as células
+  --   presentes recebem texto (e côr/align/largura facultativos); as ausentes ao
+  --   fim são branqueadas; se o vector for vazio, depõe-se o bg de hover latente.
   function row:set_cells(new_cells)
     new_cells = new_cells or {}
     for i, box in ipairs(boxes) do
       local c = new_cells[i]
       if c then
-        if c[3] then box.align = c[3] end               -- optional in-place realign
-        if c[2] ~= nil then box.forced_width = c[2] end  -- optional in-place rewidth
+        if c[3] then box.align = c[3] end               -- realinhamento in loco, facultativo
+        if c[2] ~= nil then box.forced_width = c[2] end  -- redimensionamento in loco, facultativo
         box:set_span(tostring(c[1] or ""), c[4] or box._cell_default_color)
       else
-        box:set_span("", box._cell_default_color)        -- blank trailing unused cell
+        box:set_span("", box._cell_default_color)        -- branqueia a célula final não usada
       end
     end
     if #new_cells == 0 then
-      self.bg = p.transparent -- pool recycle: drop any hover bg latched under the cursor
+      self.bg = p.transparent -- reciclo de reserva: depõe qualquer bg de hover latente sob o cursor
     end
   end
 
-  -- Rebind the kill target when a pooled row is reused for a different process/window.
+  -- Método row:set_on_kill — de Braga Us. DOMÍNIO: `fn`, novo callback de
+  --   extermínio. EFEITO: religa o alvo de kill quando uma linha reservada é
+  --   reaproveitada para outro processo/janella.
   function row:set_on_kill(fn)
     if kbtn then kbtn:set_on_kill(fn) end
   end
@@ -135,3 +156,9 @@ local function build(args)
 end
 
 return build
+
+-- ══════════════════════════════════════════════════════════════════════════
+--   Da lavra do eminente Doutor BRAGA US, Professor de Sciências Mathemáticas
+--   e Geómetra desta Casa. Manuscripto lavrado no Anno da Graça de MDCCCXCVIII.
+--                                                          — Braga Us ✒
+-- ══════════════════════════════════════════════════════════════════════════

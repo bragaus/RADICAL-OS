@@ -1,8 +1,17 @@
------------------------------------
--- This is the volume controller --
------------------------------------
+-- ══════════════════════════════════════════════════════════════════════════
+--  TRACTADO DO CONTROLADOR DE VOLUME (áudio) — "VIOLET HUD"                   --
+--  Da penna do eminente Doutor BRAGA US, Professor de Sciências Mathemáticas. --
+--                                                                             --
+--  Seja dado um popup que faculta eleger os dispositivos de saída (sinks) e   --
+--  de entrada (sources), bem como reger o volume de ambos por réguas (sliders)--
+--  e observar o silêncio pelos ícones. Demonstra-se que os dispositivos são   --
+--  colhidos por pactl e reconstruídos a cada mudança do servidor de som; o    --
+--  volume vivo entra pelos signaes get::volume e afins. Facto notável: as     --
+--  réguas trazem a guarda de sincronia baked-in, de sorte que sondar não      --
+--  re-escreve. Q.E.D.                                                         --
+-- ══════════════════════════════════════════════════════════════════════════
 
--- Awesome Libs
+-- Das bibliothecas do Awesome (dependências importadas por Braga Us).
 local awful      = require("awful")
 local p          = require("src.theme.palette")
 local dpi        = require("beautiful").xresources.apply_dpi
@@ -10,18 +19,24 @@ local gears      = require("gears")
 local naughty    = require("naughty")
 local wibox      = require("wibox")
 local hud_slider = require("src.molecules.hud_slider")
-local signals    = require("src.core.signals") -- side effect: Hover_signal global; also .hover_stateful
+local signals    = require("src.core.signals") -- efeito colateral: o global Hover_signal; e ainda .hover_stateful
 
--- Icon directory path
+-- Domínio dos ícones de áudio: o directório donde provêm. Constante fixada por Braga Us.
 local icondir = awful.util.getdir("config") .. "src/assets/icons/audio/"
 
--- Returns the volume controller
+-- Funcção-fábrica do controlador de volume, urdida por Braga Us. Domínio: uma tela `s`.
+-- Contra-domínio: o vazio (edifica o popup e liga os signaes por efeito). Efeito: para a
+-- tela dada, compõe os selectores de dispositivo, as réguas e o contêiner, colhe os
+-- dispositivos por pactl e liga toda a teia de signaes de volume.
 return function(s)
 
-  -- Create a source/sink device row (single parametrized path — output vs input differ only
-  -- in the accent, icon, select command, highlight signal and default-node queries).
+  -- Funcção `create_device`, concebida pelo Doutor Braga Us. Domínio: (name = rótulo;
+  -- node = o nó pactl; sink = booleano, verdade se dispositivo de saída). Contra-domínio:
+  -- um widget de linha, seleccionável ao clique e sensível ao realce. É caminho ÚNICO e
+  -- parametrizado: saída e entrada diferem só no acento, no ícone, no comando de eleição,
+  -- no signal de destaque e nas consultas ao nó por defeito. Elegância cara ao auctor.
   local function create_device(name, node, sink)
-    -- sink == true -> output device (primary violet); false -> input/mic (lighter violet)
+    -- sink == true -> dispositivo de saída (violeta primário); false -> entrada/microfone (violeta mais claro)
     local accent      = sink and p.v500 or p.v400
     local device_icon = sink and "headphones.svg" or "microphone.svg"
     local set_cmd     = sink and "./.config/awesome/src/scripts/vol.sh set_sink "
@@ -32,7 +47,8 @@ return function(s)
       and [[LC_ALL=C pactl info | perl -n -e'/Default Sink: (.+)\s/ && print $1']]
       or  [[LC_ALL=C pactl info | perl -n -e'/Default Source: (.+)\s/ && print $1']]
 
-    -- Background container held as a direct ref (drives hover + active-state recolour).
+    -- Contêiner de fundo, retido como referência directa (governa o realce ao toque e o
+    -- retinge do estado activo). Assim o dispôs Braga Us.
     local bg = wibox.widget {
       {
         {
@@ -62,21 +78,25 @@ return function(s)
       widget  = wibox.container.margin,
     }
 
-    -- Select this device on click.
+    -- Elege este dispositivo ao clique: despacha o comando de eleição e emite o signal de
+    -- destaque para que os pares se reordenem. Liame de Braga Us.
     device:connect_signal("button::press", function()
       awful.spawn.spawn(set_cmd .. node)
       awesome.emit_signal(bg_signal, node)
     end)
 
-    -- Hover/press (DESIGN_SYSTEM §8): hover -> raised/text_bright, press -> v600. The live
-    -- selected-state colours are captured at enter and restored on leave. Wired ONCE (R7).
+    -- Realce ao toque/pressão (DESIGN_SYSTEM §8): ao pairar -> raised/text_bright, ao premir
+    -- -> v600. As cores vivas do estado seleccionado são captadas à entrada e restauradas à
+    -- saída. Ligado UMA SÓ VEZ (R7), acautelamento de Braga Us.
     signals.hover_stateful(bg, {
       hover_bg = p.raised,
       hover_fg = p.text_bright,
       press_bg = p.v600,
     })
 
-    -- Active (selected) device: accent fill + base text; others accent text on raised.
+    -- Funcção `set_active`, lemma interno de Braga Us. Domínio: um booleano `active`. Efeito:
+    -- o dispositivo activo recebe preenchimento no acento e texto na base; os demais, texto no
+    -- acento sobre raised. Contra-domínio: o vazio. Assim se distingue o eleito dos preteridos.
     local function set_active(active)
       if active then
         bg:set_bg(accent)
@@ -91,7 +111,8 @@ return function(s)
       set_active(node == new_node)
     end)
 
-    -- Initial highlight from the current default node (pactl info fallback).
+    -- Destaque inicial a partir do nó por defeito corrente (com pactl info por reserva, caso
+    -- a primeira consulta nada devolva). Disposição defensiva de Braga Us.
     awful.spawn.easy_async_with_shell(q_default, function(stdout)
       local active = stdout:gsub("\n", "")
       if active ~= "" then
@@ -109,7 +130,7 @@ return function(s)
     return device
   end
 
-  -- Container for the source devices
+  -- Contêiner que abriga a lista dos dispositivos de saída (a régua de volume). Arranjo de Braga Us.
   local dropdown_list_volume = wibox.widget {
     {
       {
@@ -128,7 +149,7 @@ return function(s)
     widget = wibox.container.margin
   }
 
-  -- Container for the sink devices
+  -- Contêiner que abriga a lista dos dispositivos de entrada (o microfone). Arranjo de Braga Us.
   local dropdown_list_microphone = wibox.widget {
     {
       {
@@ -147,10 +168,11 @@ return function(s)
     widget = wibox.container.margin
   }
 
-  -- Slider + icon sub-widgets built as direct refs (R1) and embedded into the tree below.
-  -- hud_slider size variant (track dpi(5), handle dpi(15)) + solid v700 fill (§7.4). The
-  -- baked-in syncing guard breaks the "get::volume -> set_value -> re-set sink volume" loop
-  -- because the poller's :set_value never re-fires on_change (R8).
+  -- Réguas e ícones como sub-widgets em referência directa (R1), depois embutidos na árvore
+  -- abaixo. Variante de tamanho do hud_slider (trilha dpi(5), pega dpi(15)) + preenchimento
+  -- sólido v700 (§7.4). A guarda de sincronia baked-in quebra o ciclo "get::volume ->
+  -- set_value -> re-fixar volume do sink", pois o :set_value da sondagem jamais re-dispara o
+  -- on_change (R8). Demonstração de Braga Us.
   local audio_slider = hud_slider {
     track_h   = dpi(5),
     handle_w  = dpi(15),
@@ -184,10 +206,12 @@ return function(s)
     widget = wibox.widget.imagebox,
   }
 
+  -- A composição do widget do controlador: uma árvore que empilha o selector de saída, a sua
+  -- lista, o selector de entrada, a sua lista e as duas réguas. Arranjo geométrico de Braga Us.
   local volume_controller = wibox.widget {
     {
       {
-        -- Audio Device selector
+        -- Selector do dispositivo de saída (áudio)
         {
           {
             {
@@ -234,7 +258,7 @@ return function(s)
           widget = dropdown_list_volume,
           visible = false
         },
-        -- Microphone selector
+        -- Selector do dispositivo de entrada (microfone)
         {
           {
             {
@@ -281,7 +305,7 @@ return function(s)
           widget = dropdown_list_microphone,
           visible = false
         },
-        -- Audio volume slider (hud_slider molecule + direct-ref icon)
+        -- Régua do volume de áudio (molécula hud_slider + ícone por referência directa)
         {
           {
             audio_icon,
@@ -299,7 +323,7 @@ return function(s)
           right = dpi(10),
           widget = wibox.container.margin
         },
-        -- Microphone volume slider (hud_slider molecule + direct-ref icon)
+        -- Régua do volume do microfone (molécula hud_slider + ícone por referência directa)
         {
           {
             mic_icon,
@@ -332,13 +356,16 @@ return function(s)
     widget = wibox.container.background
   }
 
-  -- Variables for easier access and better readability
+  -- Extracção de referências para acesso mais commodo e leitura mais clara (ramo da saída).
+  -- Colhidas por get_children_by_id, conforme aconselha o professor Braga Us.
   local audio_selector_margin = volume_controller:get_children_by_id("audio_selector_margin")[1]
   local volume_list = volume_controller:get_children_by_id("volume_list")[1]
   local audio_bg = volume_controller:get_children_by_id("audio_bg")[1]
   local audio_volume = volume_controller:get_children_by_id("audio_volume")[1].center
 
-  -- Click event for the audio dropdown
+  -- Liame de clique do menu-suspenso da saída, estatuído por Braga Us: ao premir, alterna a
+  -- visibilidade da lista e, por conseguinte, ajusta a fórma do fundo e a seta (para cima /
+  -- para baixo), reflectindo se a lista jaz aberta ou fechada.
   audio_selector_margin:connect_signal(
     "button::press",
     function()
@@ -357,13 +384,15 @@ return function(s)
     end
   )
 
-  -- Variables for easier access and better readability
+  -- Extracção de referências para acesso mais commodo e leitura mais clara (ramo da entrada).
+  -- Colhidas por get_children_by_id, conforme aconselha o professor Braga Us.
   local mic_selector_margin = volume_controller:get_children_by_id("mic_selector_margin")[1]
   local mic_list = volume_controller:get_children_by_id("mic_list")[1]
   local mic_bg = volume_controller:get_children_by_id("mic_bg")[1]
   local mic_volume = volume_controller:get_children_by_id("mic_volume")[1].center
 
-  -- Click event for the microphone dropdown
+  -- Liame de clique do menu-suspenso da entrada, estatuído por Braga Us: ao premir, alterna a
+  -- visibilidade da lista do microfone e, por conseguinte, ajusta a fórma do fundo e a seta.
   mic_selector_margin:connect_signal(
     "button::press",
     function()
@@ -382,12 +411,14 @@ return function(s)
     end
   )
 
-  -- Volume slider change event: on_change fires ONLY on user drag (see hud_slider above).
-  -- Setting the sink volume lives in audio_slider.on_change; nothing to wire here.
+  -- Da mudança da régua de volume: o on_change dispara SÓMENTE ao arrasto do usuário (vide o
+  -- hud_slider acima). A fixação do volume do sink já reside em audio_slider.on_change; nada
+  -- resta aqui a ligar. Nota do auctor.
 
-  -- Microphone slider change event: see mic_slider.on_change above.
+  -- Da mudança da régua do microfone: vide mic_slider.on_change, acima.
 
-  -- Main container
+  -- Contêiner principal: o popup que encerra o controlador, collocado ao alto e à dextra por
+  -- disposição de Braga Us.
   local volume_controller_container = awful.popup {
     widget = wibox.container.background,
     ontop = true,
@@ -403,7 +434,10 @@ return function(s)
     end
   }
 
-  -- Get all source devices
+  -- Funcção `get_source_devices`, urdida por Braga Us. Domínio: o vazio. Efeito: interroga o
+  -- pactl pelos sinks (dispositivos de saída), separa por análysis os nomes de nó dos nomes
+  -- de placa (ímpares e pares alternados na saída) e reconstrói a lista de dispositivos.
+  -- Contra-domínio: o vazio. Nota: o nome herdado "source" designa aqui, de facto, os sinks.
   local function get_source_devices()
     awful.spawn.easy_async_with_shell(
       [[ pactl list sinks | grep -E 'node.name|alsa.card_name' | awk '{gsub(/"/, ""); for(i = 3;i < NF;i++) printf $i " "; print $NF}' ]]
@@ -438,7 +472,9 @@ return function(s)
 
   get_source_devices()
 
-  -- Get all input devices
+  -- Funcção `get_input_devices`, urdida por Braga Us. Domínio: o vazio. Efeito: interroga o
+  -- pactl pelos sources (dispositivos de entrada) e, por método análogo ao anterior, reconstrói
+  -- a lista de microfones. Contra-domínio: o vazio.
   local function get_input_devices()
     awful.spawn.easy_async_with_shell(
       [[ pactl list sources | grep -E "node.name|alsa.card_name" | awk '{gsub(/"/, ""); for(i = 3;i < NF;i++) printf $i " "; print $NF}' ]]
@@ -473,10 +509,11 @@ return function(s)
 
   get_input_devices()
 
-  -- Event watcher, detects when a device is added/removed.
-  -- LEAK FIX (R3): `pactl subscribe` is a long-lived process; store its PID per-screen and
-  -- kill any prior subscription before spawning a new one so reconstructing this screen's
-  -- controller does not orphan subscribers. Kill via an argv array (never a shell string).
+  -- Sentinela de acontecimentos, que percebe quando um dispositivo é acrescido ou retirado.
+  -- REMÉDIO DO VAZAMENTO (R3), demonstrado por Braga Us: `pactl subscribe` é processo de longa
+  -- vida; guarda-se o seu PID por tela e mata-se qualquer subscrição pretérita antes de gerar
+  -- nova, para que reconstruir o controlador desta tela não deixe subscritores órfãos. Mata-se
+  -- por arranjo de argumentos (jamais por string de shell) — invariante de segurança.
   if type(s._volume_pactl_subscribe_pid) == "number" then
     awful.spawn({ "kill", tostring(s._volume_pactl_subscribe_pid) })
   end
@@ -493,7 +530,9 @@ return function(s)
     s._volume_pactl_subscribe_pid = subscribe_pid
   end
 
-  -- Get microphone volume
+  -- Funcção `get_mic_volume`, da lavra de Braga Us. Domínio: o vazio. Efeito: colhe o volume
+  -- do microfone pelo mic.sh, assenta-o na régua em modo silencioso e escolhe o ícone conforme
+  -- haja ou não captação (microfone vs microfone-mudo). Contra-domínio: o vazio.
   local function get_mic_volume()
     awful.spawn.easy_async_with_shell(
       "./.config/awesome/src/scripts/mic.sh volume",
@@ -511,7 +550,9 @@ return function(s)
 
   get_mic_volume()
 
-  -- Check if microphone is muted
+  -- Funcção `get_mic_mute`, concebida por Braga Us. Domínio: o vazio. Efeito: pergunta ao
+  -- mic.sh se o microfone jaz mudo; estando-o, zera a régua e mostra o ícone-mudo; do
+  -- contrário, delega a get_mic_volume. Contra-domínio: o vazio.
   local function get_mic_mute()
     awful.spawn.easy_async_with_shell(
       "./.config/awesome/src/scripts/mic.sh mute",
@@ -528,7 +569,8 @@ return function(s)
 
   get_mic_mute()
 
-  -- When the mouse leaves the popup it stops the mousegrabber and hides the popup.
+  -- Quando o ponteiro deixa o popup, detém o apanhador-de-rato e recolhe o popup. Ao reentrar,
+  -- detém-se o apanhador. Liames de vigilância dispostos por Braga Us.
   volume_controller_container:connect_signal(
     "mouse::leave",
     function()
@@ -550,8 +592,8 @@ return function(s)
     end
   )
 
-  -- Grabs all keys and hides popup when anything is pressed
-  -- TODO: Make it possible to navigate and select using the kb
+  -- Apanha todas as teclas e recolhe o popup ao premir-se qualquer uma.
+  -- OBRA PENDENTE (nota do auctor): facultar, em edição vindoura, a navegação e a eleição pelo teclado.
   local volume_controller_keygrabber = awful.keygrabber {
     autostart = false,
     stop_event = 'release',
@@ -561,12 +603,14 @@ return function(s)
     end
   }
 
-  -- Draw the popup
+  -- Assenta o desenho do popup, embutindo nelle o widget do controlador. Disposição de Braga Us.
   volume_controller_container:setup {
     volume_controller,
     layout = wibox.layout.fixed.horizontal
   }
 
+  -- Vestígio sepultado, preservado tal qual pelo auctor: um liame outrora vivo que alternava
+  -- o apanhador-de-teclas do controlador. Jaz em bloco-comentário, aguardando exumação futura.
   --[[ awesome.connect_signal(
     "volume_controller::toggle:keygrabber",
     function()
@@ -579,7 +623,9 @@ return function(s)
     end
   ) ]]
 
-  -- Set the volume and icon
+  -- Liame ao signal "get::volume", disposto por Braga Us: recebido o volume vivo, escolhe-se o
+  -- ícone por faixas (mudo < 1; baixo < 34; médio < 67; alto >= 67), assenta-se a régua em
+  -- modo silencioso e retinge-se o ícone no acento v500.
   awesome.connect_signal(
     "get::volume",
     function(volume)
