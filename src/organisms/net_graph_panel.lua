@@ -23,8 +23,9 @@ local mt = require("src.theme.metrics")
 local format = require("src.tools.format")
 local line_graph = require("src.molecules.line_graph")
 local Icon = require("src.tools.icons") -- ícones SVG do set icons/ (§3.13)
+local ft = require("src.theme.typography")
 
-local MONO = "JetBrainsMono Nerd Font"
+local MONO = ft.mono_family
 local SAMPLES = 30 -- profundidade do histórico (≈30s a 1s/amostra)
 local INTERVAL = 1 -- segundos entre amostras
 

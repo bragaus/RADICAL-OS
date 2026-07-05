@@ -4,7 +4,6 @@
 
 -- Awesome Libs
 local awful      = require("awful")
-local color      = require("src.theme.colors")
 local p          = require("src.theme.palette")
 local dpi        = require("beautiful").xresources.apply_dpi
 local gears      = require("gears")

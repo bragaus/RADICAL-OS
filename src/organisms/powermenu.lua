@@ -9,6 +9,7 @@ local dpi = require("beautiful").xresources.apply_dpi
 local gears = require("gears")
 local wibox = require("wibox")
 local chip_button = require("src.molecules.chip_button")
+local ft = require("src.theme.typography")
 
 -- Icon directory path (profile-picture assets live under the legacy set).
 local icondir = awful.util.getdir("config") .. "src/assets/icons/powermenu/"
@@ -31,7 +32,7 @@ return function(s)
     align = 'center',
     valign = 'center',
     text = " ",
-    font = "JetBrains Mono Bold 30",
+    font = ft.mono_family .. " Bold 30",
     widget = wibox.widget.textbox
   }
 

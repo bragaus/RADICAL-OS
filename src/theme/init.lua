@@ -9,6 +9,7 @@
 local awful = require("awful")
 local beautiful = require("beautiful")
 local gears = require("gears")
+local p = require("src.theme.palette")
 
 Theme_path = awful.util.getdir("config") .. "/src/theme/"
 Theme = {}
@@ -20,7 +21,7 @@ Theme.awesome_subicon = Theme_path .. "../assets/icons/ArchLogo.png"
 
 -- Wallpaper
 beautiful.wallpaper = user_vars.wallpaper
-local fallback_bg = "#0c0617" -- palette.base (violet-black)
+local fallback_bg = p.base -- violet-black
 local ok_err, err_mod = pcall(require, "src.core.error_handling")
 local function paint_fallback(s, reason)
   if reason then
