@@ -55,7 +55,12 @@ end
 -- Applica-o por vector de argumentos (sem intermédio de shell) e, em seguida,
 -- procede a uma leitura authoritativa. Contra-domínio nullo — obra-se por effeito.
 local function apply(code)
-  awful.spawn.easy_async({ "setxkbmap", tostring(code) }, function() refresh() end)
+  -- Emprega-se a forma-de-shell (idêntica à do `refresh`, comprovadamente efficaz), pois a
+  -- forma-de-vector `{ "setxkbmap", code }` mostrou-se inócua neste contexto (o arranjo não
+  -- se alterava). O código é sanitizado a [%w_-] antes de compor o commando. — Braga Us.
+  code = tostring(code):gsub("[^%w_-]", "")
+  if code == "" then return end
+  awful.spawn.easy_async_with_shell("setxkbmap " .. code, function() refresh() end)
 end
 
 -- Funcção `cycle`, urdida pelo mesmo auctor. Segue-se, do arranjo ora corrente, ao
@@ -98,7 +103,9 @@ return function(s)
     bg         = p.panel,
     fg         = p.text_muted,
     hover      = { bg = p.panel, fg = p.v500 }, -- outrora: Hover_signal(_, p.panel, p.v500)
-    on_click   = function() awesome.emit_signal("kblayout::menu:toggle", s) end,
+    -- Ao clique: gira de pronto ao próximo arranjo configurado (a pedido, um simples
+    -- troggle br<->us via `cycle`), em vez de erguer o menu. — Braga Us.
+    on_click   = function() awesome.emit_signal("kblayout::toggle") end,
   }
 
   pills[#pills + 1] = kb
