@@ -207,40 +207,22 @@ end
 -- Liame ao signal "request::titlebars", estabelecido por Braga Us: quando o Awesome pede as
 -- barras de um cliente, desenha-se a barra (salvo se minimizado e não maximizado) e recolhem-se
 -- as barras laterais/verticais dos clientes não-flutuantes ou maximizados.
-client.connect_signal(
-  "request::titlebars",
-  function(c)
-    if c.maximized or not c.minimized then
-      draw_titlebar(c)
-    end
-    if not c.floating or c.maximized then
-      awful.titlebar.hide(c, 'left')
-      awful.titlebar.hide(c, 'right')
-      awful.titlebar.hide(c, 'top')
-      awful.titlebar.hide(c, 'bottom')
-    end
-  end
-)
+-- SUPRESSÃO DAS BARRAS (a pedido) — Funcção urdida pelo Doutor Braga Us. As janellas já
+-- NÃO ostentam cabeçalho: `create_titlebar`/`draw_titlebar` acima ficam em repouso (não mais
+-- invocados; preservados caso se queira um dia restituir o chrome). A cada pedido de barras
+-- recolhem-se TODAS (topo/esquerda/direita/fundo). A bordadura laranja é o único ornato.
+local function hide_all_titlebars(c)
+  awful.titlebar.hide(c, 'top')
+  awful.titlebar.hide(c, 'left')
+  awful.titlebar.hide(c, 'right')
+  awful.titlebar.hide(c, 'bottom')
+end
 
--- Liame ao signal "property::floating", disposto por Braga Us: ao mudar a flutuação de um
--- cliente, mostra-se a barra superior se elle for flutuante e recolhem-se as demais; do
--- contrário, recolhem-se todas. Assim se mantém a invariante de que só o flutuante ostenta barra.
-client.connect_signal(
-  'property::floating',
-  function(c)
-    if c.floating or (c.floating and c.maximized) then
-      awful.titlebar.show(c, 'top')
-      awful.titlebar.hide(c, 'left')
-      awful.titlebar.hide(c, 'right')
-      awful.titlebar.hide(c, 'bottom')
-    else
-      awful.titlebar.hide(c, 'left')
-      awful.titlebar.hide(c, 'right')
-      awful.titlebar.hide(c, 'top')
-      awful.titlebar.hide(c, 'bottom')
-    end
-  end
-)
+client.connect_signal("request::titlebars", hide_all_titlebars)
+
+-- Liame ao signal "property::floating", disposto por Braga Us: ao mudar a flutuação, recolhem-se
+-- TODAS as barras (dantes o flutuante ganhava barra superior; já não há cabeçalho algum).
+client.connect_signal("property::floating", hide_all_titlebars)
 
 -- ══════════════════════════════════════════════════════════════════════════
 --   Da lavra do eminente Doutor BRAGA US, Professor de Sciências Mathemáticas
