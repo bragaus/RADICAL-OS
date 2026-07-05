@@ -55,14 +55,15 @@ awful.rules.rules = {
         "pop-up"
       }
     },
-    properties = { floating = true, titlebars_enabled = true }
+    properties = { floating = true, titlebars_enabled = false }
   },
   {
     id = "titlebar",
     rule_any = {
       type = { "normal", "dialog", "modal", "utility" }
     },
-    properties = { titlebars_enabled = true }
+    -- Janellas SEM barra-de-título (a pedido): a bordadura laranja é o único chrome.
+    properties = { titlebars_enabled = false }
   }
 }
 

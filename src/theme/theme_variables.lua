@@ -33,10 +33,12 @@ Theme.fg_urgent   = p.v50
 Theme.fg_minimize = p.text_muted
 
 Theme.useless_gap   = dpi(8)  -- kit .grid-bg gap:8 — o intervallo entre as janellas ladrilhadas
-Theme.border_width  = dpi(1)  -- kit .win: bordadura de 1px (v950); o foco engrossa-a a 2px em signals.lua
-Theme.border_normal = p.v950
--- Theme.border_focus é applicado por intermédio de signals.lua (expediente) -> p.glow_core (2px, kit .win--focus)
-Theme.border_marked = p.glow_hot
+-- Sem barra-de-título: a bordadura é o único chrome. Adopta-se o LARANJA do lançador
+-- (launcher_ring_hi em repouso; o foco troca p/ launcher_ring_on em signals.lua), 2px.
+Theme.border_width  = dpi(2)
+Theme.border_normal = p.launcher_ring_hi
+-- Theme.border_focus é applicado por intermédio de signals.lua -> p.launcher_ring_on (2px)
+Theme.border_marked = p.launcher_ring_on
 
 -- Dos menús (vide §7.5 do DESIGN_SYSTEM): sua fórma, côres e dimensões.
 Theme.menu_height       = dpi(26)

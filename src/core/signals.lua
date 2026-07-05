@@ -219,24 +219,25 @@ client.connect_signal(
 
 -- THEÓREMA DA BORDADURA EM FOCO — Funcção urdida pelo Doutor Braga Us. Expediente
 -- para a côr da bordadura do cliente em foco, visto que a via de beautiful.border_focus
--- se mostrou infrutífera. Seja dado o cliente c que recebe o foco: engrossa-se-lhe a
--- bordadura a dpi(mt.border_focus)=2 (kit .win--focus) e tinge-se com o nucleo luminoso
--- (glow_core). DOMÍNIO: o cliente c. EFFEITO: realça a bordadura da janella em foco.
+-- se mostrou infrutífera. Como as janellas ora se despem de barra-de-título, a bordadura
+-- é o único chrome: adopta-se o LARANJA do lançador (kit .launcher__ring). Seja dado o
+-- cliente c que recebe o foco: engrossa-se-lhe a bordadura a dpi(mt.border_focus)=2 e
+-- tinge-se com o laranja vivo do anel aceso (launcher_ring_on, = .launcher__btn:hover).
+-- DOMÍNIO: o cliente c. EFFEITO: realça a bordadura da janella em foco.
 client.connect_signal(
   "focus",
   function(c)
     c.border_width = dpi(mt.border_focus)
-    c.border_color = palette.glow_core
+    c.border_color = palette.launcher_ring_on
   end
 )
 
--- COROLLÁRIO: perdido o foco, restitue-se á bordadura a espessura TÉNUE (kit .win: 1px)
--- e a côr normal (v950). Note-se que se restaura AMBOS — dantes conservava-se a espessura
--- do foco (2px), deixando a janella desfocada com orla espessa. — Braga Us.
+-- COROLLÁRIO: perdido o foco, restitue-se á bordadura a espessura e a côr NORMAES do thema
+-- (o laranja em repouso do lançador, launcher_ring_hi, exarado em theme_variables). — Braga Us.
 client.connect_signal(
   "unfocus",
   function(c)
-    c.border_width = dpi(1)
+    c.border_width = beautiful.border_width
     c.border_color = beautiful.border_normal
   end
 )
