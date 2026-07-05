@@ -1,0 +1,1073 @@
+bragaus-vjfe59f11x-b0821h
+    descrição: Computer
+    largura: 64 bits
+    capacidades: smp vsyscall32
+  *-core
+       descrição: Motherboard
+       ID físico: 0
+     *-memory
+          descrição: Memória do sistema
+          ID físico: 0
+          tamanho: 8GiB
+     *-cpu
+          produto: Intel(R) Core(TM) i5-10400F CPU @ 2.90GHz
+          fabricante: Intel Corp.
+          ID físico: 1
+          informações do barramento: cpu@0
+          versão: 6.165.5
+          tamanho: 4GHz
+          capacidade: 4300MHz
+          largura: 64 bits
+          capacidades: fpu fpu_exception wp vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm pbe syscall nx pdpe1gb rdtscp x86-64 constant_tsc art arch_perfmon pebs bts rep_good nopl xtopology nonstop_tsc cpuid aperfmperf pni pclmulqdq dtes64 monitor ds_cpl vmx est tm2 ssse3 sdbg fma cx16 xtpr pdcm pcid sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand lahf_lm abm 3dnowprefetch cpuid_fault epb ssbd ibrs ibpb stibp ibrs_enhanced tpr_shadow flexpriority ept vpid ept_ad fsgsbase tsc_adjust bmi1 avx2 smep bmi2 erms invpcid mpx rdseed adx smap clflushopt intel_pt xsaveopt xsavec xgetbv1 xsaves dtherm ida arat pln pts hwp hwp_notify hwp_act_window hwp_epp vnmi pku ospke md_clear flush_l1d arch_capabilities cpufreq
+          configuração: microcode=256
+     *-pci
+          descrição: Host bridge
+          produto: Comet Lake-S 6c Host Bridge/DRAM Controller
+          fabricante: Intel Corporation
+          ID físico: 100
+          informações do barramento: pci@0000:00:00.0
+          versão: 05
+          largura: 32 bits
+          clock: 33MHz
+          configuração: driver=skl_uncore
+          recursos: irq:0
+        *-pci:0
+             descrição: PCI bridge
+             produto: 6th-10th Gen Core Processor PCIe Controller (x16)
+             fabricante: Intel Corporation
+             ID físico: 1
+             informações do barramento: pci@0000:00:01.0
+             versão: 05
+             largura: 32 bits
+             clock: 33MHz
+             capacidades: pci normal_decode bus_master cap_list
+             configuração: driver=pcieport
+             recursos: irq:121 porta de E/S:3000(tamanho=4096) memória:a0000000-a10fffff porta de E/S:4000000000(tamanho=17213423616)
+           *-display
+                descrição: VGA compatible controller
+                produto: GA106 [GeForce RTX 3060 Lite Hash Rate]
+                fabricante: NVIDIA Corporation
+                ID físico: 0
+                informações do barramento: pci@0000:01:00.0
+                nome lógico: /dev/fb0
+                versão: a1
+                largura: 64 bits
+                clock: 33MHz
+                capacidades: vga_controller bus_master cap_list rom fb
+                configuração: depth=32 driver=nvidia latency=0 resolution=3440,1440
+                recursos: memória de E/S:400-3ff memória de E/S:440-43f irq:144 memória:a0000000-a0ffffff memória:4000000000-43ffffffff memória:4400000000-4401ffffff porta de E/S:3000(tamanho=128) memória:c0000-dffff
+           *-multimedia
+                descrição: Audio device
+                produto: GA106 High Definition Audio Controller
+                fabricante: NVIDIA Corporation
+                ID físico: 0.1
+                informações do barramento: pci@0000:01:00.1
+                nome lógico: card3
+                nome lógico: /dev/snd/controlC3
+                nome lógico: /dev/snd/hwC3D0
+                nome lógico: /dev/snd/pcmC3D3p
+                nome lógico: /dev/snd/pcmC3D7p
+                nome lógico: /dev/snd/pcmC3D8p
+                nome lógico: /dev/snd/pcmC3D9p
+                versão: a1
+                largura: 32 bits
+                clock: 33MHz
+                capacidades: bus_master cap_list
+                configuração: driver=snd_hda_intel latency=0
+                recursos: irq:17 memória:a1080000-a1083fff
+              *-input:0
+                   produto: HDA NVidia HDMI/DP,pcm=3
+                   ID físico: 0
+                   nome lógico: input16
+                   nome lógico: /dev/input/event14
+              *-input:1
+                   produto: HDA NVidia HDMI/DP,pcm=7
+                   ID físico: 1
+                   nome lógico: input17
+                   nome lógico: /dev/input/event15
+              *-input:2
+                   produto: HDA NVidia HDMI/DP,pcm=8
+                   ID físico: 2
+                   nome lógico: input18
+                   nome lógico: /dev/input/event16
+              *-input:3
+                   produto: HDA NVidia HDMI/DP,pcm=9
+                   ID físico: 3
+                   nome lógico: input19
+                   nome lógico: /dev/input/event17
+        *-usb
+             descrição: USB controller
+             produto: Tiger Lake-H USB 3.2 Gen 2x1 xHCI Host Controller
+             fabricante: Intel Corporation
+             ID físico: 14
+             informações do barramento: pci@0000:00:14.0
+             versão: 11
+             largura: 64 bits
+             clock: 33MHz
+             capacidades: xhci bus_master cap_list
+             configuração: driver=xhci_hcd latency=0
+             recursos: memória de E/S:440-43f irq:123 memória:4402100000-440210ffff
+        *-memory DISPONÍVEL
+             descrição: RAM memory
+             produto: Tiger Lake-H Shared SRAM
+             fabricante: Intel Corporation
+             ID físico: 14.2
+             informações do barramento: pci@0000:00:14.2
+             versão: 11
+             largura: 64 bits
+             clock: 33MHz (30.3ns)
+             capacidades: cap_list
+             configuração: latency=0
+             recursos: memória de E/S:440-43f memória de E/S:440-43f memória:4402114000-4402117fff memória:440211b000-440211bfff
+        *-serial:0
+             descrição: Serial bus controller
+             produto: Tiger Lake-H Serial IO I2C Controller #0
+             fabricante: Intel Corporation
+             ID físico: 15
+             informações do barramento: pci@0000:00:15.0
+             versão: 11
+             largura: 64 bits
+             clock: 33MHz
+             capacidades: bus_master cap_list
+             configuração: driver=intel-lpss latency=0
+             recursos: irq:27 memória:440211a000-440211afff
+        *-communication
+             descrição: Communication controller
+             produto: Tiger Lake-H Management Engine Interface
+             fabricante: Intel Corporation
+             ID físico: 16
+             informações do barramento: pci@0000:00:16.0
+             versão: 11
+             largura: 64 bits
+             clock: 33MHz
+             capacidades: bus_master cap_list
+             configuração: driver=mei_me latency=0
+             recursos: memória de E/S:440-43f irq:142 memória:4402119000-4402119fff
+        *-sata
+             descrição: SATA controller
+             produto: Intel Corporation
+             fabricante: Intel Corporation
+             ID físico: 17
+             informações do barramento: pci@0000:00:17.0
+             versão: 11
+             largura: 32 bits
+             clock: 66MHz
+             capacidades: sata ahci_1.0 bus_master cap_list
+             configuração: driver=ahci latency=0
+             recursos: irq:131 memória:a1220000-a1221fff memória:a1223000-a12230ff porta de E/S:4050(tamanho=8) porta de E/S:4040(tamanho=4) porta de E/S:4020(tamanho=32) memória:a1222000-a12227ff
+        *-pci:1
+             descrição: PCI bridge
+             produto: Tiger Lake-H PCI Express Root Port #5
+             fabricante: Intel Corporation
+             ID físico: 1c
+             informações do barramento: pci@0000:00:1c.0
+             versão: 11
+             largura: 32 bits
+             clock: 33MHz
+             capacidades: pci normal_decode bus_master cap_list
+             configuração: driver=pcieport
+             recursos: irq:122 memória:a1100000-a11fffff
+           *-nvme
+                descrição: NVMe device
+                produto: Neo Forza NSP095P3451-W04D2K0
+                fabricante: MAXIO Technology (Hangzhou) Ltd.
+                ID físico: 0
+                informações do barramento: pci@0000:02:00.0
+                nome lógico: /dev/nvme0
+                versão: HS12962
+                serial: NFK2404100101822
+                largura: 64 bits
+                clock: 33MHz
+                capacidades: nvme nvm_express bus_master cap_list
+                configuração: driver=nvme latency=0 nqn=nqn.2014-08.com.maxio:nvme:1202:M.2:NFK2404100101822 state=live
+                recursos: irq:16 memória:a1100000-a1103fff
+              *-namespace:0
+                   descrição: NVMe disk
+                   ID físico: 0
+                   nome lógico: hwmon1
+              *-namespace:1
+                   descrição: NVMe disk
+                   ID físico: 2
+                   nome lógico: /dev/ng0n1
+              *-namespace:2
+                   descrição: NVMe disk
+                   ID físico: 1
+                   informações do barramento: nvme@0:1
+                   nome lógico: /dev/nvme0n1
+                   configuração: wwid=nvme.1e4b-4e464b32343034313030313031383232-4e656f20466f727a61204e535030393550333435312d57303444324b30-00000001
+        *-isa
+             descrição: ISA bridge
+             produto: H510 LPC/eSPI Controller
+             fabricante: Intel Corporation
+             ID físico: 1f
+             informações do barramento: pci@0000:00:1f.0
+             versão: 11
+             largura: 32 bits
+             clock: 33MHz
+             capacidades: isa bus_master
+             configuração: latency=0
+           *-pnp00:00
+                produto: PnP device PNP0c02
+                ID físico: 0
+                capacidades: pnp
+                configuração: driver=system
+           *-pnp00:01
+                produto: PnP device PNP0501
+                ID físico: 1
+                capacidades: pnp
+                configuração: driver=serial
+           *-pnp00:02
+                produto: PnP device PNP0c02
+                ID físico: 2
+                capacidades: pnp
+                configuração: driver=system
+           *-pnp00:03
+                produto: PnP device PNP0c02
+                ID físico: 3
+                capacidades: pnp
+                configuração: driver=system
+           *-pnp00:04
+                produto: PnP device PNP0c02
+                ID físico: 4
+                capacidades: pnp
+                configuração: driver=system
+           *-pnp00:05
+                produto: PnP device PNP0c02
+                ID físico: 5
+                capacidades: pnp
+                configuração: driver=system
+           *-pnp00:06
+                produto: PnP device PNP0c02
+                ID físico: 6
+                capacidades: pnp
+                configuração: driver=system
+        *-multimedia
+             descrição: Audio device
+             produto: Intel Corporation
+             fabricante: Intel Corporation
+             ID físico: 1f.3
+             informações do barramento: pci@0000:00:1f.3
+             nome lógico: card2
+             nome lógico: /dev/snd/controlC2
+             nome lógico: /dev/snd/hwC2D0
+             nome lógico: /dev/snd/pcmC2D0c
+             nome lógico: /dev/snd/pcmC2D0p
+             nome lógico: /dev/snd/pcmC2D1p
+             nome lógico: /dev/snd/pcmC2D2c
+             versão: 11
+             largura: 64 bits
+             clock: 33MHz
+             capacidades: bus_master cap_list
+             configuração: driver=snd_hda_intel latency=32
+             recursos: memória de E/S:440-43f memória de E/S:440-43f irq:143 memória:4402110000-4402113fff memória:4402000000-44020fffff
+           *-input:0
+                produto: HDA Intel PCH Rear Mic
+                ID físico: 0
+                nome lógico: input20
+                nome lógico: /dev/input/event18
+           *-input:1
+                produto: HDA Intel PCH Front Mic
+                ID físico: 1
+                nome lógico: input21
+                nome lógico: /dev/input/event19
+           *-input:2
+                produto: HDA Intel PCH Line
+                ID físico: 2
+                nome lógico: input22
+                nome lógico: /dev/input/event20
+           *-input:3
+                produto: HDA Intel PCH Line Out
+                ID físico: 3
+                nome lógico: input23
+                nome lógico: /dev/input/event21
+           *-input:4
+                produto: HDA Intel PCH Front Headphone
+                ID físico: 4
+                nome lógico: input24
+                nome lógico: /dev/input/event22
+        *-serial:1
+             descrição: SMBus
+             produto: Tiger Lake-H SMBus Controller
+             fabricante: Intel Corporation
+             ID físico: 1f.4
+             informações do barramento: pci@0000:00:1f.4
+             versão: 11
+             largura: 64 bits
+             clock: 33MHz
+             configuração: driver=i801_smbus latency=0
+             recursos: memória de E/S:440-43f irq:16 memória:4402118000-44021180ff porta de E/S:efa0(tamanho=32)
+        *-serial:2
+             descrição: Serial bus controller
+             produto: Tiger Lake-H SPI Controller
+             fabricante: Intel Corporation
+             ID físico: 1f.5
+             informações do barramento: pci@0000:00:1f.5
+             versão: 11
+             largura: 32 bits
+             clock: 33MHz
+             configuração: driver=intel-spi latency=0
+             recursos: irq:0 memória:a1224000-a1224fff
+        *-network
+             descrição: Ethernet interface
+             produto: Ethernet Connection (14) I219-V
+             fabricante: Intel Corporation
+             ID físico: 1f.6
+             informações do barramento: pci@0000:00:1f.6
+             nome lógico: eno1
+             versão: 11
+             serial: fc:34:97:7b:aa:3f
+             tamanho: 100Mbit/s
+             capacidade: 1Gbit/s
+             largura: 32 bits
+             clock: 33MHz
+             capacidades: bus_master cap_list ethernet physical tp 10bt 10bt-fd 100bt 100bt-fd 1000bt-fd autonegotiation
+             configuração: autonegotiation=on broadcast=yes driver=e1000e driverversion=6.17.0-22-generic duplex=full firmware=0.4-4 ip=192.168.0.235 latency=0 link=yes multicast=yes port=twisted pair speed=100Mbit/s
+             recursos: irq:132 memória:a1200000-a121ffff
+  *-sound:0
+       descrição: Device
+       ID físico: 1
+       nome lógico: card0
+       nome lógico: /dev/snd/controlC0
+       nome lógico: /dev/snd/pcmC0D0c
+       nome lógico: /dev/snd/pcmC0D0p
+  *-sound:1
+       descrição: Camera
+       ID físico: 2
+       nome lógico: card1
+       nome lógico: /dev/snd/controlC1
+       nome lógico: /dev/snd/pcmC1D0c
+  *-sound:2
+       descrição: Set
+       ID físico: 3
+       nome lógico: card4
+       nome lógico: /dev/snd/controlC4
+       nome lógico: /dev/snd/pcmC4D0c
+       nome lógico: /dev/snd/pcmC4D0p
+  *-input:0
+       produto: Sleep Button
+       ID físico: 4
+       nome lógico: input0
+       nome lógico: /dev/input/event0
+       capacidades: platform
+  *-input:1
+       produto: Power Button
+       ID físico: 5
+       nome lógico: input1
+       nome lógico: /dev/input/event1
+       capacidades: platform
+  *-input:2
+       produto: C-Media USB Headphone Set
+       ID físico: 6
+       nome lógico: input10
+       nome lógico: /dev/input/event10
+       capacidades: usb
+  *-input:3
+       produto: Logitech G502 HERO Gaming Mouse
+       ID físico: 7
+       nome lógico: input11
+       nome lógico: /dev/input/event11
+       nome lógico: /dev/input/mouse1
+       capacidades: usb
+  *-input:4
+       produto: Logitech G502 HERO Gaming Mouse Keyboard
+       ID físico: 8
+       nome lógico: input12
+       nome lógico: /dev/input/event12
+       capacidades: usb
+  *-input:5
+       produto: Eee PC WMI hotkeys
+       ID físico: 9
+       nome lógico: input15
+       nome lógico: /dev/input/event13
+       capacidades: platform
+  *-input:6
+       produto: Power Button
+       ID físico: a
+       nome lógico: input2
+       nome lógico: /dev/input/event2
+       capacidades: platform
+  *-input:7
+       produto: LIYUANY USB PnP Sound Device
+       ID físico: b
+       nome lógico: input3
+       nome lógico: /dev/input/event3
+       capacidades: usb
+  *-input:8
+       produto: HyperX HyperX Mars Gaming KeyBoard
+       ID físico: c
+       nome lógico: input4
+       nome lógico: /dev/input/event4
+       nome lógico: input4::capslock
+       nome lógico: input4::compose
+       nome lógico: input4::kana
+       nome lógico: input4::numlock
+       nome lógico: input4::scrolllock
+       capacidades: usb
+  *-input:9
+       produto: HyperX HyperX Mars Gaming KeyBoard Mouse
+       ID físico: d
+       nome lógico: input5
+       nome lógico: /dev/input/event5
+       nome lógico: /dev/input/mouse0
+       capacidades: usb
+  *-input:10
+       produto: HyperX HyperX Mars Gaming KeyBoard System Control
+       ID físico: e
+       nome lógico: input6
+       nome lógico: /dev/input/event6
+       capacidades: usb
+  *-input:11
+       produto: HyperX HyperX Mars Gaming KeyBoard Consumer Control
+       ID físico: f
+       nome lógico: input7
+       nome lógico: /dev/input/event7
+       capacidades: usb
+  *-input:12
+       produto: HyperX HyperX Mars Gaming KeyBoard
+       ID físico: 10
+       nome lógico: input8
+       nome lógico: /dev/input/event8
+       capacidades: usb
+  *-input:13
+       produto: HyperX HyperX Mars Gaming KeyBoard
+       ID físico: 11
+       nome lógico: input9
+       nome lógico: /dev/input/event9
+       capacidades: usb
+bragaus-vjfe59f11x-b0821h
+    descrição: Computador desktop
+    produto: System Product Name (SKU)
+    fabricante: ASUS
+    versão: System Version
+    serial: System Serial Number
+    largura: 64 bits
+    capacidades: smbios-3.3.0 dmi-3.3.0 smp vsyscall32
+    configuração: boot=normal chassis=desktop family=To be filled by O.E.M. sku=SKU uuid=8ec8abde-1ab3-185f-d02c-fc34977baa3f
+  *-core
+       descrição: Placa-mãe
+       produto: PRIME H510M-E
+       fabricante: ASUSTeK COMPUTER INC.
+       ID físico: 0
+       versão: Rev 1.xx
+       serial: 211290436901373
+       slot: Default string
+     *-firmware
+          descrição: BIOS
+          fabricante: American Megatrends Inc.
+          ID físico: 0
+          versão: 1017
+          date: 07/12/2021
+          tamanho: 64KiB
+          capacidade: 16MiB
+          capacidades: pci upgrade shadowing cdboot bootselect socketedrom edd int13floppynec int13floppytoshiba int13floppy360 int13floppy1200 int13floppy720 int13floppy2880 int5printscreen int14serial int17printer int10video usb biosbootspecification uefi
+     *-memory
+          descrição: Memória do sistema
+          ID físico: 3c
+          slot: Placa do sistema ou placa-mãe
+          tamanho: 8GiB
+        *-bank:0
+             descrição: DIMM DDR4 Síncrono 2667 MHz (0,4 ns)
+             produto: BL8G30C15U4R.8FE
+             fabricante: Crucial Technology
+             ID físico: 0
+             serial: E543BCCA
+             slot: Controller0-ChannelA
+             tamanho: 8GiB
+             largura: 64 bits
+             clock: 2667MHz (0.4ns)
+        *-bank:1
+             descrição: Project-Id-Version: lshwReport-Msgid-Bugs-To: FULL NAME <EMAIL@ADDRESS>PO-Revision-Date: 2013-04-07 17:30+0000Last-Translator: Neliton Pereira Jr. <nelitonpjr@gmail.com>Language-Team: Brazilian Portuguese <pt_BR@li.org>MIME-Version: 1.0Content-Type: text/plain; charset=UTF-8Content-Transfer-Encoding: 8bitX-Launchpad-Export-Date: 2026-01-27 15:18+0000X-Generator: Launchpad (build 9fcfff1971229ac997140f06b41a902ac8ec69f4)Project-Id-Version: lshwReport-Msgid-Bugs-To: FULL NAME <EMAIL@ADDRESS>PO-Revision-Date: 2013-04-07 17:30+0000Last-Translator: Neliton Pereira Jr. <nelitonpjr@gmail.com>Language-Team: Brazilian Portuguese <pt_BR@li.org>MIME-Version: 1.0Content-Type: text/plain; charset=UTF-8Content-Transfer-Encoding: 8bitX-Launchpad-Export-Date: 2026-01-27 15:18+0000X-Generator: Launchpad (build 9fcfff1971229ac997140f06b41a902ac8ec69f4) [vazio]
+             ID físico: 1
+             slot: Controller0-ChannelB-DIMM0
+     *-cache:0
+          descrição: L1 cache
+          ID físico: 48
+          slot: L1 Cache
+          tamanho: 384KiB
+          capacidade: 384KiB
+          capacidades: synchronous internal write-back
+          configuração: level=1
+     *-cache:1
+          descrição: L2 cache
+          ID físico: 49
+          slot: L2 Cache
+          tamanho: 1536KiB
+          capacidade: 1536KiB
+          capacidades: synchronous internal write-back unified
+          configuração: level=2
+     *-cache:2
+          descrição: L3 cache
+          ID físico: 4a
+          slot: L3 Cache
+          tamanho: 12MiB
+          capacidade: 12MiB
+          capacidades: synchronous internal write-back unified
+          configuração: level=3
+     *-cpu
+          descrição: CPU
+          produto: Intel(R) Core(TM) i5-10400F CPU @ 2.90GHz
+          fabricante: Intel Corp.
+          ID físico: 4b
+          informações do barramento: cpu@0
+          versão: 6.165.5
+          serial: To Be Filled By O.E.M.
+          slot: LGA1200
+          tamanho: 4073MHz
+          capacidade: 4300MHz
+          largura: 64 bits
+          clock: 100MHz
+          capacidades: lm fpu fpu_exception wp vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm pbe syscall nx pdpe1gb rdtscp x86-64 constant_tsc art arch_perfmon pebs bts rep_good nopl xtopology nonstop_tsc cpuid aperfmperf pni pclmulqdq dtes64 monitor ds_cpl vmx est tm2 ssse3 sdbg fma cx16 xtpr pdcm pcid sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand lahf_lm abm 3dnowprefetch cpuid_fault epb ssbd ibrs ibpb stibp ibrs_enhanced tpr_shadow flexpriority ept vpid ept_ad fsgsbase tsc_adjust bmi1 avx2 smep bmi2 erms invpcid mpx rdseed adx smap clflushopt intel_pt xsaveopt xsavec xgetbv1 xsaves dtherm ida arat pln pts hwp hwp_notify hwp_act_window hwp_epp vnmi pku ospke md_clear flush_l1d arch_capabilities cpufreq
+          configuração: cores=6 enabledcores=6 microcode=256 threads=12
+     *-pci
+          descrição: Host bridge
+          produto: Comet Lake-S 6c Host Bridge/DRAM Controller
+          fabricante: Intel Corporation
+          ID físico: 100
+          informações do barramento: pci@0000:00:00.0
+          versão: 05
+          largura: 32 bits
+          clock: 33MHz
+          configuração: driver=skl_uncore
+          recursos: irq:0
+        *-pci:0
+             descrição: PCI bridge
+             produto: 6th-10th Gen Core Processor PCIe Controller (x16)
+             fabricante: Intel Corporation
+             ID físico: 1
+             informações do barramento: pci@0000:00:01.0
+             versão: 05
+             largura: 32 bits
+             clock: 33MHz
+             capacidades: pci pm msi pciexpress normal_decode bus_master cap_list
+             configuração: driver=pcieport
+             recursos: irq:121 porta de E/S:3000(tamanho=4096) memória:a0000000-a10fffff porta de E/S:4000000000(tamanho=17213423616)
+           *-display
+                descrição: VGA compatible controller
+                produto: GA106 [GeForce RTX 3060 Lite Hash Rate]
+                fabricante: NVIDIA Corporation
+                ID físico: 0
+                informações do barramento: pci@0000:01:00.0
+                nome lógico: /dev/fb0
+                versão: a1
+                largura: 64 bits
+                clock: 33MHz
+                capacidades: pm msi pciexpress vga_controller bus_master cap_list rom fb
+                configuração: depth=32 driver=nvidia latency=0 mode=1920x1080 resolution=3440,1440 visual=truecolor xres=1920 yres=1080
+                recursos: memória de E/S:400-3ff memória de E/S:440-43f irq:144 memória:a0000000-a0ffffff memória:4000000000-43ffffffff memória:4400000000-4401ffffff porta de E/S:3000(tamanho=128) memória:c0000-dffff
+           *-multimedia
+                descrição: Audio device
+                produto: GA106 High Definition Audio Controller
+                fabricante: NVIDIA Corporation
+                ID físico: 0.1
+                informações do barramento: pci@0000:01:00.1
+                nome lógico: card3
+                nome lógico: /dev/snd/controlC3
+                nome lógico: /dev/snd/hwC3D0
+                nome lógico: /dev/snd/pcmC3D3p
+                nome lógico: /dev/snd/pcmC3D7p
+                nome lógico: /dev/snd/pcmC3D8p
+                nome lógico: /dev/snd/pcmC3D9p
+                versão: a1
+                largura: 32 bits
+                clock: 33MHz
+                capacidades: pm msi pciexpress bus_master cap_list
+                configuração: driver=snd_hda_intel latency=0
+                recursos: irq:17 memória:a1080000-a1083fff
+              *-input:0
+                   produto: HDA NVidia HDMI/DP,pcm=3
+                   ID físico: 0
+                   nome lógico: input16
+                   nome lógico: /dev/input/event14
+              *-input:1
+                   produto: HDA NVidia HDMI/DP,pcm=7
+                   ID físico: 1
+                   nome lógico: input17
+                   nome lógico: /dev/input/event15
+              *-input:2
+                   produto: HDA NVidia HDMI/DP,pcm=8
+                   ID físico: 2
+                   nome lógico: input18
+                   nome lógico: /dev/input/event16
+              *-input:3
+                   produto: HDA NVidia HDMI/DP,pcm=9
+                   ID físico: 3
+                   nome lógico: input19
+                   nome lógico: /dev/input/event17
+        *-usb
+             descrição: USB controller
+             produto: Tiger Lake-H USB 3.2 Gen 2x1 xHCI Host Controller
+             fabricante: Intel Corporation
+             ID físico: 14
+             informações do barramento: pci@0000:00:14.0
+             versão: 11
+             largura: 64 bits
+             clock: 33MHz
+             capacidades: pm msi xhci bus_master cap_list
+             configuração: driver=xhci_hcd latency=0
+             recursos: memória de E/S:440-43f irq:123 memória:4402100000-440210ffff
+           *-usbhost:0
+                produto: xHCI Host Controller
+                fabricante: Linux 6.17.0-22-generic xhci-hcd
+                ID físico: 0
+                informações do barramento: usb@1
+                nome lógico: usb1
+                versão: 6.17
+                capacidades: usb-2.00
+                configuração: driver=hub slots=16 speed=480Mbit/s
+              *-usb:0
+                   descrição: Vídeo
+                   produto: Wed Camera
+                   fabricante: Wed Camera
+                   ID físico: 1
+                   informações do barramento: usb@1:1
+                   nome lógico: card1
+                   nome lógico: /dev/snd/controlC1
+                   nome lógico: /dev/snd/pcmC1D0c
+                   versão: 0.00
+                   serial: 20240420112206
+                   capacidades: usb-2.00
+                   configuração: driver=snd-usb-audio maxpower=100mA speed=480Mbit/s
+              *-usb:1
+                   descrição: Dispositivo de áudio
+                   produto: LIYUANY USB PnP Sound Device
+                   fabricante: LIYUANY
+                   ID físico: 4
+                   informações do barramento: usb@1:4
+                   nome lógico: card0
+                   nome lógico: /dev/snd/controlC0
+                   nome lógico: /dev/snd/pcmC0D0c
+                   nome lógico: /dev/snd/pcmC0D0p
+                   nome lógico: input3
+                   nome lógico: /dev/input/event3
+                   versão: 1.00
+                   serial: 20170726905928
+                   capacidades: usb-2.00 audio-control usb
+                   configuração: driver=usbhid maxpower=100mA speed=12Mbit/s
+              *-usb:2
+                   descrição: hub USB
+                   produto: Thinnet TM
+                   fabricante: ThinNetworks
+                   ID físico: 5
+                   informações do barramento: usb@1:5
+                   versão: 77.63
+                   serial: 2008/10/06
+                   capacidades: usb-2.00
+                   configuração: driver=hub maxpower=100mA slots=4 speed=480Mbit/s
+                 *-usb
+                      descrição: Dispositivo de áudio
+                      produto: C-Media USB Headphone Set
+                      fabricante: C-Media Electronics, Inc.
+                      ID físico: 2
+                      informações do barramento: usb@1:5.2
+                      nome lógico: card4
+                      nome lógico: /dev/snd/controlC4
+                      nome lógico: /dev/snd/pcmC4D0c
+                      nome lógico: /dev/snd/pcmC4D0p
+                      nome lógico: input10
+                      nome lógico: /dev/input/event10
+                      versão: 1.00
+                      capacidades: usb-1.10 audio-control usb
+                      configuração: driver=usbhid maxpower=100mA speed=12Mbit/s
+              *-usb:3
+                   descrição: Teclado
+                   produto: HyperX HyperX Mars Gaming KeyBoard
+                   fabricante: HyperX
+                   ID físico: 9
+                   informações do barramento: usb@1:9
+                   nome lógico: input4
+                   nome lógico: /dev/input/event4
+                   nome lógico: input4::capslock
+                   nome lógico: input4::compose
+                   nome lógico: input4::kana
+                   nome lógico: input4::numlock
+                   nome lógico: input4::scrolllock
+                   nome lógico: input5
+                   nome lógico: /dev/input/event5
+                   nome lógico: /dev/input/mouse0
+                   nome lógico: input6
+                   nome lógico: /dev/input/event6
+                   nome lógico: input7
+                   nome lógico: /dev/input/event7
+                   nome lógico: input8
+                   nome lógico: /dev/input/event8
+                   nome lógico: input9
+                   nome lógico: /dev/input/event9
+                   versão: 1.00
+                   capacidades: usb-2.00 usb
+                   configuração: driver=usbhid maxpower=500mA speed=12Mbit/s
+              *-usb:4
+                   descrição: Mouse
+                   produto: G502 HERO Gaming Mouse
+                   fabricante: Logitech
+                   ID físico: e
+                   informações do barramento: usb@1:e
+                   versão: 27.03
+                   serial: 0B82315E3032
+                   capacidades: usb-2.00
+                   configuração: driver=usbhid maxpower=300mA speed=12Mbit/s
+           *-usbhost:1
+                produto: xHCI Host Controller
+                fabricante: Linux 6.17.0-22-generic xhci-hcd
+                ID físico: 1
+                informações do barramento: usb@2
+                nome lógico: usb2
+                versão: 6.17
+                capacidades: usb-3.10
+                configuração: driver=hub slots=4 speed=10000Mbit/s
+        *-memory DISPONÍVEL
+             descrição: RAM memory
+             produto: Tiger Lake-H Shared SRAM
+             fabricante: Intel Corporation
+             ID físico: 14.2
+             informações do barramento: pci@0000:00:14.2
+             versão: 11
+             largura: 64 bits
+             clock: 33MHz (30.3ns)
+             capacidades: pm cap_list
+             configuração: latency=0
+             recursos: memória de E/S:440-43f memória de E/S:440-43f memória:4402114000-4402117fff memória:440211b000-440211bfff
+        *-serial:0
+             descrição: Serial bus controller
+             produto: Tiger Lake-H Serial IO I2C Controller #0
+             fabricante: Intel Corporation
+             ID físico: 15
+             informações do barramento: pci@0000:00:15.0
+             versão: 11
+             largura: 64 bits
+             clock: 33MHz
+             capacidades: pm bus_master cap_list
+             configuração: driver=intel-lpss latency=0
+             recursos: irq:27 memória:440211a000-440211afff
+        *-communication
+             descrição: Communication controller
+             produto: Tiger Lake-H Management Engine Interface
+             fabricante: Intel Corporation
+             ID físico: 16
+             informações do barramento: pci@0000:00:16.0
+             versão: 11
+             largura: 64 bits
+             clock: 33MHz
+             capacidades: pm msi bus_master cap_list
+             configuração: driver=mei_me latency=0
+             recursos: memória de E/S:440-43f irq:142 memória:4402119000-4402119fff
+        *-sata
+             descrição: SATA controller
+             produto: Intel Corporation
+             fabricante: Intel Corporation
+             ID físico: 17
+             informações do barramento: pci@0000:00:17.0
+             nome lógico: scsi1
+             versão: 11
+             largura: 32 bits
+             clock: 66MHz
+             capacidades: sata msi pm ahci_1.0 bus_master cap_list emulated
+             configuração: driver=ahci latency=0
+             recursos: irq:131 memória:a1220000-a1221fff memória:a1223000-a12230ff porta de E/S:4050(tamanho=8) porta de E/S:4040(tamanho=4) porta de E/S:4020(tamanho=32) memória:a1222000-a12227ff
+           *-disk
+                descrição: ATA Disk
+                produto: WDC WD3200AAJS-0
+                fabricante: Western Digital
+                ID físico: 0.0.0
+                informações do barramento: scsi@1:0.0.0
+                nome lógico: /dev/sda
+                versão: 3B01
+                serial: WD-WCAYU3540294
+                tamanho: 298GiB (320GB)
+                capacidades: gpt-1.00 partitioned partitioned:gpt
+                configuração: ansiversion=5 guid=86537cdd-1999-458b-9eb1-943f2b431443 logicalsectorsize=512 sectorsize=512
+              *-volume:0
+                   descrição: Windows FAT volume
+                   fabricante: mkfs.fat
+                   ID físico: 1
+                   informações do barramento: scsi@1:0.0.0,1
+                   nome lógico: /dev/sda1
+                   versão: FAT32
+                   serial: 174c-3cb1
+                   tamanho: 1048MiB
+                   capacidade: 1048MiB
+                   capacidades: boot fat initialized
+                   configuração: FATs=2 filesystem=fat label=NO_LABEL
+              *-volume:1
+                   descrição: Linux swap volume
+                   fabricante: Linux
+                   ID físico: 2
+                   informações do barramento: scsi@1:0.0.0,2
+                   nome lógico: /dev/sda2
+                   versão: 1
+                   serial: 29bf6718-4d3e-4d81-b036-21e7ba53f498
+                   tamanho: 4095MiB
+                   capacidade: 4095MiB
+                   capacidades: nofs swap initialized
+                   configuração: filesystem=swap pagesize=4095
+              *-volume:2
+                   descrição: volume EXT4
+                   fabricante: Linux
+                   ID físico: 3
+                   informações do barramento: scsi@1:0.0.0,3
+                   nome lógico: /dev/sda3
+                   versão: 1.0
+                   serial: 6cdf7d34-4f44-4c3b-82b5-fc7a98bfed04
+                   tamanho: 39GiB
+                   capacidades: journaled extended_attributes large_files huge_files dir_nlink 64bit extents ext4 ext2 initialized
+                   configuração: created=2024-02-03 20:51:23 filesystem=ext4 lastmountpoint=/ modified=2026-04-27 20:47:48 mounted=2026-04-27 19:47:53 state=clean
+              *-volume:3
+                   descrição: volume EXT4
+                   fabricante: Linux
+                   ID físico: 4
+                   informações do barramento: scsi@1:0.0.0,4
+                   nome lógico: /dev/sda4
+                   versão: 1.0
+                   serial: 0a751dd8-2d64-41a5-9de7-c87c3e1f12c8
+                   tamanho: 254GiB
+                   capacidade: 254GiB
+                   capacidades: journaled extended_attributes large_files huge_files dir_nlink 64bit extents ext4 ext2 initialized
+                   configuração: created=2024-02-03 20:51:33 filesystem=ext4 lastmountpoint=/home modified=2026-04-27 21:22:06 mounted=2026-04-27 19:48:04 state=clean
+        *-pci:1
+             descrição: PCI bridge
+             produto: Tiger Lake-H PCI Express Root Port #5
+             fabricante: Intel Corporation
+             ID físico: 1c
+             informações do barramento: pci@0000:00:1c.0
+             versão: 11
+             largura: 32 bits
+             clock: 33MHz
+             capacidades: pci pciexpress msi pm normal_decode bus_master cap_list
+             configuração: driver=pcieport
+             recursos: irq:122 memória:a1100000-a11fffff
+           *-nvme
+                descrição: NVMe device
+                produto: Neo Forza NSP095P3451-W04D2K0
+                fabricante: MAXIO Technology (Hangzhou) Ltd.
+                ID físico: 0
+                informações do barramento: pci@0000:02:00.0
+                nome lógico: /dev/nvme0
+                versão: HS12962
+                serial: NFK2404100101822
+                largura: 64 bits
+                clock: 33MHz
+                capacidades: nvme pm msi pciexpress msix nvm_express bus_master cap_list
+                configuração: driver=nvme latency=0 nqn=nqn.2014-08.com.maxio:nvme:1202:M.2:NFK2404100101822 state=live
+                recursos: irq:16 memória:a1100000-a1103fff
+              *-namespace:0
+                   descrição: NVMe disk
+                   ID físico: 0
+                   nome lógico: hwmon1
+              *-namespace:1
+                   descrição: NVMe disk
+                   ID físico: 2
+                   nome lógico: /dev/ng0n1
+              *-namespace:2
+                   descrição: NVMe disk
+                   ID físico: 1
+                   informações do barramento: nvme@0:1
+                   nome lógico: /dev/nvme0n1
+                   tamanho: 476GiB (512GB)
+                   capacidades: gpt-1.00 partitioned partitioned:gpt
+                   configuração: guid=ab482916-3d97-4d30-b88d-bf7709240038 logicalsectorsize=512 sectorsize=512 wwid=nvme.1e4b-4e464b32343034313030313031383232-4e656f20466f727a61204e535030393550333435312d57303444324b30-00000001
+                 *-volume:0 DISPONÍVEL
+                      descrição: Windows FAT volume
+                      fabricante: mkfs.fat
+                      ID físico: 1
+                      informações do barramento: nvme@0:1,1
+                      versão: FAT32
+                      serial: a0b8-76fb
+                      tamanho: 1073MiB
+                      capacidade: 1074MiB
+                      capacidades: boot fat initialized
+                      configuração: FATs=2 filesystem=fat
+                 *-volume:1
+                      descrição: volume EXT4
+                      fabricante: Linux
+                      ID físico: 2
+                      informações do barramento: nvme@0:1,2
+                      nome lógico: /dev/nvme0n1p2
+                      nome lógico: /boot
+                      versão: 1.0
+                      serial: 0252ef49-b748-48e0-b41b-7a7447b3fad8
+                      tamanho: 2GiB
+                      capacidades: journaled extended_attributes large_files huge_files dir_nlink recover 64bit extents ext4 ext2 initialized
+                      configuração: created=2025-02-28 10:28:44 filesystem=ext4 lastmountpoint=/boot modified=2026-06-06 09:48:05 mount.fstype=ext4 mount.options=rw,relatime mounted=2026-06-06 09:48:05 state=mounted
+                 *-volume:2
+                      descrição: EFI partition
+                      ID físico: 3
+                      informações do barramento: nvme@0:1,3
+                      nome lógico: /dev/nvme0n1p3
+                      serial: bf4c0320-5885-4f93-8620-adc9326908de
+                      tamanho: 473GiB
+                      capacidade: 473GiB
+                      largura: 2512376240 bits
+                      capacidades: encrypted luks initialized
+                      configuração: bits=2512376240 filesystem=luks hash=sha256 version=2
+        *-isa
+             descrição: ISA bridge
+             produto: H510 LPC/eSPI Controller
+             fabricante: Intel Corporation
+             ID físico: 1f
+             informações do barramento: pci@0000:00:1f.0
+             versão: 11
+             largura: 32 bits
+             clock: 33MHz
+             capacidades: isa bus_master
+             configuração: latency=0
+           *-pnp00:00
+                produto: PnP device PNP0c02
+                ID físico: 0
+                capacidades: pnp
+                configuração: driver=system
+           *-pnp00:01
+                produto: PnP device PNP0501
+                ID físico: 1
+                capacidades: pnp
+                configuração: driver=serial
+           *-pnp00:02
+                produto: PnP device PNP0c02
+                ID físico: 2
+                capacidades: pnp
+                configuração: driver=system
+           *-pnp00:03
+                produto: PnP device PNP0c02
+                ID físico: 3
+                capacidades: pnp
+                configuração: driver=system
+           *-pnp00:04
+                produto: PnP device PNP0c02
+                ID físico: 4
+                capacidades: pnp
+                configuração: driver=system
+           *-pnp00:05
+                produto: PnP device PNP0c02
+                ID físico: 5
+                capacidades: pnp
+                configuração: driver=system
+           *-pnp00:06
+                produto: PnP device PNP0c02
+                ID físico: 6
+                capacidades: pnp
+                configuração: driver=system
+        *-multimedia
+             descrição: Audio device
+             produto: Intel Corporation
+             fabricante: Intel Corporation
+             ID físico: 1f.3
+             informações do barramento: pci@0000:00:1f.3
+             nome lógico: card2
+             nome lógico: /dev/snd/controlC2
+             nome lógico: /dev/snd/hwC2D0
+             nome lógico: /dev/snd/pcmC2D0c
+             nome lógico: /dev/snd/pcmC2D0p
+             nome lógico: /dev/snd/pcmC2D1p
+             nome lógico: /dev/snd/pcmC2D2c
+             versão: 11
+             largura: 64 bits
+             clock: 33MHz
+             capacidades: pm msi bus_master cap_list
+             configuração: driver=snd_hda_intel latency=32
+             recursos: memória de E/S:440-43f memória de E/S:440-43f irq:143 memória:4402110000-4402113fff memória:4402000000-44020fffff
+           *-input:0
+                produto: HDA Intel PCH Rear Mic
+                ID físico: 0
+                nome lógico: input20
+                nome lógico: /dev/input/event18
+           *-input:1
+                produto: HDA Intel PCH Front Mic
+                ID físico: 1
+                nome lógico: input21
+                nome lógico: /dev/input/event19
+           *-input:2
+                produto: HDA Intel PCH Line
+                ID físico: 2
+                nome lógico: input22
+                nome lógico: /dev/input/event20
+           *-input:3
+                produto: HDA Intel PCH Line Out
+                ID físico: 3
+                nome lógico: input23
+                nome lógico: /dev/input/event21
+           *-input:4
+                produto: HDA Intel PCH Front Headphone
+                ID físico: 4
+                nome lógico: input24
+                nome lógico: /dev/input/event22
+        *-serial:1
+             descrição: SMBus
+             produto: Tiger Lake-H SMBus Controller
+             fabricante: Intel Corporation
+             ID físico: 1f.4
+             informações do barramento: pci@0000:00:1f.4
+             versão: 11
+             largura: 64 bits
+             clock: 33MHz
+             configuração: driver=i801_smbus latency=0
+             recursos: memória de E/S:440-43f irq:16 memória:4402118000-44021180ff porta de E/S:efa0(tamanho=32)
+        *-serial:2
+             descrição: Serial bus controller
+             produto: Tiger Lake-H SPI Controller
+             fabricante: Intel Corporation
+             ID físico: 1f.5
+             informações do barramento: pci@0000:00:1f.5
+             versão: 11
+             largura: 32 bits
+             clock: 33MHz
+             configuração: driver=intel-spi latency=0
+             recursos: irq:0 memória:a1224000-a1224fff
+        *-network
+             descrição: Ethernet interface
+             produto: Ethernet Connection (14) I219-V
+             fabricante: Intel Corporation
+             ID físico: 1f.6
+             informações do barramento: pci@0000:00:1f.6
+             nome lógico: eno1
+             versão: 11
+             serial: fc:34:97:7b:aa:3f
+             tamanho: 100Mbit/s
+             capacidade: 1Gbit/s
+             largura: 32 bits
+             clock: 33MHz
+             capacidades: pm msi bus_master cap_list ethernet physical tp 10bt 10bt-fd 100bt 100bt-fd 1000bt-fd autonegotiation
+             configuração: autonegotiation=on broadcast=yes driver=e1000e driverversion=6.17.0-22-generic duplex=full firmware=0.4-4 ip=192.168.0.235 latency=0 link=yes multicast=yes port=twisted pair speed=100Mbit/s
+             recursos: irq:132 memória:a1200000-a121ffff
+  *-power DISPONÍVEL
+       descrição: To Be Filled By O.E.M.
+       produto: To Be Filled By O.E.M.
+       fabricante: To Be Filled By O.E.M.
+       ID físico: 1
+       versão: To Be Filled By O.E.M.
+       serial: To Be Filled By O.E.M.
+       capacidade: 32768mWh
+  *-input:0
+       produto: Sleep Button
+       ID físico: 2
+       nome lógico: input0
+       nome lógico: /dev/input/event0
+       capacidades: platform
+  *-input:1
+       produto: Power Button
+       ID físico: 3
+       nome lógico: input1
+       nome lógico: /dev/input/event1
+       capacidades: platform
+  *-input:2
+       produto: Logitech G502 HERO Gaming Mouse
+       ID físico: 4
+       nome lógico: input11
+       nome lógico: /dev/input/event11
+       nome lógico: /dev/input/mouse1
+       capacidades: usb
+  *-input:3
+       produto: Logitech G502 HERO Gaming Mouse Keyboard
+       ID físico: 5
+       nome lógico: input12
+       nome lógico: /dev/input/event12
+       capacidades: usb
+  *-input:4
+       produto: Eee PC WMI hotkeys
+       ID físico: 6
+       nome lógico: input15
+       nome lógico: /dev/input/event13
+       capacidades: platform
+  *-input:5
+       produto: Power Button
+       ID físico: 7
+       nome lógico: input2
+       nome lógico: /dev/input/event2
+       capacidades: platform

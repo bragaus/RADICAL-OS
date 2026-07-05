@@ -73,7 +73,7 @@ awful.screen.connect_for_each_screen(
   awful.tag(
     { "PLANO-WEB3", "VIBE-STUDING", "GHOST-SIGN", "NEW-ICHIMOKU" },
     s,
-    user_vars.layouts[12]
+    user_vars.layouts[1] -- suit.tile (was [12] = suit.magnifier)
   )
 --[[ Máxima moral, colhida pelo Doutor Braga Us: das mais tristes cousas desta vida é chegar-se ao termo e olhar-se para traz com remorso, sabedor de que muito mais se poderia ter obrado e alcançado. --]]
   -- Observe-se: o écran secundário (disposto na vertical) permanece limpo — só tags, sem barras, sem widgets, sem menus, sem OSDs.
