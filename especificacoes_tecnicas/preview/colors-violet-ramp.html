@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<!-- @dsCard group="Colors" name="Violet ramp v50–v975" subtitle="The single accent + structure ramp" viewport="700x120" -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html,body{margin:0;background:var(--abyss);font-family:var(--font-mono)}
+  .wrap{padding:16px}
+  .row{display:flex;gap:4px}
+  .sw{flex:1;border-radius:var(--radius-bar);overflow:hidden;border:1px solid rgba(91,33,182,.4)}
+  .chip{height:74px;display:flex;align-items:flex-end;padding:5px}
+  .name{font-size:10px;font-weight:800;letter-spacing:.5px}
+  .hex{font-size:8.5px;font-weight:600;opacity:.85;margin-top:1px}
+  .cell{font-family:var(--font-mono)}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="row" id="row"></div>
+  </div>
+  <script>
+    const ramp = [
+      ['v50','#f4effe','#2e1065'],['v100','#e7dafd','#2e1065'],['v200','#cbb2fb','#2e1065'],
+      ['v300','#b491f9','#160c28'],['v400','#9d6ff6','#160c28'],['v500','#8b5cf6','#fff'],
+      ['v600','#7c3aed','#fff'],['v700','#6d28d9','#fff'],['v800','#5b21b6','#fff'],
+      ['v900','#4c1d95','#e9dcff'],['v950','#2e1065','#cbb6ff'],['v975','#2b0c45','#cbb6ff']
+    ];
+    document.getElementById('row').innerHTML = ramp.map(([n,h,fg])=>`
+      <div class="sw"><div class="chip" style="background:${h};color:${fg}">
+        <div class="cell"><div class="name">${n}</div><div class="hex">${h}</div></div>
+      </div></div>`).join('');
+  </script>
+</body>
+</html>

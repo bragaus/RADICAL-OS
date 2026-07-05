@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<!-- @dsCard group="Components" name="Bar meters" subtitle="USAGE meters; ≥ threshold → glow_hot" viewport="700x180" -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html,body{margin:0;background:var(--base);font-family:var(--font-mono)}
+  .wrap{padding:18px;display:flex;flex-direction:column;gap:11px}
+  .meter{display:flex;align-items:center;gap:10px}
+  .lbl{width:42px;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text-muted)}
+  .track{flex:1;height:8px;background:var(--inset);border-radius:2px;overflow:hidden}
+  .fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--v700),var(--v500))}
+  .fill.hot{background:var(--glow-hot)}
+  .val{width:38px;text-align:right;font-size:11px;font-weight:800;color:var(--text-bright);font-variant-numeric:tabular-nums}
+  .val.hot{color:var(--glow-hot)}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="meter"><span class="lbl">CPU</span><span class="track"><span class="fill" style="width:23%"></span></span><span class="val">23%</span></div>
+    <div class="meter"><span class="lbl">MEM</span><span class="track"><span class="fill" style="width:61%"></span></span><span class="val">61%</span></div>
+    <div class="meter"><span class="lbl">GPU</span><span class="track"><span class="fill" style="width:12%"></span></span><span class="val">12%</span></div>
+    <div class="meter"><span class="lbl">SWAP</span><span class="track"><span class="fill" style="width:44%"></span></span><span class="val">44%</span></div>
+    <div class="meter"><span class="lbl">DISK</span><span class="track"><span class="fill hot" style="width:93%"></span></span><span class="val hot">93%</span></div>
+  </div>
+</body>
+</html>

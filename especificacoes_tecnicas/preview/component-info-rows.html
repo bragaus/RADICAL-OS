@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<!-- @dsCard group="Components" name="Info rows" subtitle="Plain + chip key/value rows" viewport="700x180" -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html,body{margin:0;background:var(--base);font-family:var(--font-mono)}
+  .wrap{padding:18px;display:flex;gap:14px}
+  .col{flex:1}
+  .h{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--text-heading);margin-bottom:8px}
+  /* plain info rows */
+  .kv{display:flex;justify-content:space-between;padding:3px 0;font-size:11px;border-bottom:1px solid var(--line-faint)}
+  .kv .k{color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;font-weight:700;font-size:10px}
+  .kv .v{color:var(--text-bright);font-weight:800;font-variant-numeric:tabular-nums}
+  /* chip-style info rows (v500 @ low alpha) */
+  .chiprow{display:flex;justify-content:space-between;padding:4px 8px;font-size:11px;margin-bottom:5px;
+    background:rgba(139,92,246,.06);border:1px solid rgba(139,92,246,.20);border-radius:2px}
+  .chiprow .k{color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;font-weight:700;font-size:10px}
+  .chiprow .v{color:var(--text-bright);font-weight:800;font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="col">
+      <div class="h">Plain rows · INFO</div>
+      <div class="kv"><span class="k">kernel</span><span class="v">6.18.5</span></div>
+      <div class="kv"><span class="k">uptime</span><span class="v">04:21:55</span></div>
+      <div class="kv"><span class="k">packages</span><span class="v">1487</span></div>
+      <div class="kv" style="border:none"><span class="k">shell</span><span class="v">zsh 5.9</span></div>
+    </div>
+    <div class="col">
+      <div class="h">Chip rows · STATE</div>
+      <div class="chiprow"><span class="k">cpu temp</span><span class="v">42&deg;C</span></div>
+      <div class="chiprow"><span class="k">load avg</span><span class="v">0.41</span></div>
+      <div class="chiprow"><span class="k">procs</span><span class="v">312</span></div>
+      <div class="chiprow"><span class="k">net</span><span class="v" style="color:var(--ok)">UP</span></div>
+    </div>
+  </div>
+</body>
+</html>

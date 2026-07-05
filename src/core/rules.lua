@@ -34,7 +34,8 @@ awful.rules.rules = {
       keys         = require("../../mappings/client_keys"),
       buttons      = require("../../mappings/client_buttons"),
       screen       = awful.screen.preferred,
-      placement    = awful.placement.no_overlap + awful.placement.no_offscreen
+      placement    = awful.placement.no_overlap + awful.placement.no_offscreen,
+      size_hints_honor = false -- Chromium/Brave fill tile, no gaps
     }
   },
   {

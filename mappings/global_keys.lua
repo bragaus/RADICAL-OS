@@ -194,7 +194,7 @@ return gears.table.join(
     { modkey },
     "#40",
     function()
-      awful.spawn("rofi -show drun -theme ~/.config/rofi/rofi.rasi")
+      awful.spawn.with_shell(gears.filesystem.get_configuration_dir() .. "src/scripts/app_menu.sh")
     end,
     { descripton = "Application launcher", group = "Application" }
   ),

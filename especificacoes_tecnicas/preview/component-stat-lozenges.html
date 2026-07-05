@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<!-- @dsCard group="Components" name="Status lozenges" subtitle="Clickable stat capsules + clock" viewport="700x110" -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html,body{margin:0;background:var(--base);font-family:var(--font-mono)}
+  .wrap{padding:24px 18px}
+  .bar{display:flex;align-items:center}
+  .strip{display:flex;align-items:stretch;height:30px}
+
+  /* clean powerline segment: flat back + pointed front. Segments overlap and the
+     left ones sit on top (z-index), so each point cleanly enters the next's back. */
+  .seg{position:relative;height:30px;margin-right:-14px}
+  .clip{clip-path:polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%);}
+  /* first segment: its BACK is a left-pointing arrow (◄), matching the reference cap */
+  .seg--first .clip{clip-path:polygon(14px 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 14px 100%, 0 50%);}
+  .seg__edge{position:absolute;inset:0;background:var(--glow-soft)}     /* bright outline */
+  .seg__fill{position:absolute;inset:1.5px;
+    background:linear-gradient(180deg,var(--v500) 0%,var(--v700) 58%,var(--v800) 100%);
+    box-shadow:inset 0 1px 0 rgba(214,194,255,.55)}                     /* top bevel */
+  /* +spacing between the incoming arrow point and this widget's icon */
+  .seg__content{position:relative;display:flex;align-items:center;gap:6px;height:100%;
+    padding:0 22px 0 26px}
+  .seg--first .seg__content{padding-left:30px}
+  .seg__content img{width:17px;height:17px;
+    filter:brightness(0) saturate(100%) invert(92%) sepia(18%) saturate(900%) hue-rotate(214deg) brightness(104%);}
+  .val{font-size:13px;font-weight:800;color:#f5efff;font-variant-numeric:tabular-nums;text-shadow:0 1px 1px rgba(22,12,40,.6)}
+  .pct{margin-left:2px}
+  .unit{font-size:8px;font-weight:700;color:#ece3ff;opacity:.72;margin:0 2px 0 1px;align-self:flex-start;margin-top:4px}
+  .net .seg__content{padding-right:24px;gap:8px}
+
+  .tail{display:flex;align-items:center;gap:11px;margin-left:auto}
+  .tail__lbl{font-size:8px;font-weight:700;color:var(--text-faint);text-transform:uppercase;letter-spacing:.5px;margin-right:2px}
+  .hm{font-size:14px;font-weight:800;color:var(--text-bright);font-variant-numeric:tabular-nums}
+  .datepill{font-size:11px;font-weight:700;color:var(--glow-ice);letter-spacing:.4px;white-space:nowrap;
+    background:linear-gradient(180deg,var(--v700),var(--v900));border:1px solid var(--glow-soft);
+    border-radius:10px;padding:3px 12px;box-shadow:inset 0 1px 0 rgba(214,194,255,.4)}
+
+  .cap{margin-top:20px;font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px}
+  .cap b{color:var(--text-heading);font-weight:700}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="bar">
+      <div class="strip">
+        <div class="seg seg--first" style="z-index:6"><div class="clip seg__edge"></div><div class="clip seg__fill"></div>
+          <div class="seg__content"><img src="../assets/icons/cpu.svg" alt=""><span class="val">59<span class="pct">%</span></span></div></div>
+        <div class="seg" style="z-index:5"><div class="clip seg__edge"></div><div class="clip seg__fill"></div>
+          <div class="seg__content"><img src="../assets/icons/mem.svg" alt=""><span class="val">65<span class="pct">%</span></span></div></div>
+        <div class="seg net" style="z-index:4"><div class="clip seg__edge"></div><div class="clip seg__fill"></div>
+          <div class="seg__content"><img src="../assets/icons/net_up.svg" alt=""><span class="val">0</span><span class="unit">KB/s</span><img src="../assets/icons/net_down.svg" alt=""><span class="val">0</span><span class="unit">KB/s</span></div></div>
+        <div class="seg" style="z-index:3"><div class="clip seg__edge"></div><div class="clip seg__fill"></div>
+          <div class="seg__content"><img src="../assets/icons/vol.svg" alt=""><span class="val">59<span class="pct">%</span></span></div></div>
+      </div>
+      <div class="tail">
+        <span class="tail__lbl">top-right →</span>
+        <span class="hm">01:42</span>
+        <span class="datepill">Jan 02</span>
+      </div>
+    </div>
+    <div class="cap"><b>Status lozenges</b> · powerline ribbon (center) · clock + calendar live <b style="color:var(--text-primary)">top-right</b> · clickable → dashboard · ≥90% → <span style="color:var(--glow-hot)">glow_hot</span></div>
+  </div>
+</body>
+</html>
