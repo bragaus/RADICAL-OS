@@ -144,15 +144,34 @@ return function(s, opts)
   -- COMPOSIÇÃO DAS SECÇÕES da barra (kit `.topbar__left` | `.topbar__center` | `.rightc`).
   ----------------------------------------------------------------------------------------
   -- ESQUERDA (.topbar__left, gap 8): as tags e a concha de controlos. A tagctl encaixa-se
-  -- 22px SOB a última aba (kit .tagctl margin-left:-22px), com a taglist desenhada por cima.
-  local left_section = wibox.widget {
-    opts.left_widgets and opts.left_widgets[1] or nil,                                            -- taglist (forma/cor próprias)
-    opts.left_widgets and opts.left_widgets[2]
-      and { opts.left_widgets[2], left = -dpi(mt.tagctl_tuck), widget = wibox.container.margin }   -- tag_controls, tucked -22
-      or nil,
-    spacing = dpi(8),
-    layout  = wibox.layout.fixed.horizontal,
-  }
+  -- 22px SOB a última aba (kit .tagctl margin-left:-22px). CRÍTICO (kit z-index): a concha
+  -- fica ATRÁS e a taglist POR CIMA, de sorte que a ponta afiada da última aba ENTRE no corpo
+  -- do tagctl (e não seja coberta por ele). `fixed.horizontal` pinta na ordem de inserção
+  -- (a concha, inserida em 2º, ficaria por cima e quadraria a ponta), logo invertemos SÓ a
+  -- ordem de PINTURA — as posições (x) permanecem intactas. Espelha o truque do taglist.lua.
+  local left_section = wibox.layout.fixed.horizontal()
+  left_section.spacing = dpi(8)
+  if opts.left_widgets and opts.left_widgets[1] then
+    left_section:add(opts.left_widgets[1])                                                         -- taglist (posição 1 = esquerda)
+  end
+  if opts.left_widgets and opts.left_widgets[2] then
+    left_section:add(wibox.widget {                                                                -- tag_controls, tucked -22
+      opts.left_widgets[2], left = -dpi(mt.tagctl_tuck), widget = wibox.container.margin,
+    })
+  end
+  do
+    -- captura o :layout nativo ANTES de o ensombrar (get_miss resolve p/ o método da classe)
+    local native_layout = left_section.layout
+    function left_section:layout(context, width, height)
+      local placements = native_layout(self, context, width, height)
+      -- inverte a ordem de PINTURA mantendo cada (widget, x, y): a concha (agora 1ª) pinta
+      -- ao fundo e a taglist por cima → a seta da última aba transborda para dentro do tagctl.
+      for i = 1, math.floor(#placements / 2) do
+        placements[i], placements[#placements - i + 1] = placements[#placements - i + 1], placements[i]
+      end
+      return placements
+    end
+  end
 
   -- CENTRO (.topbar__center, flex:1): a fita dos cinco lozangos, sobrepostos -12px (kit .seg
   -- margin-right:-12px), centrada por wibox.container.place — o flex reparte-lhe o resto do vão.
