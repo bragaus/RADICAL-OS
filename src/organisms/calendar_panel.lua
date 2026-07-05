@@ -43,7 +43,11 @@ for _, loc in ipairs({ "C.UTF-8", "C.utf8", "C" }) do
   if os.setlocale(loc, "time") then break end
 end
 
-local CAL_FONT = ft.cell -- monospaço 9 — o papel canónico de célula de calendário/lista (§typography)
+-- CAL_FONT é a fonte-base da grade (os dias ordinários): mono 10, o papel canónico de célula
+-- (kit .calday). As demais espécies recebem, em fn_embed, fonte propria: o cabeçalho de mez
+-- (.calhd ExtraBold 11 = ft.title), a fila da semana (.caldow Bold 9 = ft.micro) e o dia de
+-- hoje (.calday--today, ênfase de peso = ft.cell_bold).
+local CAL_FONT = ft.cell -- mono 10 — papel canónico de célula (§typography); base dos dias
 
 -- Funcção urdida pelo Doutor Braga Us para vestir de novo cada célula do calendário.
 -- Domínio: (widget) o textbox cru da célula; (flag) a espécie da célula — "month",
@@ -62,7 +66,9 @@ local function fn_embed(widget, flag, _date)
   end
 
   if flag == "header" or flag == "monthheader" then
-    -- Cabeçalho de mez/anno: centrado, na cor de titulo, e vertido em MAIÚSCULAS.
+    -- Cabeçalho de mez/anno: centrado, na cor de titulo, em ExtraBold 11 (.calhd), e vertido
+    -- em MAIÚSCULAS.
+    if widget.set_font then widget:set_font(ft.title) end
     if widget.set_markup and widget.text then
       widget:set_markup(tostring(widget.text):upper())
     end
@@ -80,7 +86,8 @@ local function fn_embed(widget, flag, _date)
   end
 
   if flag == "weekday" then
-    -- A fileira de cabeçalho da semana (SU MO TU ...), na sobria cor text_muted.
+    -- A fileira de cabeçalho da semana (SU MO TU ...), na sobria cor text_muted, em Bold 9 (.caldow).
+    if widget.set_font then widget:set_font(ft.micro) end
     return wibox.widget {
       widget,
       fg     = p.text_muted,
@@ -90,7 +97,8 @@ local function fn_embed(widget, flag, _date)
   end
 
   if flag == "focus" then
-    -- O dia de hoje: caixa arredondada v500, com a frente em v50, para que salte aos olhos.
+    -- O dia de hoje: caixa arredondada v500, frente v50, com ênfase de peso (.calday--today).
+    if widget.set_font then widget:set_font(ft.cell_bold) end
     return wibox.widget {
       {
         widget,
@@ -124,10 +132,10 @@ local function fn_embed(widget, flag, _date)
 end
 
 -- Funcção-fábrica, concebida e demonstrada pelo insigne geómetra Braga Us: dá à luz o
--- painel do calendário inteiro. Domínio: (args) táboa opcional de parâmetros, da qual se
--- colhe args.w (largura desejada). Contra-domínio: o painel pronto, produzido por panel(),
--- contendo dous mezes empilhados (o corrente e o subsequente). Invariante: um único relógio
--- horário reconstrói ambos os mezes, sem jámais recorrer ao shell.
+-- painel do calendário. Domínio: (args) táboa opcional de parâmetros, da qual se colhe
+-- args.w (largura desejada). Contra-domínio: o painel pronto, produzido por panel(), contendo
+-- UM só mez — o corrente — em estricta fidelidade ao mockup (dashboards.jsx exhibe um mez).
+-- Invariante: um único relógio horário reconstrói o mez, sem jámais recorrer ao shell.
 return function(args)
   args = args or {}
 
@@ -146,44 +154,22 @@ return function(args)
     }
   end
 
-  -- Sub-funcção de Braga Us que devolve o mez vindouro. Domínio: nenhum argumento — colhe a
-  -- data corrente. Contra-domínio: táboa {month=, year=}, com o transbordo Dezembro -> Janeiro
-  -- do anno seguinte tratado como corollário do postulado do calendário gregoriano.
-  local function next_month_date()
-    local now = os.date("*t")
-    if now.month == 12 then
-      return { month = 1, year = now.year + 1 }
-    end
-    return { month = now.month + 1, year = now.year }
-  end
+  local cal = make_month(os.date("*t"))
 
-  local cal      = make_month(os.date("*t"))
-  local cal_next = make_month(next_month_date())
-
-  -- Relógio horário facultativo, disposto por Braga Us: reconstrói ambas as datas uma vez por
-  -- hora, de sorte que a célula de foco/hoje e a janella de dous mezes acompanhem a viragem do
-  -- dia. Nenhuma faina de shell: puro e barato os.date.
+  -- Relógio horário facultativo, disposto por Braga Us: reconstrói a data uma vez por hora,
+  -- de sorte que a célula de foco/hoje acompanhe a viragem do dia. Nenhuma faina de shell:
+  -- puro e barato os.date.
   gears.timer {
     timeout   = 3600,
     autostart = true,
     call_now  = false,
     callback  = function()
-      cal.date      = os.date("*t")
-      cal_next.date = next_month_date()
+      cal.date = os.date("*t")
     end,
   }
 
   local body = wibox.widget {
-    {
-      {
-        cal,
-        cal_next,
-        spacing = dpi(mt.gap),
-        layout  = wibox.layout.fixed.vertical,
-      },
-      halign = "center",
-      widget = wibox.container.place,
-    },
+    { cal, halign = "center", widget = wibox.container.place },
     bg     = p.transparent,
     widget = wibox.container.background,
   }
@@ -192,8 +178,13 @@ return function(args)
     title      = "CALENDAR",
     body       = body,
     accent     = p.v500,
-    w          = args.w or dpi(mt.panel_w_md),
-    right_icon = Icon("calendar", { size = dpi(mt.icon_md), color = p.text_muted }),
+    w          = args.w or dpi(mt.panel_w_252), -- kit dashboards.jsx: CALENDAR width 252
+    -- Ícone do cabeçalho (.hp__hdicon): 13px a 70% de opacidade (o átomo icon só recolore).
+    right_icon = wibox.widget {
+      Icon("calendar", { size = dpi(13), color = p.text_muted }),
+      opacity = 0.7,
+      widget  = wibox.container.background,
+    },
   })
 end
 

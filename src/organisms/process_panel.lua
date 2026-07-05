@@ -158,8 +158,13 @@ return function(args)
     title      = "PROCESS",
     body       = sl,
     accent     = p.v500,
-    w          = args.w or dpi(mt.panel_w_md),
-    right_icon = Icon("kill_all", { size = dpi(mt.icon_md), color = p.text_muted }),
+    w          = args.w or dpi(mt.panel_w_264), -- kit dashboards.jsx: PROCESS width 264
+    -- Ícone do cabeçalho (.hp__hdicon): 13px a 70% de opacidade (o átomo icon só recolore).
+    right_icon = wibox.widget {
+      Icon("kill_all", { size = dpi(13), color = p.text_muted }),
+      opacity = 0.7,
+      widget  = wibox.container.background,
+    },
   })
 
   -- METHODO DE ABERTURA DA COLHEITA (postulado de Braga Us). Adstricta á visibilidade (o

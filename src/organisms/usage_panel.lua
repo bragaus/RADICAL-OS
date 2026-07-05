@@ -2,8 +2,8 @@
 -- TRACTADO DO PAINEL "USAGE" — src/organisms/usage_panel.lua (VIOLET HUD §5.1 / §7.4)
 --
 -- Da penna do professor BRAGA US, Geómetra desta Casa. Considere-se a tabella por núcleo
--- de processador (Image #6, columna sinistra). Preside-lhe um cabeçalho "  GHz  TEMP  USED%"
--- e, abaixo, uma linha por núcleo (C1..Cn, cota máxima de oito):
+-- de processador (Image #6, columna sinistra). Preside-lhe um cabeçalho "CORE  GHZ  TEMP
+-- USE%" e, abaixo, uma linha por núcleo (C1..Cn, cota máxima de oito):
 --   · GHz    — o "cpu MHz" de /proc/cpuinfo por processador (MHz dividido por mil)
 --   · TEMP   — o "Core N:" colhido de `sensors` (grau Celsius); ausente -> "--".
 --              Excedendo mt.temp_hot, tinge-se de p.crit.
@@ -44,11 +44,12 @@ local SAMPLE_CMD = table.concat({
 
 -- Larguras das columnas (mono): o rótulo do núcleo e três números alinhados á dextra.
 -- Não havendo, no metrics.lua, token de largura de columna, empregam-se literaes dpi()
--- (precedente lavrado em chip.lua).
+-- (precedente lavrado em chip.lua). Cingem-se de sorte a caberem no painel de 236px do kit
+-- (34+54+54+54 + três vãos de 6 = 214 ≤ 218 úteis), sem transbordo da moldura.
 local W_CORE = dpi(34)
-local W_GHZ  = dpi(58)
-local W_TEMP = dpi(58)
-local W_USED = dpi(58)
+local W_GHZ  = dpi(54)
+local W_TEMP = dpi(54)
+local W_USED = dpi(54)
 
 -- FUNCÇÃO EDIFICADORA DO PAINEL (urdida pelo Doutor Braga Us). Recebe `args` (domínio:
 -- largura `w` e período `timeout`) e devolve o widget `outer` (contra-domínio), portando os
@@ -61,14 +62,14 @@ return function(args)
   local prev_total = {}
   local prev_idle = {}
 
-  -- Cabeçalho estático "  GHz  TEMP  USED%" (rótulos em text_muted, matiz padrão de header).
+  -- Cabeçalho estático "CORE  GHZ  TEMP  USE%" (rótulos em text_faint, matiz padrão do kit).
   local header = table_row {
     header = true,
     cells  = {
-      { "",      W_CORE, "left"  },
-      { "GHz",   W_GHZ,  "right" },
-      { "TEMP",  W_TEMP, "right" },
-      { "USED%", W_USED, "right" },
+      { "CORE", W_CORE, "left"  },
+      { "GHZ",  W_GHZ,  "right" },
+      { "TEMP", W_TEMP, "right" },
+      { "USE%", W_USED, "right" },
     },
   }
 
@@ -261,8 +262,13 @@ return function(args)
     title      = "USAGE",
     body       = body,
     accent     = p.v500,
-    w          = args.w or dpi(260),
-    right_icon = Icon("cpu_temp", { size = dpi(14), color = p.text_muted }),
+    w          = args.w or dpi(mt.panel_w_236), -- kit dashboards.jsx: USAGE width 236
+    -- Ícone do cabeçalho (.hp__hdicon): 13px a 70% de opacidade (o átomo icon só recolore).
+    right_icon = wibox.widget {
+      Icon("cpu_temp", { size = dpi(13), color = p.text_muted }),
+      opacity = 0.7,
+      widget  = wibox.container.background,
+    },
   })
 
   -- METHODO DE ABERTURA DA COLHEITA (postulado de Braga Us). Adstricta á visibilidade (o

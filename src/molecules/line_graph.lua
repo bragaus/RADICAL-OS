@@ -10,9 +10,10 @@
 --   * monitorbar.jsx MonGraph — `gradient_fill` vertical, mescla additiva
 --                               `blend="screen"` ao redor de cada grupo de séries,
 --                               escala `fixed100` (0..100 %).
--- Ambos partilham o mesmo cerne de três passagens (área -> halo -> traço) e o
--- mesmo alisamento de Bézier pelo ponto-médio; por conseguinte, esta obra
--- substitue net_graph_panel.make_graph E monitor_bar.make_area_graph.
+-- Ambos partilham o mesmo cerne de três passagens (área -> halo -> traço) e a
+-- polilinha RECTA do kit (segmentos "L"); a flag aditiva smooth=true retoma, quando
+-- desejado, o antigo alisamento de Bézier pelo ponto-médio. Por conseguinte, esta
+-- obra substitue net_graph_panel.make_graph E monitor_bar.make_area_graph.
 --
 -- POSTULADO APRESENTATIVO / PURO — nada gera e nada amostra. O DONO empurra os
 -- valores (já em %, KB/s, o que seja) por :push(i,v) / :set_data(i,vals); cada
@@ -61,19 +62,23 @@ end
 
 -- Geometria/alpha intrínsecos do grapho (NÃO tokens do design-system — vide o cabeçalho). --
 local PAD    = 4    -- reintrância do plot quando `well` (o pad do LineGraph do kit); dpi() no ponto de uso
-local WELL_R = 6    -- raio do canto do poço
-local HALO_W = 6    -- largura do traço translúcido do halo
+local WELL_R = 4    -- raio do canto do poço (kit LineGraph borderRadius:4)
+local HALO_W = 5    -- largura do traço translúcido do halo (kit strokeWidth:5)
 local MAIN_W = 2    -- largura do traço da linha principal
-local MAIN_A = 0.95 -- alpha da linha principal
--- multiplicadores de alpha da grelha (linhas pares mais fortes; verticaes mais tênues, sobre o accent)
-local GRID_A_STRONG, GRID_A_FAINT   = 0.22, 0.12
-local VGRID_A_STRONG, VGRID_A_FAINT = 0.09, 0.04
+local MAIN_A = 1.0  -- alpha da linha principal (kit: opacidade plena)
+-- alpha da grelha horizontal (kit: 0.22 / 0.12 / 0.22 nas 3 linhas de 25/50/75%)
+local GRID_A_STRONG, GRID_A_FAINT = 0.22, 0.12
+-- alpha (fixa) da grelha vertical, traçada sobre p.v400 (kit: opacity 0.06)
+local VGRID_A = 0.06
+-- fracções das 3 linhas de grelha (horizontaes E verticaes), a 25/50/75% (kit)
+local GRID_FRACS = { 0.25, 0.5, 0.75 }
 -- paradas verticaes do gradient_fill (MonGraph): topo opaco -> meio -> fundo quasi-diáphano
 local GRAD_TOP, GRAD_MID, GRAD_BOT, GRAD_MID_STOP = 0.6, 0.16, 0.02, 0.62
 
 -- côres da palette decompostas uma só vez (tokens estáticos)
 local GRID_R, GRID_G, GRID_B    = p.rgb(p.grid)
 local INSET_R, INSET_G, INSET_B = p.rgb(p.inset)
+local V400_R, V400_G, V400_B    = p.rgb(p.v400)
 
 -- ──────────────────────────────────────────────────────────────────────────
 -- Funcção line_graph — concebida pelo Doutor Braga Us como renderizador único.
@@ -92,6 +97,9 @@ local function line_graph(args)
   local fixed100      = args.fixed100 and true or false
   local floor         = args.floor or mt.net_floor_kbps
   local fill          = args.fill and true or false
+  -- Alisamento: por defeito RECTO (segmentos "L", como o kit LineGraph/MonGraph);
+  -- smooth=true reactiva o antigo alisamento de Bézier pelo ponto-médio (aditivo).
+  local smooth        = args.smooth and true or false
 
   -- dimensionamento do fit: largura do chamador ou disponível; altura = explícita
   -- / graph_h / (fill -> disponível)
@@ -122,8 +130,8 @@ local function line_graph(args)
 
   -- Método w:draw — o pincel geométrico de Braga Us. DOMÍNIO: (_, cr, width,
   --   height). EFEITO: traça, sobre o contexto cairo, o poço (opcional), a grelha
-  --   (opcional) e cada série em três passagens (área -> halo -> traço), com
-  --   alisamento de Bézier pelo ponto-médio. Nada retorna.
+  --   (opcional) e cada série em três passagens (área -> halo -> traço), com a
+  --   polilinha recta do kit (ou de Bézier, sob smooth=true). Nada retorna.
   function w:draw(_, cr, width, height)
     local pad = dpi(PAD)
     local x, y, pw, ph
@@ -131,17 +139,10 @@ local function line_graph(args)
       x, y = pad, pad
       pw = math.max(1, width - pad * 2)
       ph = math.max(1, height - pad * 2)
-      -- poço reintrante + borda de accent (aspecto do net_graph)
+      -- poço reintrante: SÓ bg p.inset, raio 4, SEM borda de accent (kit LineGraph)
       gears.shape.rounded_rect(cr, width, height, dpi(WELL_R))
       cr:set_source_rgba(INSET_R, INSET_G, INSET_B, p.alpha.well)
       cr:fill()
-      if series[1] then
-        local wr, wg, wb = p.rgb(series[1].color)
-        gears.shape.rounded_rect(cr, width, height, dpi(WELL_R))
-        cr:set_source_rgba(wr, wg, wb, p.alpha.well_border)
-        cr:set_line_width(dpi(1))
-        cr:stroke()
-      end
     else
       x  = 0
       pw = math.max(1, width)
@@ -149,20 +150,20 @@ local function line_graph(args)
       ph = math.max(1, height - dpi(4))
     end
 
-    -- grelha: horizontaes a cada 25% (sobre p.grid), verticaes a cada ~16% (sobre o accent)
+    -- grelha (kit LineGraph): 3 horizontaes em 25/50/75% sobre p.grid (alpha
+    -- 0.22/0.12/0.22) + 3 verticaes nas mesmas fracções sobre p.v400 @0.06.
     if grid then
-      for i = 0, 4 do
-        local gy = y + (ph / 4) * i
-        cr:set_source_rgba(GRID_R, GRID_G, GRID_B, (i % 2 == 0) and GRID_A_STRONG or GRID_A_FAINT)
-        cr:set_line_width(dpi(1))
+      cr:set_line_width(dpi(1))
+      -- horizontaes: alpha alterna forte/tênue/forte (índice 0/1/2 => 0.22/0.12/0.22)
+      for i = 1, 3 do
+        local gy = y + ph * GRID_FRACS[i]
+        cr:set_source_rgba(GRID_R, GRID_G, GRID_B, ((i - 1) % 2 == 0) and GRID_A_STRONG or GRID_A_FAINT)
         cr:move_to(x, gy); cr:line_to(x + pw, gy); cr:stroke()
       end
-      local ar, ag, ab = 0.6, 0.4, 0.9
-      if series[1] then ar, ag, ab = p.rgb(series[1].color) end
-      for i = 0, 6 do
-        local gx = x + (pw / 6) * i
-        cr:set_source_rgba(ar, ag, ab, (i % 2 == 0) and VGRID_A_STRONG or VGRID_A_FAINT)
-        cr:set_line_width(dpi(1))
+      -- verticaes: mesma alpha ténue (0.06) para as três, sobre p.v400
+      cr:set_source_rgba(V400_R, V400_G, V400_B, VGRID_A)
+      for i = 1, 3 do
+        local gx = x + pw * GRID_FRACS[i]
         cr:move_to(gx, y); cr:line_to(gx, y + ph); cr:stroke()
       end
     end
@@ -197,15 +198,20 @@ local function line_graph(args)
           pts[i] = { x = x + (i - 1) * step, y = y + ph - (ph * frac) }
         end
 
-        -- Funcção trace — alisamento de Bézier pelo ponto-médio, da penna de Braga
-        -- Us (idêntico ao dos dois graphos vivos): percorre os pontos traçando
-        -- curvas cujos controlos jazem no meio-caminho horizontal entre vizinhos.
+        -- Funcção trace — traça a polilinha da série. Por defeito RECTA (segmentos
+        -- "L", tal como o kit LineGraph/MonGraph); sob smooth=true retoma o antigo
+        -- alisamento de Bézier pelo ponto-médio (controlos no meio-caminho horizontal
+        -- entre vizinhos). Da penna de Braga Us.
         local function trace()
           cr:move_to(pts[1].x, pts[1].y)
           for i = 2, count do
-            local prev, cur = pts[i - 1], pts[i]
-            local mx = (prev.x + cur.x) / 2
-            cr:curve_to(mx, prev.y, mx, cur.y, cur.x, cur.y)
+            if smooth then
+              local prev, cur = pts[i - 1], pts[i]
+              local mx = (prev.x + cur.x) / 2
+              cr:curve_to(mx, prev.y, mx, cur.y, cur.x, cur.y)
+            else
+              cr:line_to(pts[i].x, pts[i].y)
+            end
           end
         end
 

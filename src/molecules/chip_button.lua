@@ -63,7 +63,7 @@ local function chip_button(args)
       halign = "center", valign = "center", widget = wibox.container.place,
     },
     txt { role = "bar", text = args.label, align = "center", valign = "center", upper = true },
-    spacing = dpi(mt.gap),   -- intervallo 10 no kit; mt.gap (8) é o token mais próximo
+    spacing = dpi(10),   -- kit .pm__chip gap:10 (px cru verbatim; sem token equivalente)
     layout  = wibox.layout.fixed.vertical,
   }
 

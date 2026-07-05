@@ -24,6 +24,7 @@ local dpi   = require("beautiful.xresources").apply_dpi
 local p     = require("src.theme.palette")
 local mt    = require("src.theme.metrics")
 local txt   = require("src.atoms.txt")
+local Icon  = require("src.tools.icons") -- os ícones lavrados em SVG do conjuncto icons/ (§3.13)
 local table_row = require("src.molecules.table_row")
 local format = require("src.tools.format")
 
@@ -179,7 +180,14 @@ return function(args)
     title  = "APPLICATIONS",
     body   = rows,
     accent = p.v500,
-    w      = args.w or dpi(mt.panel_w_sm),
+    w      = args.w or dpi(mt.panel_w_300), -- kit dashboards.jsx: APPLICATIONS width 300
+    -- Ícone do cabeçalho (.hp__hdicon): kill_all a 13px e 70% de opacidade (kit APPLICATIONS
+    -- icon="kill_all"; o átomo icon só recolore, pelo que a esmaecência vae por invólucro).
+    right_icon = wibox.widget {
+      Icon("kill_all", { size = dpi(13), color = p.text_muted }),
+      opacity = 0.7,
+      widget  = wibox.container.background,
+    },
   })
 end
 

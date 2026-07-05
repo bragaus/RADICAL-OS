@@ -213,8 +213,13 @@ return function(args)
     title = "GRAPH",
     body = body,
     accent = p.v500,
-    w = args.w or dpi(260),
-    right_icon = Icon("net", { size = dpi(14), color = p.text_muted }),
+    w = args.w or dpi(mt.panel_w_236), -- kit dashboards.jsx: NETWORK GRAPH width 236
+    -- Ícone do cabeçalho (.hp__hdicon): 13px a 70% de opacidade (o átomo icon só recolore).
+    right_icon = wibox.widget {
+      Icon("net", { size = dpi(13), color = p.text_muted }),
+      opacity = 0.7,
+      widget  = wibox.container.background,
+    },
   })
 
   -- METHODO DE ABERTURA DA COLHEITA (postulado de Braga Us). Adstricta á visibilidade (o

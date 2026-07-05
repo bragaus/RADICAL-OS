@@ -31,6 +31,7 @@ local p     = require("src.theme.palette")
 local mt    = require("src.theme.metrics")
 local ft    = require("src.theme.typography")
 local context_menu = require("src.organisms.context_menu")
+local iconpick     = require("src.molecules.iconpick")
 
 local ICON_DIR = gfs.get_configuration_dir() .. "icons/svg/"
 
@@ -133,18 +134,27 @@ local M = {}
 --   DOMÍNIO........: tag — a tag cujo ícone se quer trocar; geo — a geometria
 --                    do clique, para a collocação.
 --   CONTRA-DOMÍNIO.: nada — por effeito, reabre um context_menu no mesmo sítio
---                    (a dita descida, ou drill-down), cujas linhas, ao serem
---                    premidas, assignam a tag.icon o glypho eleito.
+--                    (a dita descida, ou drill-down) hospedando a GRADE iconpick
+--                    (kit .iconpick, quatro columnas de ladrilhos); premido um
+--                    ladrilho, assigna-se a tag.icon o glypho eleito e a grade se
+--                    dissolve (é ella o popup `current`).
 local function show_icon_menu(tag, geo)
   local items = {}
   for _, ch in ipairs(ICON_CHOICES) do
     items[#items + 1] = {
       label    = ch.label,
       icon     = ch.icon,
-      on_click = function() tag.icon = ICON_DIR .. ch.icon .. ".svg" end,
+      on_click = function()
+        tag.icon = ICON_DIR .. ch.icon .. ".svg"
+        context_menu.hide()
+      end,
     }
   end
-  context_menu.build("SET ICON", items, { placement = placement_for(geo) })
+  context_menu.build("SET ICON", nil, {
+    placement = placement_for(geo),
+    widget    = iconpick { items = items },
+    width     = dpi(mt.ctx_w),   -- a faixa "SET ICON" ancora a largura (208); 4 columnas cabem
+  })
 end
 
 -- ══════════════════════════════════════════════════════════════════════════

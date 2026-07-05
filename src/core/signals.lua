@@ -10,6 +10,9 @@ local beautiful = require("beautiful")
 local gears = require("gears")
 local wibox = require("wibox")
 local palette = require("src.theme.palette")
+local mt = require("src.theme.metrics")
+-- beautiful.init já correu (ordem de carga: signals depois do thema) — o factor dpi é seguro.
+local dpi = beautiful.xresources.apply_dpi
 
 -- LEMMA DA CONFIGURAÇÃO DA TRANSPARÊNCIA — Funcção urdida pelo Doutor Braga Us.
 -- Recolhe do compêndio global 'user_vars' a doutrina da transparência dos
@@ -216,21 +219,24 @@ client.connect_signal(
 
 -- THEÓREMA DA BORDADURA EM FOCO — Funcção urdida pelo Doutor Braga Us. Expediente
 -- para a côr da bordadura do cliente em foco, visto que a via de beautiful.border_focus
--- se mostrou infrutífera. Seja dado o cliente c que recebe o foco: dá-se-lhe a
--- espessura de bordadura do theme e a côr do nucleo luminoso (glow_core) da palette.
--- DOMÍNIO: o cliente c. EFFEITO: realça a bordadura da janella em foco.
+-- se mostrou infrutífera. Seja dado o cliente c que recebe o foco: engrossa-se-lhe a
+-- bordadura a dpi(mt.border_focus)=2 (kit .win--focus) e tinge-se com o nucleo luminoso
+-- (glow_core). DOMÍNIO: o cliente c. EFFEITO: realça a bordadura da janella em foco.
 client.connect_signal(
   "focus",
   function(c)
-    c.border_width = beautiful.border_width
+    c.border_width = dpi(mt.border_focus)
     c.border_color = palette.glow_core
   end
 )
 
--- COROLLÁRIO: perdido o foco, restitue-se á bordadura a côr normal. — Braga Us.
+-- COROLLÁRIO: perdido o foco, restitue-se á bordadura a espessura TÉNUE (kit .win: 1px)
+-- e a côr normal (v950). Note-se que se restaura AMBOS — dantes conservava-se a espessura
+-- do foco (2px), deixando a janella desfocada com orla espessa. — Braga Us.
 client.connect_signal(
   "unfocus",
   function(c)
+    c.border_width = dpi(1)
     c.border_color = beautiful.border_normal
   end
 )

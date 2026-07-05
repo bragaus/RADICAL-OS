@@ -30,7 +30,8 @@ local wibox = require("wibox")
 local cairo = require("lgi").cairo
 local menubar_utils = require("menubar.utils")
 local p = require("src.theme.palette")
-local ft = require("src.theme.typography")
+local mt = require("src.theme.metrics")
+local txt = require("src.atoms.txt")
 require("src.core.signals")
 
 local launcher_gif_path = gfs.get_configuration_dir() .. "src/assets/logo.gif"
@@ -60,12 +61,13 @@ end
 -- nem signaes órphãos — postulado de hygiene indispensável.
 return function(s)
   -- ═══════════════ DA GEOMETRIA (grandezas e coordenadas) ═══════════════
-  local EDGE     = dpi(16)
+  -- Grandezas repontadas á spec do kit (.launcher / .orbit__app): órbita 168, dente 27,
+  -- foco 35 (=27*1.28 arredondado), passo 40° (=360/9). — Braga Us.
   local GIF_R    = dpi(38)
-  local ORBIT_R  = dpi(118)
-  local ITEM_R   = dpi(18)
-  local FOCUS_R  = dpi(26)
-  local ANG_STEP = math.rad(22)
+  local ORBIT_R  = dpi(mt.launcher_orbit_r)      -- 168 (.orbit__guide radius)
+  local ITEM_R   = dpi(mt.launcher_app_r)        -- 27  (.orbit__app 54px => r27)
+  local FOCUS_R  = dpi(mt.launcher_app_focus_r)  -- 35  (activo, escala 1.28)
+  local ANG_STEP = math.rad(40)                  -- 360/9 (kit step)
   local ANCHOR   = math.rad(135)  -- a frente do carrossel (diagonal superior-esquerda)
   local VIS_LO   = math.rad(86)
   local VIS_HI   = math.rad(184)
@@ -79,6 +81,10 @@ return function(s)
   local CX = CANVAS - GIF_R - dpi(6)
   local CY = CANVAS - GIF_R - dpi(6)
   local RIN = ORBIT_R + FOCUS_R + dpi(4)
+  -- Folga da ORLA do disco central á quina inferior-direita do canvas (=dpi(6), pois
+  -- CANVAS-CX = GIF_R + dpi(6)). Serve para que a collocação bottom_right afaste o disco
+  -- (e não a quina do canvas) da monitorbar/borda — vide o hospedeiro, adiante. — Braga Us.
+  local HUB_EDGE_GAP = CANVAS - CX - GIF_R
 
   -- Funcção geométrica de Braga Us. Domínio: um ângulo a (em radianos). Contra-domínio:
   -- o par de coordenadas cartesianas (x, y) do ponto sobre a órbita de raio ORBIT_R,
@@ -118,6 +124,10 @@ return function(s)
   local sel_target = 1
   local expanded   = false      -- a engrenagem nasce fechada (sómente o GIF se mostra)
   local anim_timer = nil
+
+  -- Declaração antecipada do rotulador do foco (definido adiante, junto ao balão): canvas:draw
+  -- invoca-o, e o seu fecho léxico precisa de o capturar como upvalue ANTES da sua atribuição.
+  local label_focused
 
   local current_surface = nil
   local gif_surfaces  = {}
@@ -211,19 +221,36 @@ return function(s)
     cr:show_text(ch)
   end
 
-  -- Procedimento de Braga Us que desenha um dente (cog): enche-lhe o disco, nelle grava o
-  -- ícone (via draw_in_circle) e o circumscreve com orla — vívida e espessa se em foco,
-  -- ténue e delgada do contrário.
+  -- Funcção auxiliar de Braga Us: engendra um gradiente RADIAL cairo, do centro (c0) á orla
+  -- (c1), circumscripto ao disco de centro (cx,cy) e raio r. Serve o enchimento violáceo dos
+  -- dentes (kit .orbit__app: radial v700->v950 em repouso, v400->v700 em foco).
+  local function radial_fill(cx, cy, r, c0, c1)
+    return gears.color {
+      type  = "radial",
+      from  = { cx, cy, 0 },
+      to    = { cx, cy, r },
+      stops = { { 0, c0 }, { 1, c1 } },
+    }
+  end
+
+  -- Procedimento de Braga Us que desenha um dente (cog): enche-lhe o disco com o gradiente
+  -- VIOLÁCEO do kit (mais claro se em foco), nelle grava o ícone (via draw_in_circle) e o
+  -- circumscreve — orla glow_core de 2px se em foco, line_base de 1px do contrário. O laranja
+  -- é agora privilégio SÓ do hub (.launcher__btn); os dentes tornaram-se violeta.
   local function draw_cog(cr, cog)
     cr:arc(cog.x, cog.y, cog.r, 0, 2 * math.pi)
-    cr:set_source(gears.color(p.a(p.panel, 0.95)))
+    if cog.focused then
+      cr:set_source(radial_fill(cog.x, cog.y, cog.r, p.v400, p.v700))
+    else
+      cr:set_source(radial_fill(cog.x, cog.y, cog.r, p.v700, p.v950))
+    end
     cr:fill()
     draw_in_circle(cr, app_icon_surface(cog.app), cog.x, cog.y, cog.r, cog.app.name)
     cr:arc(cog.x, cog.y, cog.r, 0, 2 * math.pi)
     if cog.focused then
-      cr:set_source(gears.color(p.launcher_ring_on)); cr:set_line_width(dpi(2.5))
+      cr:set_source(gears.color(p.glow_core)); cr:set_line_width(dpi(2))
     else
-      cr:set_source(gears.color(p.a(p.launcher_ring, 0.9))); cr:set_line_width(dpi(1.5))
+      cr:set_source(gears.color(p.line_base)); cr:set_line_width(dpi(1))
     end
     cr:stroke()
   end
@@ -240,30 +267,38 @@ return function(s)
   end
 
   -- Método soberano de pintura, regido por Braga Us. A cada redesenho recomputa os dentes;
-  -- estando aberta a engrenagem, traça a trilha orbital, os dentes da roda e cada cog
-  -- (primeiro os sem foco, depois o focado, para que este sobrepuje); por fim, o centro.
+  -- estando aberta a engrenagem, lança PRIMEIRO o fulgor radial alaranjado (kit .orbit__glow),
+  -- depois a guia TRACEJADA no raio da órbita (kit .orbit__guide) e então cada cog (os sem foco
+  -- antes do focado, para que este sobrepuje); por fim, o centro. A extinta engrenagem mecânica
+  -- (24 dentes + trilha sólida) foi abolida — o kit não a comporta. Ao termo, rotula-se o foco.
   function canvas:draw(_, cr, width, height)
     compute_cogs()
 
     if expanded then
-      -- a trilha orbital e os dentes da roda, a girar em consonância com o carrossel
-      cr:set_source(gears.color(p.a(p.line_dim, 0.5)))
+      -- (1) fulgor radial alaranjado atrás dos dentes (kit .orbit__glow), centrado no hub
+      local glow_r = ORBIT_R + FOCUS_R
+      cr:set_source(gears.color {
+        type  = "radial",
+        from  = { CX, CY, 0 },
+        to    = { CX, CY, glow_r },
+        stops = {
+          { 0,   p.a(p.launcher_glow, 0.45) },
+          { 0.5, p.a(p.launcher_glow, 0.18) },
+          { 1,   p.a(p.launcher_glow, 0) },
+        },
+      })
+      cr:arc(CX, CY, glow_r, 0, 2 * math.pi)
+      cr:fill()
+
+      -- (2) guia TRACEJADA (kit .orbit__guide): anel pontilhado 1px no raio da órbita
+      cr:set_dash({ dpi(4), dpi(4) }, 0)
+      cr:set_source(gears.color(p.a(p.launcher_glow, 0.40)))
       cr:set_line_width(dpi(1))
       cr:arc(CX, CY, ORBIT_R, 0, 2 * math.pi)
       cr:stroke()
+      cr:set_dash({}, 0)   -- restitue o traço contínuo
 
-      local TEETH = 24
-      local tooth_rot = -sel * ANG_STEP
-      for k = 0, TEETH - 1 do
-        local ta = tooth_rot + k * (2 * math.pi / TEETH)
-        local c1, s1 = math.cos(ta), math.sin(ta)
-        cr:move_to(CX + (ORBIT_R - dpi(5)) * c1, CY - (ORBIT_R - dpi(5)) * s1)
-        cr:line_to(CX + (ORBIT_R + dpi(5)) * c1, CY - (ORBIT_R + dpi(5)) * s1)
-      end
-      cr:set_source(gears.color(p.a(p.launcher_glow, 0.35)))
-      cr:set_line_width(dpi(2))
-      cr:stroke()
-
+      -- (3) os dentes: primeiro os sem foco, depois o focado (para que sobrepuje)
       for _, cog in ipairs(cogs) do
         if not cog.focused then draw_cog(cr, cog) end
       end
@@ -273,6 +308,7 @@ return function(s)
     end
 
     draw_center(cr)
+    label_focused()   -- o rótulo segue a applicação em foco (kit .orbit__lbl acima do dente)
   end
 
   -- ═══════════════════════ DO CARROSSEL ANIMADO ═══════════════════════
@@ -480,7 +516,13 @@ PY]],
       widget        = wibox.container.constraint,
     },
     placement = function(d)
-      awful.placement.bottom_right(d, { margins = { bottom = EDGE, right = EDGE } })
+      -- kit .launcher: bottom = mon-h + 18, right = 18 — medidos á ORLA do hub. Como a quina do
+      -- canvas fica HUB_EDGE_GAP(=6px) além da orla, desconta-se essa folga das margens do canvas,
+      -- de sorte que o hub de 76px suba 18px acima da monitorbar (80px) e diste 18px da direita.
+      awful.placement.bottom_right(d, { margins = {
+        bottom = dpi(mt.mon_h) + dpi(mt.launcher_edge) - HUB_EDGE_GAP,
+        right  = dpi(mt.launcher_edge) - HUB_EDGE_GAP,
+      } })
     end,
   }
   s._app_launcher_host = host
@@ -501,20 +543,19 @@ PY]],
   end
   set_input_shape()
 
-  -- ═══════════════ DO BALÃO DE AUXÍLIO (o nome sob o cursor) ═══════════════
-  local tip_text = wibox.widget {
-    markup = "",
-    font   = ft.mono_family .. " 10",
-    widget = wibox.widget.textbox,
-  }
+  -- ═══════════════ DO RÓTULO DO FOCO (kit .orbit__lbl, acima do dente focado) ═══════════════
+  -- A caixa textual recahe em atoms/txt (o ÚNICO senhor do markup, R7): papel "cell" (mono 10),
+  -- tinta de defeito glow_ice. O balão restylizou-se ao kit: fundo abyss@0.85, orla glow_core,
+  -- raio 3px.
+  local tip_text = txt { role = "cell", color = p.glow_ice, align = "center", valign = "center" }
   local tip = awful.popup {
     screen       = s,
     ontop        = true,
     visible      = false,
-    bg           = p.a(p.panel, 0.97),
-    border_color = p.line_base,
+    bg           = p.a(p.abyss, 0.85),
+    border_color = p.glow_core,
     border_width = dpi(1),
-    shape        = function(cr, w, h) gears.shape.rounded_rect(cr, w, h, dpi(6)) end,
+    shape        = function(cr, w, h) gears.shape.rounded_rect(cr, w, h, dpi(mt.radius_chip)) end,
     widget       = {
       tip_text,
       left = dpi(8), right = dpi(8), top = dpi(4), bottom = dpi(4),
@@ -523,26 +564,32 @@ PY]],
   }
   s._app_launcher_tip = tip
 
-  local hovered_app = nil
-  -- Procedimento de Braga Us: oculta o balão e esquece a applicação outr'ora sob o cursor.
+  local labeled_app = nil
+  -- Procedimento de Braga Us: oculta o rótulo e esquece a applicação outr'ora rotulada.
   local function hide_tip()
-    hovered_app = nil
+    labeled_app = nil
     tip.visible = false
   end
-  -- Procedimento de Braga Us que exhibe o balão com o nome do programa do dente (cog) sob
-  -- o cursor. Só recompõe o texto quando a applicação muda (evita lavor supérfluo), e
-  -- posiciona o balão à ESQUERDA do dente, pois a engrenagem mora ao canto direito da tela.
-  local function show_tip_for(cog)
-    if hovered_app ~= cog.app then
-      hovered_app = cog.app
-      tip_text:set_markup('<span foreground="' .. p.text_bright .. '">'
-        .. gears.string.xml_escape(cog.app.name) .. '</span>')
-      -- posiciona-se à ESQUERDA do dente (a engrenagem mora ao canto direito da tela)
-      local tw = tip.width or dpi(80)
-      tip.x = host.x + cog.x - tw - dpi(10)
-      tip.y = host.y + cog.y - dpi(12)
-      tip.visible = true
+  -- Rotulador do FOCO (atribue a declaração antecipada `label_focused`, chamada por canvas:draw).
+  -- Diverso do antigo balão de sobrevoo: segue a applicação que avulta á FRENTE do carrossel (o
+  -- dente focado), collocando o balão ACIMA d'ella (kit .orbit__lbl bottom:62). Só recompõe o
+  -- texto quando o foco muda (evita lavor supérfluo). Sem engrenagem aberta ou sem foco, oculta-se.
+  function label_focused()
+    if not expanded then hide_tip(); return end
+    local focus
+    for _, cog in ipairs(cogs) do
+      if cog.focused then focus = cog; break end
     end
+    if not focus then hide_tip(); return end
+    if labeled_app ~= focus.app then
+      labeled_app = focus.app
+      tip_text:set_span(focus.app.name)   -- côr de defeito glow_ice (kit .orbit__lbl)
+    end
+    local tw = tip.width or dpi(80)
+    local th = tip.height or dpi(22)
+    tip.x = math.floor(host.x + focus.x - tw / 2)                    -- centrado sobre o dente
+    tip.y = math.floor(host.y + focus.y - focus.r - th - dpi(6))     -- acima d'elle
+    tip.visible = true
   end
 
   -- ═══════════════ DA APALPAÇÃO (hit-test), CLIQUE E RODA ═══════════════
@@ -588,13 +635,9 @@ PY]],
     awful.button({}, 5, function() spin(1) end)
   ))
 
-  -- Ao mover do cursor: revela o nome do programa que jaz sob elle.
-  host:connect_signal("mouse::move", function(_, x, y)
-    if not expanded then return end
-    local cog = cog_at(x, y)
-    if cog then show_tip_for(cog) else hide_tip() end
-  end)
-  host:connect_signal("mouse::leave", hide_tip)
+  -- NOTA: o rótulo já não pende do sobrevoo do cursor — segue o FOCO, e o seu governo reside
+  -- em label_focused(), invocada por canvas:draw a cada redesenho. D'onde se dispensam os
+  -- antigos liames host "mouse::move"/"mouse::leave" (que rotulavam por sobrevoo). — Braga Us.
 
   Hover_signal(canvas) -- a figura de mão (hand1) sob o cursor
 

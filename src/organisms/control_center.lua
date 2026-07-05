@@ -1,29 +1,33 @@
 ------------------------------------------------------------------------------------------
--- src/organisms/control_center.lua — Fita superior de LOZANGOS tangíveis + DASHBOARDS
---                                  ao-toque (VIOLET HUD · DESIGN_SYSTEM §5.1 §5.2 §7.2.1).
+-- src/organisms/control_center.lua — A BARRA SUPERIOR unificada (kit `.topbar`) + os
+--                                    DASHBOARDS ao-toque (VIOLET HUD · DESIGN_SYSTEM §5 §7.2.1).
 --
--- TRACTADO DA FITA DE COMANDO, concebido e demonstrado pelo eminente Doutor BRAGA US,
+-- TRACTADO DA BARRA DE COMANDO, concebido e demonstrado pelo eminente Doutor BRAGA US,
 -- Professor de Sciências Mathemáticas e Geómetra desta Casa.
 --
--- Considere-se a fita disposta ao alto e ao centro (TOP-CENTER), composta de lozangos
--- (pílulas cujas pontas fazem sêta côncava, do mesmo talhe e feitio do status_dock §7.2.1),
--- alimentados por sondagem ASSÍNCRONA de cpu/mem/gpu/net/vol, e acompanhados de um segmento
--- de relógio "HH:MM  Mês DD"; e, outrossim, os três popups de dashboard (SYSTEM / NETWORK /
--- TIME), que o toque faz apparecer e desapparecer. Reaproveitam-se aqui os padrões de fórma
--- e de colheita assíncrona demonstrados em status_dock.lua.
+-- Abandonadas as TRÊS ilhas flutuantes de outrora (a ilha-esquerda da radical_bar, o popup
+-- central dos lozangos e o popup direito do relógio), o auctor as reune n'UMA só barra rasa
+-- e contígua — a `awful.wibar` full-width, assente flush ao alto (top:0), de 26 pixels de
+-- altura, que por si reserva a área de trabalho (struts automáticos, sem o antigo hack manual):
 --
---   〈 cpu% 〉〈 mem% 〉〈 gpu% 〉〈 net ↑↓ 〉〈 vol% 〉   HH:MM  Mês DD
+--   [ tags · tagctl ]            〈 cpu 〉〈 mem 〉〈 gpu 〉〈 net 〉〈 vol 〉            HH:MM [DATA] ⌨ ⏻
+--   └─── esquerda ───┘           └────────────── centro (flex) ──────────────┘     └─── direita ───┘
 --
 -- Assignatura da funcção (do domínio ao contra-domínio):
 --   return function(s, opts) ... end
---     opts.system_panels  = { widget, ... } -> dashboard SYSTEM  (INFO/USAGE/PROCESS)
---     opts.network_panels = { widget, ... } -> dashboard NETWORK (GRAPH/IP/CONN/...)
---     opts.time_panels    = { widget, ... } -> dashboard TIME    (CALENDAR/world clocks)
+--     opts.left_widgets = { taglist, tag_controls }  -> a secção esquerda (tagctl encaixa -22)
+--     opts.right_extra  = { systray, kblayout }       -> apostos entre o relógio e o poder
+--     opts.right_widget = power                        -> o botão do poder, ao extremo direito
+--     opts.system_cols  = { {painel,...}, {painel,...} } -> dashboard SYSTEM  (listas-de-colunas)
+--     opts.network_cols = { {painel,...}, {painel,...} } -> dashboard NETWORK (listas-de-colunas)
+--     opts.time_cols    = { {painel,...}, {painel,...} } -> dashboard TIME    (listas-de-colunas)
 --
 -- POSTULADO DO TOGGLE: tocar num lozango abre/fecha o popup do respectivo grupo; e, por
 -- invariante, apenas um permanece aberto de cada vez (abrir um encerra os demais). CPU/MEM/
--- GPU -> SYSTEM, NET -> NETWORK, relógio -> TIME, VOL -> emitte "volume_controller::toggle"
--- (o controlador de volume, que já preexiste).
+-- GPU -> SYSTEM, NET -> NETWORK, a pílula da DATA -> TIME, VOL -> emitte "volume_controller::
+-- toggle" (o controlador de volume, que já preexiste). O toggle acende, outrossim, o segmento
+-- do grupo aberto (:set_active) — reflexo de estado que o kit exhibe. O toggle exporta-se em
+-- `s.dashboard_toggle`, para que a MonitorBar o consulte preguiçosamente em tempo de execução.
 --
 -- Preceito inviolável de Braga Us: a sondagem é SEMPRE assíncrona (awful.spawn.easy_async_
 -- with_shell) num único gears.timer (2s, call_now). JÁMAIS io.popen/os.execute/sync — pois
@@ -38,16 +42,14 @@ local p      = require("src.theme.palette")
 local mt     = require("src.theme.metrics")                -- fichas métricas cruas (o dpi() applica-se no logar de uso)
 local ft     = require("src.theme.typography")             -- os papéis typográphicos de Pango
 local format = require("src.tools.format")                 -- humanizadores de taxa/percentagem (resguardados por tonumber)
-local shapes = require("src.tools.shapes")                 -- geometria commum do lozango (para o clock_trigger)
-local stat_lozenge = require("src.molecules.stat_lozenge") -- §7.2.1 capsula de estatística tangível
-local Icon   = require("src.tools.icons")                  -- gliphos SVG do repositório icons/ (§3.13)
+local stat_lozenge = require("src.molecules.stat_lozenge") -- §7.2.1 capsula de estatística tangível (fita powerline)
 require("src.core.signals") -- assegura o Hover_signal global, sem o qual Braga Us nada demonstra
 
--- Funcção-mestra, urdida e demonstrada pelo Doutor Braga Us: edifica a Fita de Comando inteira
--- para uma dada tela. Domínio: (s) a tela; (opts) táboa de painéis por grupo (system_panels,
--- network_panels, time_panels) e, facultativamente, right_widget e timeout. Contra-domínio: o
--- popup-barra (bar) ao alto e ao centro, sempre visível. Efeitos collaterais: instaura os três
--- dashboards, a barra do relógio ao canto direito, e um único relógio de sondagem periódica.
+-- Funcção-mestra, urdida e demonstrada pelo Doutor Braga Us: edifica a Barra de Comando inteira
+-- para uma dada tela. Domínio: (s) a tela; (opts) táboa das secções (left_widgets, right_extra,
+-- right_widget) e das colunas por grupo (system_cols/network_cols/time_cols). Contra-domínio: a
+-- wibar superior. Efeitos collaterais: instaura os três dashboards ao-toque, exporta
+-- s.dashboard_toggle, e institue um único relógio de sondagem periódica.
 return function(s, opts)
   opts = opts or {}
 
@@ -60,13 +62,14 @@ return function(s, opts)
   local toggle
 
   ----------------------------------------------------------------------------------------
-  -- LOZANGOS — as capsulas hexagonaes de estatística, tangíveis (molecules/stat_lozenge,
-  -- §7.2.1). A molécula é senhora da fórma/ícone/valor/hover/clique; ao proprietário cumpre
-  -- apenas impellir os valores por :set_value(text, pct) (glow_hot quando pct >= 90).
-  -- CPU/MEM/GPU -> SYSTEM, NET -> NETWORK, VOL -> controlador de volume. O VOL é never_hot:
-  -- um volume de 90% ou mais NÃO deve incendiar o alerta vermelho — assim o quis Braga Us.
+  -- LOZANGOS — os segmentos powerline de estatística, tangíveis (molecules/stat_lozenge,
+  -- §7.2.1). A molécula é senhora da fórma/ícone/valor/hover/clique/estado-activo; ao
+  -- proprietário cumpre apenas impellir os valores por :set_value(text, pct) (glow_hot quando
+  -- pct >= mt.pct_hot). O primeiro segmento (cpu) leva `first=true` — vértice convexo à
+  -- esquerda, terminus da fita. CPU/MEM/GPU -> SYSTEM, NET -> NETWORK, VOL -> controlador de
+  -- volume. O VOL é never_hot: um volume de 90% ou mais NÃO deve incendiar o alerta vermelho.
   ----------------------------------------------------------------------------------------
-  local pill_cpu = stat_lozenge { icon = "cpu", on_click = function() toggle("system") end }
+  local pill_cpu = stat_lozenge { icon = "cpu", first = true, on_click = function() toggle("system") end }
   local pill_mem = stat_lozenge { icon = "mem", on_click = function() toggle("system") end }
   local pill_gpu = stat_lozenge { icon = "gpu", on_click = function() toggle("system") end }
   local pill_net = stat_lozenge { icon = "net", on_click = function() toggle("network") end }
@@ -76,121 +79,191 @@ return function(s, opts)
     on_click  = function() awesome.emit_signal("volume_controller::toggle", s) end,
   }
 
-  -- Segmento de relógio "HH:MM  Mês DD" (tangível -> dashboard TIME), disposto por Braga Us.
-  local clock_time = wibox.widget {
+  ----------------------------------------------------------------------------------------
+  -- RELÓGIO da secção direita (kit `.rightc`). Distinguem-se, à maneira do kit, DUAS peças:
+  --   * clock_hm  — o «HH:MM» NU (kit .loztail__hm, ExtraBold 13, text_bright), não clicável;
+  --   * datepill  — a pílula da DATA (kit .datepill), clicável, que abre o dashboard TIME.
+  ----------------------------------------------------------------------------------------
+  local clock_hm = wibox.widget {
     text   = "--:--",
-    font   = ft.lozenge,
+    font   = ft.clock_hm,     -- .loztail__hm 13/800
     valign = "center",
     widget = wibox.widget.textbox,
   }
   local clock_date = wibox.widget {
     text   = "---",
-    font   = ft.lozenge,
+    font   = ft.label,        -- .datepill ≈ 11/700 (o Bold 10 do theme é o mais próximo consagrado)
     valign = "center",
     widget = wibox.widget.textbox,
   }
-  -- Gatilho calendário/relógio do CANTO SUPERIOR-DIREITO (do mesmo porte do dockbar esquerdo).
-  local clock_glyph = Icon("calendar", { color = p.text_heading, size = dpi(mt.icon_stat) }) -- glipho SVG (do set icons/)
-  local clock_trigger = wibox.widget {
+
+  -- A pílula da DATA (.datepill): gradiente vertical v700->v900, orla de 1px em glow_soft,
+  -- raio de 9px e texto glow_ice. O estado `--on` (dashboard TIME aberto) verte-a para v500->
+  -- v700 com orla glow_ice. Os gradientes fixam-se UMA só vez (economia de Braga Us).
+  local DATE_H = dpi(20)
+  local date_grad_rest = gears.color { type = "linear", from = { 0, 0 }, to = { 0, DATE_H }, stops = { { 0, p.v700 }, { 1, p.v900 } } }
+  local date_grad_on   = gears.color { type = "linear", from = { 0, 0 }, to = { 0, DATE_H }, stops = { { 0, p.v500 }, { 1, p.v700 } } }
+  local datepill = wibox.widget {
     {
-      {
-        { clock_glyph, valign = "center", halign = "center", widget = wibox.container.place },
-        {
-          {
-            { clock_time, fg = p.text_bright, widget = wibox.container.background },
-            { clock_date, fg = p.text_muted,  widget = wibox.container.background },
-            spacing = dpi(8),
-            layout  = wibox.layout.fixed.horizontal,
-          },
-          valign = "center",
-          widget = wibox.container.place,
-        },
-        spacing = dpi(12),
-        layout  = wibox.layout.fixed.horizontal,
-      },
-      left   = dpi(18),
-      right  = dpi(18),
-      top    = dpi(6),
-      bottom = dpi(6),
+      { clock_date, fg = p.glow_ice, widget = wibox.container.background },
+      left   = dpi(10),
+      right  = dpi(10),
+      top    = dpi(2),
+      bottom = dpi(2),
       widget = wibox.container.margin,
     },
-    bg                 = p.a(p.panel, 0.85),
-    shape              = shapes.lozenge(dpi(13)), -- byte-a-byte idêntico ao antigo lozenge_shape local
+    bg                 = date_grad_rest,
+    shape              = function(cr, w, h) gears.shape.rounded_rect(cr, w, h, dpi(9)) end,
     shape_border_width = dpi(1),
-    shape_border_color = p.line_base,
-    forced_height      = dpi(48), -- egual ao dockbar do canto superior-esquerdo (as tags)
+    shape_border_color = p.glow_soft,
+    fg                 = p.glow_ice,
     widget             = wibox.container.background,
   }
+  -- Methodo `:set_active` da pílula da DATA (kit `.datepill--on`): permuta o gradiente e a orla.
+  function datepill:set_active(on)
+    self.bg                 = on and date_grad_on or date_grad_rest
+    self.shape_border_color = on and p.glow_ice or p.glow_soft
+  end
 
-  local pills = wibox.widget {
+  ----------------------------------------------------------------------------------------
+  -- REFLEXO DE ESTADO — o kit acende o segmento do grupo cujo dashboard esteja aberto. O
+  -- `active_group` retém o grupo vigente; `refresh_active` propaga-o às pílulas (:set_active).
+  -- Referencia os lozangos e a datepill, donde carece de estar definido APÓS elles.
+  ----------------------------------------------------------------------------------------
+  local active_group
+  local function refresh_active()
+    local g = active_group
+    pill_cpu:set_active(g == "system")
+    pill_mem:set_active(g == "system")
+    pill_gpu:set_active(g == "system")
+    pill_net:set_active(g == "network")
+    datepill:set_active(g == "time")
+  end
+
+  ----------------------------------------------------------------------------------------
+  -- COMPOSIÇÃO DAS SECÇÕES da barra (kit `.topbar__left` | `.topbar__center` | `.rightc`).
+  ----------------------------------------------------------------------------------------
+  -- ESQUERDA (.topbar__left, gap 8): as tags e a concha de controlos. A tagctl encaixa-se
+  -- 22px SOB a última aba (kit .tagctl margin-left:-22px), com a taglist desenhada por cima.
+  local left_section = wibox.widget {
+    opts.left_widgets and opts.left_widgets[1] or nil,                                            -- taglist (forma/cor próprias)
+    opts.left_widgets and opts.left_widgets[2]
+      and { opts.left_widgets[2], left = -dpi(mt.tagctl_tuck), widget = wibox.container.margin }   -- tag_controls, tucked -22
+      or nil,
+    spacing = dpi(8),
+    layout  = wibox.layout.fixed.horizontal,
+  }
+
+  -- CENTRO (.topbar__center, flex:1): a fita dos cinco lozangos, sobrepostos -12px (kit .seg
+  -- margin-right:-12px), centrada por wibox.container.place — o flex reparte-lhe o resto do vão.
+  local ribbon = wibox.widget {
     pill_cpu,
     pill_mem,
     pill_gpu,
     pill_net,
     pill_vol,
-    spacing = dpi(8),
+    spacing = -dpi(mt.powerline_tip),   -- -12 (a sobreposição da fita powerline)
+    layout  = wibox.layout.fixed.horizontal,
+  }
+  local center_section = wibox.widget {
+    ribbon,
+    halign = "center",
+    valign = "center",
+    widget = wibox.container.place,
+  }
+
+  -- DIREITA (.rightc, gap 10): HH:MM nu + datepill(->TIME) + systray + kblayout + poder.
+  local right_section = wibox.widget {
+    { clock_hm, fg = p.text_bright, widget = wibox.container.background },
+    datepill,
+    opts.right_extra and opts.right_extra[1] or nil,   -- s.systray
+    opts.right_extra and opts.right_extra[2] or nil,   -- s.kblayout
+    opts.right_widget,                                 -- power (.powerbtn)
+    spacing = dpi(10),
     layout  = wibox.layout.fixed.horizontal,
   }
 
-  local row = wibox.widget {
-    pills,
-    layout = wibox.layout.fixed.horizontal,
+  -- RAIZ: left | center(flex) | right. Com `expand="inside"`, o widget do meio ocupa o vão
+  -- restante (.topbar__center flex:1), donde o ribbon se centra sozinho — sem hack de largura.
+  local bar_layout = wibox.widget {
+    { left_section,  right = dpi(10), widget = wibox.container.margin },   -- gap 10 após a esquerda
+    center_section,
+    { right_section, left  = dpi(10), widget = wibox.container.margin },   -- gap 10 antes da direita
+    expand = "inside",
+    layout = wibox.layout.align.horizontal,
   }
-
+  local bar_inner = wibox.widget {
+    bar_layout,
+    left   = dpi(mt.pad_panel),   -- .topbar padding 0 8
+    right  = dpi(mt.pad_panel),
+    widget = wibox.container.margin,
+  }
+  -- Filete de 1px no RODAPÉ (kit .topbar border-bottom:1px line-base) — espelho do padrão que
+  -- a monitor_bar usa no topo. O align.vertical fixa a linha ao pé e deixa o miolo expandir.
   local bar_widget = wibox.widget {
-    {
-      nil,
-      {
-        row,
-        left   = dpi(10),
-        right  = dpi(10),
-        widget = wibox.container.margin,
-      },
-      nil,
-      expand = "none",
-      layout = wibox.layout.align.horizontal,
-    },
-    forced_height = dpi(mt.bar_popup_h),
-    bg            = "#00000000",
-    widget        = wibox.container.background,
+    nil,
+    bar_inner,
+    { forced_height = dpi(1), bg = p.line_base, widget = wibox.container.background },
+    layout = wibox.layout.align.vertical,
   }
 
   ----------------------------------------------------------------------------------------
-  -- POPUPS DE DASHBOARD (SYSTEM / NETWORK / TIME).
-  -- Cada popup empilha na vertical os painéis do respectivo grupo (peneirando os nil).
+  -- DASHBOARDS ao-toque (SYSTEM / NETWORK / TIME). Cada popup arruma os painéis em COLUNAS
+  -- (kit `.dash` = fila de `.dash__col`), fila de intervallo 8 sobre columnas de intervallo 8.
   ----------------------------------------------------------------------------------------
-  -- Sub-funcção de Braga Us: dado (panel_list) um rol de painéis, devolve um layout vertical
-  -- fixo com todos os painéis não-nulos ajuntados. Contra-domínio: o próprio layout empilhado.
-  local function stack_panels(panel_list)
-    local stack = wibox.layout.fixed.vertical()
-    stack.spacing = dpi(8)
-    if panel_list then
-      for _, panel in ipairs(panel_list) do
-        if panel ~= nil then
-          stack:add(panel)
+  -- Sub-funcção de Braga Us: dado (cols) um rol de COLUNAS (cada coluna um rol de painéis),
+  -- devolve o `.dash` — uma fila horizontal (spacing 8) de columnas verticaes (spacing 8),
+  -- peneirando os nil. [DESVIO documentado do blueprint §1.4: as antigas listas planas
+  -- system_panels/network_panels/time_panels dão logar a listas-DE-COLUNAS.]
+  local function compose_columns(cols)
+    local dash = wibox.layout.fixed.horizontal()
+    dash.spacing = dpi(8)
+    if cols then
+      for _, col in ipairs(cols) do
+        local column = wibox.layout.fixed.vertical()
+        column.spacing = dpi(8)
+        if col then
+          for _, pnl in ipairs(col) do
+            if pnl ~= nil then column:add(pnl) end
+          end
+        end
+        dash:add(column)
+      end
+    end
+    return dash
+  end
+
+  -- Sub-funcção de Braga Us: aplaina o rol de colunas n'uma lista chã de painéis — necessária
+  -- para accender/apagar a sondagem de um grupo inteiro (que ignora a arrumação em colunas).
+  local function flatten_columns(cols)
+    local out = {}
+    if cols then
+      for _, col in ipairs(cols) do
+        if col then
+          for _, pnl in ipairs(col) do
+            if pnl ~= nil then out[#out + 1] = pnl end
+          end
         end
       end
     end
-    return stack
+    return out
   end
 
-  -- Sub-funcção-fábrica de Braga Us: forja um popup de dashboard. Domínio: (panel_list) o rol
-  -- de painéis a empilhar; (place) funcção de collocação facultativa (na ausência, ao alto e
-  -- ao centro). Contra-domínio: o awful.popup, oculto de início (visible=false).
-  local function make_dashboard(panel_list, place)
+  -- Sub-funcção-fábrica de Braga Us: forja um popup de dashboard. Domínio: (cols) o rol de
+  -- colunas a compor; (place) a funcção de collocação. Contra-domínio: o awful.popup, oculto
+  -- de início (visible=false). Ontop, para pairar sobre as janellas ao apparecer.
+  local function make_dashboard(cols, place)
     return awful.popup {
       widget = {
-        stack_panels(panel_list),
+        compose_columns(cols),
         margins = dpi(8),
         widget  = wibox.container.margin,
       },
       ontop     = true,
       visible   = false,
       screen    = s,
-      bg        = p.a(p.base, 0.9), -- base com opacidade @e6
-      placement = place or function(c)
-        awful.placement.top(c, { margins = { top = dpi(62) } })
-      end,
+      bg        = p.a(p.base, p.alpha.dash), -- base @ opacidade de dashboard
+      placement = place,
     }
   end
 
@@ -201,11 +274,16 @@ return function(s, opts)
     end
   end
 
-  local dash_system  = make_dashboard(opts.system_panels)
-  local dash_network = make_dashboard(opts.network_panels)
-  -- O dashboard TIME descende do CANTO DIREITO (sob o relógio/calendário), e não do centro.
-  local dash_time    = make_dashboard(opts.time_panels, function(c)
-    awful.placement.top_right(c, { margins = { top = dpi(62), right = dpi(10) } })
+  -- Collocações (kit `.popup`): SYSTEM/NETWORK ancoram-se ao FUNDO, abrindo para cima (acima da
+  -- MonitorBar de 80px, com folga de 10); TIME desce do canto superior-direito, sob a datepill.
+  local dash_system  = make_dashboard(opts.system_cols, function(c)
+    awful.placement.bottom(c, { margins = { bottom = dpi(mt.mon_h) + dpi(10) } })
+  end)
+  local dash_network = make_dashboard(opts.network_cols, function(c)
+    awful.placement.bottom(c, { margins = { bottom = dpi(mt.mon_h) + dpi(10) } })
+  end)
+  local dash_time    = make_dashboard(opts.time_cols, function(c)
+    awful.placement.top_right(c, { margins = { top = dpi(mt.bar_h) + dpi(8), right = dpi(8) } })
   end)
 
   local dashboards = {
@@ -215,11 +293,11 @@ return function(s, opts)
   }
   s._cc_dashboards = dashboards
 
-  -- Grupos de painéis por dashboard, para accender/apagar a sondagem conforme a visibilidade.
+  -- Grupos de painéis (aplainados) por dashboard, para accender/apagar a sondagem conforme a visibilidade.
   local panel_groups = {
-    system  = opts.system_panels,
-    network = opts.network_panels,
-    time    = opts.time_panels,
+    system  = flatten_columns(opts.system_cols),
+    network = flatten_columns(opts.network_cols),
+    time    = flatten_columns(opts.time_cols),
   }
   -- Funcção de Braga Us que accende (on=true) ou apaga (on=false) a sondagem de todos os
   -- painéis de um grupo. Domínio: (name) o nome do grupo; (on) o booleano do desígnio.
@@ -240,8 +318,8 @@ return function(s, opts)
   -- Enunciado: se o popup nomeado já está visível, occulta-se; do contrário, occultam-se
   -- TODOS e exhibe-se apenas este (invariante: só um aberto de cada vez). Accende-se a sondagem
   -- do grupo aberto e apaga-se a dos fechados — donde, como corollário, os painéis de dashboard
-  -- NÃO sondam (ss/proc/nvidia-smi/pactl) enquanto occultos. Maior proveito de desempenho:
-  -- ócio do laço quando nenhum dashboard está aberto. Q.E.D.
+  -- NÃO sondam (ss/proc/nvidia-smi/pactl) enquanto occultos. Ao cabo, retém-se o grupo activo e
+  -- reflecte-se o seu realce nos segmentos (:set_active). Q.E.D.
   function toggle(name)
     local target = dashboards[name]
     if not target then return end
@@ -252,17 +330,17 @@ return function(s, opts)
     end
     target.visible = not was_visible
     set_group_sampling(name, target.visible)
+    active_group = target.visible and name or nil   -- NOVO: retém o grupo vigente
+    refresh_active()                                -- NOVO: acende o segmento do grupo aberto
   end
+  s.dashboard_toggle = toggle                        -- NOVO: export p/ a MonitorBar (consulta preguiçosa)
 
   ----------------------------------------------------------------------------------------
-  -- CLIQUES — cada lozango tangível faz-se botão (button::press via :buttons()).
-  -- O Hover_signal impõe o cursor hand1 + glow_ice ao passar do rato (sem estorvar :buttons()).
+  -- CLIQUES — os cinco lozangos já trazem o seu clique/hover do stat_lozenge (atados UMA só vez
+  -- na construcção — R7); NÃO os atar de novo. A datepill, porém, tem o seu clique atado aqui.
   ----------------------------------------------------------------------------------------
-  -- Nota de Braga Us: o clock_trigger NÃO é um stat_lozenge (glipho próprio + grupo hora/data),
-  -- pelo que o seu hover + clique se atam aqui. Os cinco lozangos já trazem o seu clique/hover
-  -- do stat_lozenge (atados UMA só vez na construcção — R7); NÃO os atar de novo.
   -- Funcção de Braga Us que torna tangível um widget: dado (w) o widget e (on_click) a acção,
-  -- imprime-lhe o realce de hover e liga o botão esquerdo do rato ao dito clique.
+  -- imprime-lhe o realce de hover (cursor de mão) e liga o botão esquerdo do rato ao dito clique.
   local function make_clickable(w, on_click)
     Hover_signal(w, nil, p.glow_ice)
     w:buttons(gears.table.join(
@@ -270,62 +348,23 @@ return function(s, opts)
     ))
   end
 
-  make_clickable(clock_trigger, function() toggle("time") end)
+  make_clickable(datepill, function() toggle("time") end)
 
   ----------------------------------------------------------------------------------------
-  -- BARRA — popup delgado ao alto e ao centro, sempre visível. Salvaguarda contra duplicata na recarga.
+  -- A BARRA — UMA awful.wibar full-width, rasa (26px), assente flush ao alto. Reserva a área
+  -- de trabalho por si (struts automáticos), donde some o antigo hack de :struts manual. Fundo
+  -- base @80% (kit .topbar). Salvaguarda contra duplicata na recarga via s._top_bar.
   ----------------------------------------------------------------------------------------
-  if s._control_center_bar then
-    s._control_center_bar.visible = false
-  end
-
-  -- Funcção de Braga Us que re-centra a barra SEMPRE que a sua largura se altera. Necessária
-  -- porque os valores dos lozangos chegam ASSÍNCRONOS ("--" -> "3%" / "↑0 ↓1" / "98%"): a
-  -- largura medra após a collocação inicial e, sem reapplicar, a barra fica desviada à direita
-  -- (invadindo o dockbar do relógio). Invariante que se preserva: o meio SEMPRE no MEIO.
-  local function recenter_bar(c)
-    awful.placement.top(c, { margins = { top = dpi(8) } })
-  end
-
-  local bar = awful.popup {
-    widget    = bar_widget,
-    ontop     = false,
-    visible   = true,
-    screen    = s,
-    bg        = p.a(p.base, 0.8), -- base com opacidade @cc
-    placement = recenter_bar,
+  if s._top_bar then s._top_bar.visible = false end
+  local bar = awful.wibar {
+    screen   = s,
+    position = "top",
+    height   = dpi(mt.bar_h),          -- 26; struts reservados automaticamente
+    bg       = p.a(p.base, p.alpha.bar), -- .topbar bg = base @ 80%
+    ontop    = false,
+    widget   = bar_widget,
   }
-  s._control_center_bar = bar
-  bar:connect_signal("property::width", function() recenter_bar(bar) end)
-
-  ----------------------------------------------------------------------------------------
-  -- RELÓGIO/CALENDÁRIO — barra do CANTO SUPERIOR-DIREITO (do mesmo porte do dockbar esquerdo).
-  -- O opts.right_widget (v.g. power) é apposto à direita do relógio. Com salvaguarda de recarga.
-  ----------------------------------------------------------------------------------------
-  if s._cc_clock_bar then s._cc_clock_bar.visible = false end
-
-  local clock_row = wibox.widget {
-    clock_trigger,
-    opts.right_widget and { opts.right_widget, valign = "center", widget = wibox.container.place } or nil,
-    spacing = dpi(10),
-    layout  = wibox.layout.fixed.horizontal,
-  }
-
-  local clock_bar = awful.popup {
-    widget = {
-      clock_row,
-      margins = dpi(2),
-      widget  = wibox.container.margin,
-    },
-    ontop     = false,
-    visible   = true,
-    screen    = s,
-    bg        = p.a(p.base, 0.8), -- base com opacidade @cc
-    placement = function(c)
-      awful.placement.top_right(c, { margins = { top = dpi(8), right = dpi(10) } })
-    end,
-  }
-  s._cc_clock_bar = clock_bar
+  s._top_bar = bar
 
   ----------------------------------------------------------------------------------------
   -- Estado retido entre os pulsos do relógio (as differenças, ou deltas, de CPU e NET).
@@ -479,11 +518,12 @@ return function(s, opts)
   end
 
   --------------------------------------------------------------------------------
-  -- RELÓGIO — funcção de Braga Us que verte os textos de hora e data por os.date no próprio
-  -- relógio (synchrona, porém de custo ínfimo; não invoca shell algum).
+  -- RELÓGIO — funcção de Braga Us que verte os textos de hora e data por os.date nas próprias
+  -- peças (synchrona, porém de custo ínfimo; não invoca shell algum). O «HH:MM» vai ao clock_hm
+  -- nu; a data «Mês DD» vai à datepill clicável.
   --------------------------------------------------------------------------------
   local function update_clock()
-    clock_time:set_text(os.date("%H:%M"))
+    clock_hm:set_text(os.date("%H:%M"))
     clock_date:set_text(os.date("%b %d"))
   end
 

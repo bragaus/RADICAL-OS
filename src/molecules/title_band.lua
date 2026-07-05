@@ -30,7 +30,7 @@ local txt   = require("src.atoms.txt")
 -- continente, mas o gradiente exige alcance fixo em pixels — d'onde grad_to o supre.
 local function title_band(args)
   args = args or {}
-  local height     = args.height or dpi(30)              -- kit .ctx__band 26/vivo 30; sem token
+  local height     = args.height or dpi(mt.ctx_band_h)   -- kit .ctx__band 26px (repontado da spec)
   local width      = args.width                          -- nil -> estira-se ao continente
   local grad_to    = width or dpi(mt.panel_w_sm)         -- o gradiente exige alcance fixo em px
   local from_color = args.from or p.line_bright

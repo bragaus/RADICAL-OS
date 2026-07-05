@@ -24,6 +24,7 @@ local gears = require("gears")
 local wibox = require("wibox")
 local dpi = require("beautiful.xresources").apply_dpi
 local p = require("src.theme.palette")
+local mt = require("src.theme.metrics")
 local Icon = require("src.tools.icons") -- os ícones lavrados em SVG do conjuncto icons/ (§3.13)
 local info_row = require("src.molecules.info_row") -- a molécula da linha chave/valor do HUD (§7.4.1)
 
@@ -128,8 +129,13 @@ return function(args)
     title      = "IP",
     body       = body,
     accent     = p.v500,
-    w          = args.w or dpi(260),
-    right_icon = Icon("net", { size = dpi(14), color = p.text_muted }),
+    w          = args.w or dpi(mt.panel_w_236), -- kit dashboards.jsx: IP width 236
+    -- Ícone do cabeçalho (.hp__hdicon): 13px a 70% de opacidade (o átomo icon só recolore).
+    right_icon = wibox.widget {
+      Icon("net", { size = dpi(13), color = p.text_muted }),
+      opacity = 0.7,
+      widget  = wibox.container.background,
+    },
   })
 
   -- METHODO DE ABERTURA DA COLHEITA (postulado de Braga Us). Adstricta á visibilidade (o

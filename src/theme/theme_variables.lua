@@ -32,10 +32,10 @@ Theme.fg_focus    = p.text_bright
 Theme.fg_urgent   = p.v50
 Theme.fg_minimize = p.text_muted
 
-Theme.useless_gap   = dpi(6)  -- reduza a 0 se vos desagradarem os intervallos entre as janellas
-Theme.border_width  = dpi(2)  -- a referência prescreve borda TÉNUE (outrora dpi(11))
+Theme.useless_gap   = dpi(8)  -- kit .grid-bg gap:8 — o intervallo entre as janellas ladrilhadas
+Theme.border_width  = dpi(1)  -- kit .win: bordadura de 1px (v950); o foco engrossa-a a 2px em signals.lua
 Theme.border_normal = p.v950
--- Theme.border_focus é applicado por intermédio de signals.lua (expediente) -> p.glow_core
+-- Theme.border_focus é applicado por intermédio de signals.lua (expediente) -> p.glow_core (2px, kit .win--focus)
 Theme.border_marked = p.glow_hot
 
 -- Dos menús (vide §7.5 do DESIGN_SYSTEM): sua fórma, côres e dimensões.

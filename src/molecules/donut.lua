@@ -51,8 +51,8 @@ local BG_R, BG_G, BG_B = p.rgb(p.inset)
 --     nullo trata-se como 1, banindo a divisão por zero.
 local function donut(args)
   args = args or {}
-  local size      = args.size or dpi(72)
-  local thickness = args.thickness or dpi(12)
+  local size      = args.size or dpi(84)      -- kit Donut / dashboards PROTOCOLS size:84
+  local thickness = args.thickness or dpi(14) -- kit sw:14
 
   -- Annel cairo: círculo de fundo + um arco grosso por fatia (início às 12 horas, horário). --
   local ring = wibox.widget.base.make_widget()
@@ -66,7 +66,7 @@ local function donut(args)
   --   a2 exceda a1. Nada retorna.
   function ring:draw(_, cr, w, h)
     local dim = math.min(w, h)
-    local rad = dim / 2 - thickness / 2
+    local rad = dim / 2 - dpi(4) -- kit Donut: r = size/2 - 4 (traço centrado no raio)
     if rad < 1 then return end
     local cx, cy = w / 2, h / 2
     cr:set_line_width(thickness)
@@ -111,7 +111,7 @@ local function donut(args)
   --   { row, sw, label, value } com o widget da linha e referências directas aos
   --   seus três sub-widgets, para actualização in loco ulterior.
   local function make_legend_row()
-    local sw    = swatch { color = p.text_faint }
+    local sw    = swatch { color = p.text_faint, size = dpi(8) } -- kit legenda swatch 8x8
     local label = txt { role = "cell", upper = true }
     local value = txt { role = "cell_bold", align = "right" }
     local row = wibox.widget {
@@ -148,7 +148,7 @@ local function donut(args)
   local root = wibox.widget {
     { ring_box, valign = "center", widget = wibox.container.place },
     { legend_layout, valign = "center", widget = wibox.container.place },
-    spacing = dpi(mt.gap),
+    spacing = dpi(12), -- kit: gap:12 entre o annel e a legenda
     layout  = wibox.layout.fixed.horizontal,
   }
 

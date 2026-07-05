@@ -113,12 +113,13 @@ local function scroll_list(args)
   --   qual seja max(0, #data - VISIBLE), que jamais permitte janella vazia à cauda.
   local function max_offset() return math.max(0, #data - VISIBLE) end
 
-  -- Rótulo do estado vazio, a preencher a área fixa (centrado, esmaecido, em caixa-alta).
+  -- Rótulo do estado vazio, a preencher a área fixa (à ESQUERDA, esmaecido, em
+  -- caixa-alta — kit .sl__empty é left-aligned).
   local empty_widget = wibox.widget {
     {
       txt.empty(args.empty_text or "NO DATA"),
       valign = "center",
-      halign = "center",
+      halign = "left",
       widget = wibox.container.place,
     },
     forced_height = AREA_H,
@@ -131,7 +132,7 @@ local function scroll_list(args)
       { list, right = GUTTER, widget = wibox.container.margin },
       {
         nil, nil,
-        { scrollbar, right = (GUTTER - SB_W) / 2, widget = wibox.container.margin },
+        { scrollbar, right = dpi(2), widget = wibox.container.margin }, -- kit .sl__track right:2px
         layout = wibox.layout.align.horizontal,
       },
       layout = wibox.layout.stack,

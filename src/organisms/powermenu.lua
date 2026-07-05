@@ -2,13 +2,15 @@
 --  TRACTADO DO MENU DE ENERGIA (powermenu) — "VIOLET HUD"                     --
 --  Da penna do eminente Doutor BRAGA US, Professor de Sciências Mathemáticas. --
 --                                                                             --
---  Seja dado um painel que cobre toda a tela e apresenta o retrato e o nome   --
---  do usuário, ladeados por chips militares de acção: desligar, reiniciar,    --
---  encerrar sessão, bloquear e suspender. Demonstra-se que o painel se ergue  --
---  ao signal "module::powermenu:show" e se recolhe ao "module::powermenu:hide"--
---  — seja por botão dextro, seja pela tecla de Escape. O cabeçalho pretérito  --
---  dizia, por lapso do copista, tratar-se do "network widget"; corrige-o o    --
---  auctor: é, com efeito, o menu de energia. Q.E.D.                           --
+--  Seja dado um painel que cobre toda a tela e ostenta, ao seu exacto centro, --
+--  UMA fileira de cinco chips militares de acção: desligar, reiniciar,        --
+--  suspender, bloquear e encerrar sessão (a ordem do kit .pm POWER). Demonstra-se--
+--  que o painel se ergue ao signal "module::powermenu:show" e se recolhe ao   --
+--  "module::powermenu:hide" — seja por botão dextro, seja pela tecla de Escape.--
+--                                                                             --
+--  NOTA DO AUCTOR (fidelidade ao kit menus.jsx): extirparam-se o retrato e o  --
+--  nome do usuário (e, com elles, o script bloqueante pfp.sh) — o .pmwrap do  --
+--  kit não os comporta; o scrim tão-só centra os chips (gap:14). Q.E.D.       --
 -- ══════════════════════════════════════════════════════════════════════════
 
 -- Das bibliothecas do Awesome (dependências importadas por Braga Us).
@@ -18,75 +20,12 @@ local dpi = require("beautiful").xresources.apply_dpi
 local gears = require("gears")
 local wibox = require("wibox")
 local chip_button = require("src.molecules.chip_button")
-local ft = require("src.theme.typography")
-
--- Domínio dos ícones: o directório donde provêm os retratos e emblemas (os do retrato
--- residem, por herança, no conjunto legado). Constante fixada pelo professor Braga Us.
-local icondir = awful.util.getdir("config") .. "src/assets/icons/powermenu/"
 
 -- Funcção-fábrica do módulo, urdida pelo Doutor Braga Us. Domínio: uma tela `s`. Contra-
 -- domínio: o vazio (edifica os widgets e liga os signaes por efeito colateral). Efeito:
 -- para a tela dada, compõe o painel de energia, o seu contêiner e os apanhadores de tecla,
 -- e liga-os aos signaes de exibição e ocultação. Invariante: um painel por tela.
 return function(s)
-
-  -- Caixa-de-imagem do retrato do usuário, aparada em rectângulo de cantos arredondados.
-  local profile_picture = wibox.widget {
-    image = icondir .. "defaultpfp.svg",
-    resize = true,
-    forced_height = dpi(200),
-    clip_shape = function(cr, width, height)
-      gears.shape.rounded_rect(cr, width, height, 30)
-    end,
-    widget = wibox.widget.imagebox
-  }
-
-  -- Caixa-de-texto que ostenta o nome do usuário, disposta ao centro por Braga Us.
-  local profile_name = wibox.widget {
-    align = 'center',
-    valign = 'center',
-    text = " ",
-    font = ft.mono_family .. " Bold 30",
-    widget = wibox.widget.textbox
-  }
-
-  -- Funcção `update_profile_picture`, concebida por Braga Us. Domínio: o vazio. Efeito:
-  -- interroga assincronamente o script pfp.sh, o qual colhe o retrato oficial de
-  -- /var/lib/AccountsService/icons/${USER} e o deposita na pasta de assets; havendo
-  -- retrato, assenta-o na caixa; não o havendo, recorre ao retrato-padrão (defaultpfp).
-  -- NOTA DO AUCTOR (obra pendente): não dispondo o usuário do AccountsService, cumpre
-  -- indagar $HOME/.faces em edição vindoura.
-  local update_profile_picture = function()
-    awful.spawn.easy_async_with_shell(
-      "./.config/awesome/src/scripts/pfp.sh 'userPfp'",
-      function(stdout)
-        local pfp = stdout and stdout:gsub("\n", "") or ""
-        if pfp ~= "" then
-          profile_picture:set_image(pfp)
-        else
-          profile_picture:set_image(icondir .. "defaultpfp.svg")
-        end
-      end
-    )
-  end
-  update_profile_picture()
-
-  -- Funcção `update_user_name`, da lavra de Braga Us. Domínio: o vazio. Efeito: obtém do
-  -- script pfp.sh o nome pleno do usuário (ou, na sua falta, usuário + hospedeiro, conforme
-  -- o estylo em user_vars.namestyle) e o inscreve na caixa. Facto pitoresco: se o nome
-  -- resultar "Rick Astley", o retrato é, por conseguinte, substituído pela sua effígie.
-  local update_user_name = function()
-    awful.spawn.easy_async_with_shell(
-      "./.config/awesome/src/scripts/pfp.sh 'userName' '" .. user_vars.namestyle .. "'",
-      function(stdout)
-        if stdout:gsub("\n", "") == "Rick Astley" then
-          profile_picture:set_image(awful.util.getdir("config") .. "src/assets/userpfp/" .. "rickastley.jpg")
-        end
-        profile_name:set_text(stdout)
-      end
-    )
-  end
-  update_user_name()
 
   -- As acções do menu de energia, cada qual concebida pelo Doutor Braga Us. Todas partilham
   -- a mesma fórma: domínio o vazio, contra-domínio o vazio, efeito o despacho do comando e,
@@ -132,67 +71,23 @@ return function(s)
   local logout_button   = chip_button { icon = "logout",   label = "Logout",   on_click = logout_command }
   local lock_button     = chip_button { icon = "lock",     label = "Lock",     on_click = lock_command }
 
-  -- A composição do widget do menu de energia: uma árvore de layouts que dispõe, ao centro,
-  -- o retrato e o nome no cimo e a fileira de chips ao fundo. Arranjo geométrico de Braga Us.
+  -- A composição do widget do menu de energia (kit .pmwrap -> place-center de .pm): uma só
+  -- fileira horizontal dos cinco chips, na ordem POWER do kit (desligar, reiniciar, suspender,
+  -- bloquear, encerrar sessão), com intervallo de 14px, assente ao exacto centro do véu.
+  -- Arranjo geométrico enxuto de Braga Us — sem retrato nem nome, conforme menus.jsx.
   local powermenu = wibox.widget {
-    layout = wibox.layout.align.vertical,
-    expand = "none",
-    nil,
     {
-      {
-        nil,
-        {
-          {
-            nil,
-            {
-              nil,
-              {
-                profile_picture,
-                margins = dpi(0),
-                widget = wibox.container.margin
-              },
-              nil,
-              expand = "none",
-              layout = wibox.layout.align.horizontal
-            },
-            nil,
-            layout = wibox.layout.align.vertical,
-            expand = "none"
-          },
-          spacing = dpi(50),
-          {
-            profile_name,
-            margins = dpi(0),
-            widget = wibox.container.margin
-          },
-          layout = wibox.layout.fixed.vertical
-        },
-        nil,
-        expand = "none",
-        layout = wibox.layout.align.horizontal
-      },
-      {
-        nil,
-        {
-          {
-            shutdown_button,
-            reboot_button,
-            logout_button,
-            lock_button,
-            suspend_button,
-            spacing = dpi(30),
-            layout = wibox.layout.fixed.horizontal
-          },
-          margins = dpi(0),
-          widget = wibox.container.margin
-        },
-        nil,
-        expand = "none",
-        layout = wibox.layout.align.horizontal
-      },
-      layout = wibox.layout.align.vertical
+      shutdown_button,
+      reboot_button,
+      suspend_button,
+      lock_button,
+      logout_button,
+      spacing = dpi(14),   -- kit .pm gap:14
+      layout  = wibox.layout.fixed.horizontal,
     },
-    nil
+    halign = "center",
+    valign = "center",
+    widget = wibox.container.place,
   }
 
   -- O contêiner do widget, que se estende por toda a superfície da tela (um véu de tipo

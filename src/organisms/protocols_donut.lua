@@ -11,8 +11,10 @@
 
 local awful = require("awful")
 local gears = require("gears")
+local wibox = require("wibox")
 local dpi = require("beautiful.xresources").apply_dpi
 local p = require("src.theme.palette")
+local mt = require("src.theme.metrics")
 local panel = require("src.tools.panel")
 local donut = require("src.molecules.donut")
 local Icon = require("src.tools.icons") -- os ícones lavrados em SVG do conjuncto icons/ (§3.13)
@@ -26,6 +28,7 @@ return function(args)
   -- Semeada com as três categorias a zero; o update reordena-as de maior a menor e repovoa
   -- por :set_slices.
   local chart = donut {
+    size   = dpi(84), -- kit Donut / dashboards.jsx PROTOCOLS size:84
     slices = {
       { label = "ESTABLISHED", pct = 0, color = p.data1 },
       { label = "LISTEN",      pct = 0, color = p.data3 },
@@ -85,8 +88,13 @@ return function(args)
     title      = "PROTOCOLS",
     body       = chart,
     accent     = p.v500,
-    w          = args.w or dpi(300),
-    right_icon = Icon("send_signal", { size = dpi(14), color = p.text_muted }),
+    w          = args.w or dpi(mt.panel_w_236), -- kit dashboards.jsx: PROTOCOLS width 236
+    -- Ícone do cabeçalho (.hp__hdicon): 13px a 70% de opacidade (o átomo icon só recolore).
+    right_icon = wibox.widget {
+      Icon("send_signal", { size = dpi(13), color = p.text_muted }),
+      opacity = 0.7,
+      widget  = wibox.container.background,
+    },
   })
 
   -- METHODO DE ABERTURA DA COLHEITA (postulado de Braga Us). Adstricta á visibilidade (o

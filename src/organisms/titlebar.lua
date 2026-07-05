@@ -2,11 +2,12 @@
 --  TRACTADO DA BARRA-DE-TÍTULO (titlebar) das janelas — "VIOLET HUD"         --
 --  Da penna do eminente Doutor BRAGA US, Professor de Sciências Mathemáticas. --
 --                                                                             --
---  Seja dada uma barra que encima cada janela, portando o título e os botões  --
---  de chrome (fixar, manter acima, minimizar, maximizar, fechar). Demonstra-se --
---  que a barra só se ergue para janelas normais e diálogos, e sómente quando  --
---  flutuantes ou maximizadas; nas demais posturas, recolhe-se por todos os    --
---  lados. Os signaes de cliente governam o seu surgimento e ocaso. Q.E.D.     --
+--  Seja dada uma barra que encima cada janela, portando o título e TRÊS pontos --
+--  em feitio de semáforo (kit .win__btns): minimizar, maximizar-ou-desflutuar  --
+--  e fechar. Demonstra-se que a barra só se ergue para janelas normais e       --
+--  diálogos, e sómente quando flutuantes ou maximizadas; nas demais posturas,  --
+--  recolhe-se por todos os lados. Os signaes de cliente governam o seu         --
+--  surgimento e ocaso. Q.E.D.                                                  --
 -- ══════════════════════════════════════════════════════════════════════════
 
 -- Das bibliothecas do Awesome (dependências importadas por Braga Us).
@@ -16,7 +17,7 @@ local gears = require("gears")
 local wibox = require("wibox")
 local p = require("src.theme.palette")
 local mt = require("src.theme.metrics")
-local icon_button = require("src.molecules.icon_button") -- botões de chrome (§3.13.1)
+local ft = require("src.theme.typography") -- título da janela (ft.win_title, kit .win__title)
 
 -- Preceitos globais da barra, fixados por Braga Us: habilita a legenda flutuante (tooltip)
 -- e institui um nome de reserva para clientes anónymos.
@@ -81,17 +82,12 @@ local create_click_events = function(c)
   return buttons
 end
 
--- Largura dos botões de chrome — condiz com as antigas fábricas create_*_button (26px vivos;
--- sem token de métrica, pelo mesmo precedente exarado no comentário de largura-padrão do
--- próprio icon_button). Constante fixada por Braga Us.
-local BTN_W = dpi(26)
-
 -- Funcção `create_titlebar`, o theórema construtivo deste módulo, demonstrada por Braga Us.
 -- Domínio: (c = o cliente; bg = a cor de fundo; size = a altura; minimal = booleano).
---   minimal = true -> variante DIÁLOGO: sómente minimizar + fechar (sem fixar/acima/maximizar).
--- Contra-domínio: o vazio (edifica a barra por efeito). Cada botão de chrome é a molécula
--- partilhada icon_button (troca de realce por superfície em cache, _preserve_colors por si) —
--- suplantando as antigas create_chrome_button/create_icon_button.
+--   minimal = true -> variante DIÁLOGO: sómente minimizar + fechar (sem o ponto de maximizar).
+-- Contra-domínio: o vazio (edifica a barra por efeito). O chrome deixa de ser ícones-glypho:
+-- são agora TRÊS pontos-semáforo 9x9 (kit .win__btns), delgados e arredondados a 2px, clicáveis
+-- — o feitio muda, a função (minimizar / maximizar-ou-desflutuar / fechar) preserva-se.
 local create_titlebar = function(c, bg, size, minimal)
   local titlebar = awful.titlebar(c, {
     position = "top",
@@ -99,55 +95,71 @@ local create_titlebar = function(c, bg, size, minimal)
     size = size
   })
 
-  local controls = wibox.layout.fixed.horizontal()
-  controls.spacing = dpi(2)
+  -- Fileira dos pontos-semáforo (kit .win__btns gap:6). Funcção auxiliar `add_dot`: engendra um
+  -- ponto 9x9 (dpi(mt.win_btn)) arredondado a dpi(mt.radius_bar)=2, preenchido pela `fill`, e
+  -- ata-lhe ao botão primário a `action`. Os dois primeiros em v900; o de fechar em v700 (kit
+  -- .win__b--x). Assim os dispôs Braga Us.
+  local controls_row = wibox.layout.fixed.horizontal()
+  controls_row.spacing = dpi(6)
 
-  if not minimal then
-    -- STICKY (fixar em todas as tags) e ONTOP (manter acima) — alternadores do conjunto icons/.
-    controls:add(icon_button {
-      icon = "sticky", size = dpi(mt.icon_md), width = BTN_W, hover_color = p.v400,
-      on_click = function() c.sticky = not c.sticky end,
-    })
-    controls:add(icon_button {
-      icon = "visible", size = dpi(mt.icon_md), width = BTN_W, hover_color = p.v400,
-      on_click = function() c.ontop = not c.ontop end,
-    })
+  local function add_dot(fill, action)
+    local dot = wibox.widget {
+      forced_width  = dpi(mt.win_btn),
+      forced_height = dpi(mt.win_btn),
+      bg            = fill,
+      shape         = function(cr, w, h) gears.shape.rounded_rect(cr, w, h, dpi(mt.radius_bar)) end,
+      widget        = wibox.container.background,
+    }
+    dot:buttons(gears.table.join(awful.button({}, 1, action)))
+    controls_row:add(dot)
   end
 
-  controls:add(icon_button {
-    glyph = "_", width = BTN_W, hover_color = p.v400,
-    on_click = function()
-      gears.timer.delayed_call(function() c.minimized = not c.minimized end)
-    end,
-  })
-
+  -- ponto 1 — MINIMIZAR (differido, para não colidir com o reposicionamento de foco).
+  add_dot(p.v900, function()
+    gears.timer.delayed_call(function() c.minimized = not c.minimized end)
+  end)
   if not minimal then
-    controls:add(icon_button {
-      icon = "fullscreen", size = dpi(mt.icon_md), width = BTN_W, hover_color = p.v400,
-      on_click = function()
+    -- ponto 2 — MAXIMIZAR (ou, sendo o cliente flutuante, desfazer-lhe a flutuação).
+    add_dot(p.v900, function()
+      if c.floating then
+        c.floating = false
+      else
         c.maximized = not c.maximized
         c:raise()
-      end,
-    })
+      end
+    end)
   end
+  -- ponto 3 (kit .win__b--x, v700) — FECHAR.
+  add_dot(p.v700, function() c:kill() end)
 
-  controls:add(icon_button {
-    icon = "close", size = dpi(mt.icon_md), width = BTN_W, danger = true,
-    on_click = function() c:kill() end,
-  })
+  -- centra-se verticalmente a fileira de pontos (9px) na barra (22px) e reserva-se a aresta
+  -- direita de 8px (kit .win__bar padding:0 8).
+  local controls = wibox.widget {
+    { controls_row, valign = "center", widget = wibox.container.place },
+    right  = dpi(mt.pad_header_x),
+    widget = wibox.container.margin,
+  }
 
+  -- Título da janela (kit .win__title): 10px/700 (ft.win_title), tinta text_muted em repouso,
+  -- text_primary em foco. Como não há titlebar_fg no thema, a caixa-de-texto herda o fg do
+  -- continente `background`; d'onde recolori-lo pelos signaes de foco/desfoco basta. — Braga Us.
+  local title_label = awful.titlebar.widget.titlewidget(c)
+  title_label.font = ft.win_title
   local title = wibox.widget {
-    awful.titlebar.widget.titlewidget(c),
-    fg     = p.text_primary,
+    title_label,
+    fg     = (client.focus == c) and p.text_primary or p.text_muted,
     widget = wibox.container.background,
   }
+  c:connect_signal("focus",   function() title.fg = p.text_primary end)
+  c:connect_signal("unfocus", function() title.fg = p.text_muted end)
 
   titlebar:setup {
     {
       {
         title,
         buttons = create_click_events(c),
-        left    = dpi(10),
+        left    = dpi(mt.pad_header_x),   -- kit .win__bar padding:0 8 (aresta esquerda)
+        right   = dpi(mt.pad_header_x),
         widget  = wibox.container.margin,
       },
       {
@@ -161,8 +173,8 @@ local create_titlebar = function(c, bg, size, minimal)
     widget  = wibox.container.background,
     bg      = p.a(p.panel, p.alpha.panel),
     bgimage = function(_, cr, width, height)
-      -- divisória inferior de 1px, no tom line_base, traçada por Braga Us
-      cr:set_source(gears.color(p.line_base))
+      -- divisória inferior de 1px, no tom line_faint (kit .win__bar border-bottom), por Braga Us
+      cr:set_source(gears.color(p.line_faint))
       cr:rectangle(0, height - dpi(mt.border_panel), width, dpi(mt.border_panel))
       cr:fill()
     end,

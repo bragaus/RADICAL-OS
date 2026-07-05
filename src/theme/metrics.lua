@@ -37,7 +37,7 @@ return {
   row_h = 18, row_header_h = 16, row_gap = 2, visible_rows = 6,
 
   -- Listas e rolagem (scroll) -------------------------------------------
-  gutter = 10, sb_w = 4, thumb_min_pct = 14, kill_w = 28, kill_icon = 14,
+  gutter = 10, sb_w = 4, thumb_min_pct = 14, kill_w = 26, kill_icon = 14,   -- kill_w 28->26 (kit .killbtn)
 
   -- Larguras -------------------------------------------------------------
   panel_w = 520, panel_w_sm = 260, panel_w_md = 300, osd_w = 280, clock_row_w = 504,
@@ -58,6 +58,37 @@ return {
 
   -- Limiares semânticos (a regra do >=90, quatro vezes; a da temperatura, duas) --
   pct_hot = 90, temp_hot = 80,
+
+  -- ══ ACCRÉSCIMOS DA FIDELIDADE (px CRÚS verbatim do kit; consumam-se via dpi) ══
+  -- Os tokens que se seguem transpõem, medida a medida, o kit.css para a lavra do
+  --   redesenho pixel-fiel. Os *_actual supra permanecem por ora (os consumidores
+  --   ainda os invocam); ao termo da migração, órfãos, serão dados por extirpados.
+
+  -- Etiquetas da barra superior (kit .tags / .tag) ----------------------
+  tag_h = 24, tag_pad_l = 18, tag_pad_r = 20, tag_icon = 13,
+
+  -- Concha dos controles de aba (kit .tagctl / .tagctl__*) --------------
+  tagctl_h = 24, tagctl_pad_l = 31, tagctl_pad_r = 13, tagctl_gap = 5,
+  tagctl_edge = 1, tagctl_tuck = 22, tagctl_btn_w = 22, tagctl_btn_h = 14,
+  tagctl_btn_chamfer = 3, haz_w = 7, haz_h = 14, haz_band = 2,
+
+  -- Fita de lozangos (kit .seg / .lozstrip = 24px; NÃO o token stale lozenge_h=20) --
+  seg_h = 24, seg_pad_l = 22, seg_pad_l_first = 26, seg_pad_r = 18, seg_gap = 5,
+
+  -- Dock inferior de telemetria (kit .monitorbar / .monbar__* / .monmod__*) --
+  mon_strip_h = 17, mon_row_pad_x = 8, mon_row_pad_t = 3, mon_row_pad_b = 4,
+  mon_overlap = 16, mon_edge = 1.6, mon_rail_w = 152, mon_strip_pad_x = 13,
+  mon_haz_w = 40, mon_haz_h = 8,
+
+  -- Menus, lançador, titulares e janelas (kit .ctx / .iconpick / .launcher / .win) --
+  ctx_w = 208, ctx_w_sub = 150, ctx_band_h = 26, sig_row_h = 18,
+  iconpick_tile = 20, iconpick_pad = 8, iconpick_gap = 4,
+  launcher_orbit_r = 168, launcher_app_r = 27, launcher_app_focus_r = 35,
+  launcher_edge = 18, win_btn = 9,
+
+  -- Espaçamento de célula das taboas (kit gap:6px) e larguras exactas dos painéis --
+  cell_gap = 6,
+  panel_w_236 = 236, panel_w_264 = 264, panel_w_300 = 300, panel_w_252 = 252,
 }
 -- ══════════════════════════════════════════════════════════════════════════
 --   Da lavra do eminente Doutor BRAGA US, Professor de Sciências Mathemáticas

@@ -4,12 +4,12 @@
 -- Da penna do professor BRAGA US, Geómetra desta Casa. Considere-se este manuscripto a
 -- exposição rigorosa do painel informativo, systema de linhas de chave-e-valor onde o
 -- rótulo (á sinistra, em caracter de caixa-alta e matiz esmaecido, text_muted) se oppõe
--- ao valor (á dextra, em matiz vívido, text_bright). Cada linha assenta sobre superfície
--- subtil v500@0.06 com bordadura v500@0.20 e raio de barra.
+-- ao valor (á dextra, em matiz vívido, text_bright). Segundo o mockup (dashboards.jsx) a
+-- linha vae NUA, sem superfície — o .ir--chip do kit.css jaz ocioso na composição.
 --
 -- Da natureza das linhas: cada uma é urdida pela molécula partilhada info_row, na sua
--- phase "chip"; e este "chip" reproduz, ipsis litteris, o antigo artificio create_info_row
--- (superfície v500@chip_bg, bordadura v500@chip_border, raio radius_bar, altura row_h).
+-- phase "plain" (linha nua: chave .ir__k em Bold 10, valor .ir__v em ExtraBold 11), fiel
+-- ao <InfoRow> que o mockup rende — sem o fundo v500@0.06 do antigo create_info_row.
 --
 -- Do domínio informativo aqui exhibido:
 --   CPU     -> o primeiro "model name" extrahido de /proc/cpuinfo
@@ -28,6 +28,7 @@ local gears = require("gears")
 local wibox = require("wibox")
 local dpi = require("beautiful.xresources").apply_dpi
 local p = require("src.theme.palette")
+local mt = require("src.theme.metrics")
 local Icon = require("src.tools.icons") -- os ícones lavrados em SVG do conjuncto icons/ (§3.13)
 local info_row = require("src.molecules.info_row") -- a molécula da linha chave/valor do HUD (§7.4.1)
 
@@ -67,18 +68,18 @@ return function(args)
   args = args or {}
   local panel = require("src.tools.panel")
 
-  -- Institúem-se as info-rows pela molécula partilhada (phase "chip" == aspecto do antigo
-  -- create_info_row). Guardam-se referências DIRECTAS ás linhas: a molécula devolve o
-  -- widget já munido de :set_value; jámais se interrogam ids de volta pelo corpo de panel() (R1).
-  local cpu_row    = info_row { key = "CPU",    variant = "chip" }
-  local kernel_row = info_row { key = "KERNEL", variant = "chip" }
-  local uptime_row = info_row { key = "UPTIME", variant = "chip" }
+  -- Institúem-se as info-rows pela molécula partilhada na phase "plain" (linha nua, fiel
+  -- ao <InfoRow> do mockup). Guardam-se referências DIRECTAS ás linhas: a molécula devolve
+  -- o widget já munido de :set_value; jámais se interrogam ids de volta pelo corpo de panel() (R1).
+  local cpu_row    = info_row { key = "CPU",    variant = "plain" }
+  local kernel_row = info_row { key = "KERNEL", variant = "plain" }
+  local uptime_row = info_row { key = "UPTIME", variant = "plain" }
 
   local body = wibox.widget {
     cpu_row,
     kernel_row,
     uptime_row,
-    spacing = dpi(4),
+    spacing = dpi(2),
     layout  = wibox.layout.fixed.vertical,
   }
 
@@ -129,8 +130,14 @@ return function(args)
     title      = "INFO",
     body       = body,
     accent     = p.v500,
-    w          = args.w or dpi(260),
-    right_icon = Icon("cpu", { size = dpi(14), color = p.text_muted }),
+    w          = args.w or dpi(mt.panel_w_236), -- kit dashboards.jsx: INFO width 236
+    -- Ícone do cabeçalho (.hp__hdicon): 13px a 70% de opacidade. O átomo icon sómente
+    -- recolore (sem alpha), pelo que a esmaecência se obtém por invólucro de fundo.
+    right_icon = wibox.widget {
+      Icon("cpu", { size = dpi(13), color = p.text_muted }),
+      opacity = 0.7,
+      widget  = wibox.container.background,
+    },
   })
 
   -- METHODO DE ABERTURA DA COLHEITA (postulado de Braga Us). A amostragem fica adstricta á

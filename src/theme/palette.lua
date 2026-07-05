@@ -50,11 +50,11 @@ return {
   launcher_glow    = "#ff7a18", -- base sobre a qual operam as receitas p.a(p.launcher_glow, x)
 
   -- Receitas nomeadas de opacidade — extirpam a dispersão dos valores
-  -- 0.06/0.20/0.22/0.5/0.7/0.8/0.85/0.9/0.95. Os valores de facto foram
-  -- RATIFICADOS AO CORRENTE (o painel a 0.9, e não o 0.92 do kit, et cetera):
-  -- a nulla mutação visual é o invariante desta Phase-0, tal como o quis Braga Us.
+  -- 0.06/0.20/0.22/0.5/0.7/0.8/0.92/0.95. Na presente lavra de fidelidade, o
+  -- painel foi RECONDUZIDO à spec do kit (0.92, .hp bg = panel@92%); a fita
+  -- permanece a 0.8 (.topbar bg = base@80%), tal como o dispôs o Doutor Braga Us.
   alpha = {
-    panel = 0.9, panel_hi = 0.95, bar = 0.8, clock_bar = 0.85, dash = 0.9,
+    panel = 0.92, panel_hi = 0.95, bar = 0.8, clock_bar = 0.85, dash = 0.9,
     chip_bg = 0.06, chip_border = 0.20,
     divider_tail = 0.22, bevel_hi = 0.7, bevel_lo = 0.9, tick = 0.9,
     rail = 0.5, graph_area = 0.22, graph_halo = 0.18, well = 0.96, well_border = 0.22,
