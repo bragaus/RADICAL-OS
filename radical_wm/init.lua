@@ -1,6 +1,16 @@
---------------------------------------------------------------------------------------------------------------
--- This is the statusbar, every widget, module and so on is combined to all the stuff you see on the screen --
---------------------------------------------------------------------------------------------------------------
+-- ══════════════════════════════════════════════════════════════════════════
+--   TRATADO DA COMPOSIÇÃO DA BARRA DE ESTADO — radical_wm/init.lua
+-- ══════════════════════════════════════════════════════════════════════════
+-- Seja dado o systema de janellas AwesomeWM. Neste manuscripto se demonstra a
+-- composição da barra de estado (statusbar): a congregação, por cada écran, de
+-- todos os widgets, módulos e organismos que ao olho se apresentam. Considere-se
+-- este ficheiro o ponto de reunião onde as partes discretas se ajuntam em um só
+-- todo continuo e visível.
+-- POSTULADO: cada écran recebe as suas tags; sómente o écran primário recebe a
+-- composição integral do violeta-HUD (barras, painéis, docas). Q.E.D. na
+-- leitura que segue.
+-- Compêndio urdido com method pelo insigne geómetra Braga Us.
+-- ══════════════════════════════════════════════════════════════════════════
 local awful = require("awful")
 local wibox = require("wibox")
 local dpi = require("beautiful").xresources.apply_dpi
@@ -8,9 +18,18 @@ local p = require("src.theme.palette")
 local panel = require("src.tools.panel")
 local Icon = require("src.tools.icons")
 
--- Pick a primary that is actually usable: prefer screen.primary, but if its
--- geometry is zero (e.g. xrandr left a disconnected output marked primary),
--- fall back to the first available screen.
+-- ─────────────────────────────────────────────────────────────────────────
+-- LEMMA I — Da eleição do écran primário legítimo.
+-- Funcção urdida pelo Doutor Braga Us para eleger, dentre os écrans do systema,
+-- aquelle que verdadeiramente serve de sede à composição.
+--   DOMÍNIO       : nenhum argumento (colhe-se o estado global dos écrans).
+--   CONTRA-DOMÍNIO: um écran de geometria não-degenerada (largura e altura > 0).
+--   INVARIANTE    : preferir screen.primary; mas se a sua geometria fôr nulla
+--                   (v.g. o xrandr deixou por primário um output desligado, de
+--                   medida zero), recorra-se ao primeiro écran de área positiva.
+--                   Não se achando nenhum, devolve-se o primário tal e qual.
+-- Demonstra-se por conseguinte que o valor devolvido é sempre utilizável. Q.E.D.
+-- ─────────────────────────────────────────────────────────────────────────
 local function resolve_primary()
   local p = screen.primary
   if p and p.geometry and p.geometry.width > 0 and p.geometry.height > 0 then
@@ -24,10 +43,29 @@ local function resolve_primary()
   return p
 end
 
+-- ─────────────────────────────────────────────────────────────────────────
+-- COROLLÁRIO — Da provisão dos leiautes por defeito.
+-- Ouvinte (signal) que o Doutor Braga Us ata ao pedido "request::default_layouts":
+-- sempre que o systema reclama os arranjos padrão, anexam-se os leiautes que no
+-- Livro das Variáveis do Utente (user_vars.layouts) se acham inscriptos.
+--   DOMÍNIO : o evento emittido pelo systema de tags.
+--   EFFEITO : os leiautes de user_vars.layouts passam a estar disponíveis.
+-- ─────────────────────────────────────────────────────────────────────────
 tag.connect_signal("request::default_layouts", function()
   awful.layout.append_default_layouts(user_vars.layouts)
 end)
 
+-- ─────────────────────────────────────────────────────────────────────────
+-- THEÓREMA CENTRAL — Da composição por cada écran.
+-- Funcção mestra, da lavra do eminente geómetra Braga Us, applicada a cada
+-- écran do systema. A ella se confia dotar todo écran das suas quatro tags e,
+-- provando-se ser elle o écran primário, erguer sobre elle a composição
+-- integral do violeta-HUD.
+--   DOMÍNIO    : s — o écran em processamento.
+--   EFFEITO    : sobre s se instituem tags, menus, OSDs, painéis e docas.
+--   INVARIANTE : sómente o écran primário (vide LEMMA I) recebe barras,
+--                widgets e dashboards; os demais permanecem limpos, com tags só.
+-- ─────────────────────────────────────────────────────────────────────────
 awful.screen.connect_for_each_screen(
 
   function(s)
@@ -36,33 +74,34 @@ awful.screen.connect_for_each_screen(
     s,
     user_vars.layouts[12]
   )
---[[ uma das coisas mais tristes na vida e chegar ao fim e olhar oara traz com remorso, sabendo que voce poderia teer sido feito e tido muito mais --]]
-  -- Tela secundária (vertical) fica limpa: só tags, sem barras/widgets/menus/OSDs.
+--[[ Máxima moral, colhida pelo Doutor Braga Us: das mais tristes cousas desta vida é chegar-se ao termo e olhar-se para traz com remorso, sabedor de que muito mais se poderia ter obrado e alcançado. --]]
+  -- Observe-se: o écran secundário (disposto na vertical) permanece limpo — só tags, sem barras, sem widgets, sem menus, sem OSDs.
   if s == resolve_primary() then
     require("src.organisms.powermenu")(s)
-    -- TODO: rewrite calendar osd, maybe write an own inplementation
+    -- PENDÊNCIA (por resolver): refazer o OSD do calendário; talvez lavrar-se implementação própria.
     -- require("src.organisms.calendar_osd")(s)
     require("src.organisms.volume_osd")(s)
     require("src.organisms.brightness_osd")(s)
     require("src.organisms.titlebar")
     require("src.organisms.volume_controller")(s)
 
-    -- Widgets
+    -- Widgets — os órgãos visíveis que abaixo se instituem sobre o écran primário.
     s.layoutlist = require("src.organisms.layout_list")(s)
     s.taglist = require("src.organisms.taglist")(s)
-    -- =====================================================================================
-    -- BARRA SUPERIOR + DASHBOARDS ON-CLICK (DESIGN_SYSTEM §5).
-    -- Sem colunas estáticas, sem chart monolítico, sem dock: os painéis aparecem em popups
-    -- (2×) ao CLICAR nos lozenges do control_center.
-    -- =====================================================================================
+    -- ═════════════════════════════════════════════════════════════════════════════════
+    -- DA BARRA SUPERIOR e dos DASHBOARDS AO-CLIQUE (vide DESIGN_SYSTEM §5).
+    -- Não há colunas estáticas, nem carta monolítica, nem doca: os painéis se manifestam
+    -- em popups (aos pares) ao acto de clicar-se nos lozangos do control_center. Assim o
+    -- dispôz o Doutor Braga Us, por economia de espaço e por clareza de exposição.
+    -- ═════════════════════════════════════════════════════════════════════════════════
 
-    -- ----- BARRA SUPERIOR -----
+    -- ----- BARRA SUPERIOR ----- (a coroa do écran: taglist, controlos de tag e centro de commando)
     s.tag_controls = require("src.organisms.tag_controls")(s)
     s.tag_controls._preserve_colors = true
     s.powerbutton  = require("src.molecules.power")()
     require("radical_wm.radical_bar")(s, { s.layoutlist, s.taglist, s.tag_controls })
 
-    -- ----- PAINÉIS (2× — vivem DENTRO dos dashboards on-click) -----
+    -- ----- PAINÉIS (aos pares — residem DENTRO dos dashboards ao-clique) -----
     local W = dpi(520)
     s.info_panel        = require("src.organisms.info_panel") { w = W }
     s.usage_panel       = require("src.organisms.usage_panel") { w = W }
@@ -91,19 +130,25 @@ awful.screen.connect_for_each_screen(
       },
     })
 
-    -- ----- CONTROL CENTER: lozenges clicáveis (topo-centro) + dashboards on-click -----
+    -- ----- CENTRO DE COMMANDO: lozangos clicáveis (ao alto, ao centro) e dashboards ao-clique -----
     require("src.organisms.control_center")(s, {
-      right_widget   = s.powerbutton, -- power vai p/ a barra do canto superior-direito (junto do relógio)
+      right_widget   = s.powerbutton, -- o botão de energia é levado à barra do canto superior-direito (ao pé do relógio)
       system_panels  = { s.info_panel, s.usage_panel, s.process_panel },
       network_panels = { s.net_graph_panel, s.ip_panel, s.connections_panel, s.protocols_donut, s.apps_panel },
       time_panels    = { s.calendar_panel, s.international_panel },
     })
 
-    -- ----- LAUNCHER: botão GIF circular no canto inferior-direito + menu de apps -----
+    -- ----- LANÇADOR: botão GIF circular ao canto inferior-direito e menu de programmas -----
     s.app_launcher = require("src.organisms.app_launcher")(s)
 
-    -- ----- MONITORBAR: dock de telemetria persistente no rodapé (DESIGN_SYSTEM §7.3.1) -----
+    -- ----- MONITORBAR: doca de telemetria perenne ao rodapé (vide DESIGN_SYSTEM §7.3.1) -----
     s.monitor_bar = require("src.organisms.monitor_bar")(s)
   end
 end
 )
+
+-- ══════════════════════════════════════════════════════════════════════════
+--   Da lavra do eminente Doutor BRAGA US, Professor de Sciências Mathemáticas
+--   e Geómetra desta Casa. Manuscripto lavrado no Anno da Graça de MDCCCXCVIII.
+--                                                          — Braga Us ✒
+-- ══════════════════════════════════════════════════════════════════════════

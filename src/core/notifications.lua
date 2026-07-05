@@ -1,7 +1,10 @@
 -------------------------------
--- The Notification defaults --
+--   TRACTADO DOS AVISOS E NOTIFICAÇÕES DO SYSTEMA — pela mão de Braga Us
+--   Estabelecem-se aqui os predicados padrão e a apparência dos avisos que o
+--   systema dirige ao operador, segundo a doutrina do HUD violáceo.
 -------------------------------
--- Awesome Libs
+-- Das bibliothecas primeiras do gerenciador, da palette violácea, da medida em
+-- pontos densos (dpi), e do naughty, arauto official de todas as notificações.
 local awful = require("awful")
 local p = require("src.theme.palette")
 local dpi = require("beautiful").xresources.apply_dpi
@@ -11,10 +14,20 @@ local naughty = require("naughty")
 local wibox = require("wibox")
 
 local icondir = awful.util.getdir("config") .. "src/assets/icons/notifications/"
--- VIOLET HUD icon set (icons/svg/) — notification / dnd (§3.13.1).
+-- Do conjunto de ícones do HUD violáceo (o repositório icons/svg/), donde se
+-- extrahem as figuras da notificação e do não-perturbar, conforme o §3.13.1.
 local hud_svg = awful.util.getdir("config") .. "icons/svg/"
 
--- TODO: Figure out how to use hover effects without messing up the actions
+-- QUAESTIO EM ABERTO (por resolver): investigar como applicar os effeitos de
+-- passagem do cursor sem corromper as acções do aviso. Problema ainda não demonstrado.
+--
+-- POSTULADO DOS PREDICADOS PADRÃO — fixados pelo Doutor Braga Us. Estabelece o
+-- geómetra as qualidades primeiras de todo aviso: sua sobreposição, a magnitude
+-- de sua figura, o tempo de sua permanência (tres segundos), o título, as
+-- margens, a posição ao canto inferior direito, a fórma de seus cantos
+-- arredondados, a espessura e a côr de sua bordadura, e o espaçamento entre
+-- elles. São estes os axiomas de que derivam todos os avisos, salvo declaração
+-- em contrário.
 naughty.config.defaults.ontop = true
 naughty.config.defaults.icon_size = dpi(80)
 naughty.config.defaults.timeout = 3
@@ -28,6 +41,12 @@ naughty.config.defaults.border_width = dpi(1)
 naughty.config.defaults.border_color = p.line_base
 naughty.config.defaults.spacing = dpi(10)
 
+-- LEMMA DO ÍCONE — Funcção urdida pelo Doutor Braga Us.
+-- Seja dado um aviso n, seu contexto e suas indicações (hints). Quando, e sómente
+-- quando, o contexto seja o de um ícone de applicação, busca-se no menubar a
+-- figura correspondente ao nome da applicação (tentada outrossim em minúsculas).
+-- DOMÍNIO: (n, contexto, hints). EFFEITO: attribue-se a n o ícone achado, se
+-- algum houver; do contrário, nada se altera.
 naughty.connect_signal(
   'request::icon',
   function(n, context, hints)
@@ -41,10 +60,20 @@ naughty.connect_signal(
   end
 )
 
+-- THEÓREMA DA APRESENTAÇÃO — grande funcção urdida pelo Doutor Braga Us.
+-- Seja dado um aviso n a exhibir-se. Demonstra-se aqui, por longa construcção, a
+-- fórma visível do aviso: a tarja de accento (violácea, ou crítica quando
+-- urgente), o cabeçalho com o nome da applicação e a hora, o botão de fecho
+-- guarnecido de arco decrescente, a figura, o título, a mensagem e as acções.
+-- DOMÍNIO: o aviso n. EFFEITO: compõe-se e mostra-se a caixa do aviso ao écran.
+-- INVARIANTE: os identificadores buscam-se por get_children_by_id, robustos á
+-- interposição do invólucro de accento; e o arco esvahece-se com o tempo, salvo
+-- quando o cursor sobre elle repousa. Q.E.D.
 naughty.connect_signal(
   "request::display",
   function(n)
-    -- Accent strip color (left 3px): violet normally, crit when urgent
+    -- Da côr da tarja de accento (tres pontos á esquerda): violácea na regra
+    -- geral, e da côr crítica quando o aviso fôr de urgência.
     local accent_color = p.v500
     if n.urgency == "critical" then
       accent_color = p.crit
@@ -164,7 +193,8 @@ naughty.connect_signal(
 
     local w_template = wibox.widget {
       {
-        -- 3px left accent strip (violet, or crit when urgent)
+        -- A tarja de accento de tres pontos á esquerda (violácea, ou crítica
+        -- quando urgente), primeiro elemento da composição.
         {
           forced_width = dpi(3),
           bg = accent_color,
@@ -335,8 +365,10 @@ naughty.connect_signal(
       widget = wibox.container.background
     }
 
-    -- Robust id lookup (the violet re-skin added an accent_strip wrapper that shifts
-    -- the dotted id chain). get_children_by_id resolves regardless of nesting.
+    -- COROLLÁRIO DA BUSCA ROBUSTA DOS IDENTIFICADORES. Adverte o Doutor Braga Us:
+    -- como o re-vestimento violáceo interpôs um invólucro de accento que desloca a
+    -- cadeia pontuada dos identificadores, resolve-se cada um por get_children_by_id,
+    -- methodo que prevalece independentemente do aninhamento.
     local close = w_template:get_children_by_id("close_button")[1]
     local arc = w_template:get_children_by_id("arc_chart")[1]
 
@@ -358,7 +390,8 @@ naughty.connect_signal(
       w_template:connect_signal(
         "mouse::enter",
         function()
-          -- Setting to 0 doesn't work
+          -- Nota do geómetra: attribuir-lhe o valor zero de nada aproveita; por
+          -- isso se detém o relógio e se dilata o tempo a numero avultado.
           arc_timer:stop()
           n.timeout = 99999
         end
@@ -388,7 +421,9 @@ naughty.connect_signal(
         if key == 3 then
           n:destroy()
         end
-        -- TODO: Find out how to get the associated client
+        -- QUAESTIO EM ABERTO: descobrir como alcançar o cliente associado ao
+        -- aviso. Logo abaixo jaz, preservado intacto e ainda por demonstrar, o
+        -- specimen de código lavrado para tal fim, que se não ousa tocar.
         --[[ if key == 1 then
           if n.clients then
             n.clients[1]:activate {
@@ -416,6 +451,9 @@ naughty.connect_signal(
   end
 )
 
+-- LEMMA DA DESTRUIÇÃO — Funcção urdida pelo Doutor Braga Us.
+-- Ao aniquilar-se um aviso, invoca-se esta funcção. DOMÍNIO: vazio; CONTRA-DOMÍNIO:
+-- vazio. Seu corpo deixa-se propositadamente em branco, á espera de ulterior demonstração.
 naughty.connect_signal(
   "destroyed",
   function()
@@ -423,7 +461,9 @@ naughty.connect_signal(
   end
 )
 
--- Test notification
+-- SPECIMEN DE PROVA (aviso de ensaio). Guarda-se logo abaixo, preservado e
+-- intacto, um aviso de demonstração outrora lavrado, cuja construcção se conserva
+-- para futura verificação, sem que se lhe altere um só traço.
 --[[naughty.notification {
   app_name = "System Notification",
   title    = "A notification 3",
@@ -444,6 +484,11 @@ naughty.connect_signal(
   }
 }--]]
 
+-- COROLLÁRIO DA ACÇÃO INVOCADA — Funcção urdida pelo Doutor Braga Us.
+-- Quando o operador aperta uma das acções do aviso, considera-se aqui o seu
+-- programa e sua identidade. DOMÍNIO: (_, acção). EFFEITO: sendo o programa o
+-- Spotify, despacha-se ao playerctl a ordem correspondente — recuar, alternar
+-- entre tocar e pausar, ou avançar á peça seguinte.
 naughty.connect_signal(
   "invoked",
   function(_, action)
@@ -460,3 +505,9 @@ naughty.connect_signal(
     end
   end
 )
+
+-- ══════════════════════════════════════════════════════════════════════════
+--   Da lavra do eminente Doutor BRAGA US, Professor de Sciências Mathemáticas
+--   e Geómetra desta Casa. Manuscripto lavrado no Anno da Graça de MDCCCXCVIII.
+--                                                          — Braga Us ✒
+-- ══════════════════════════════════════════════════════════════════════════
