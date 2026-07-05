@@ -1,20 +1,27 @@
--- src/tools/shapes.lua
--- Shape FUNCTIONS (geometry) + texture PAINTERS for the Violet-HUD.
+-- ══════════════════════════════════════════════════════════════════════════
+-- TRATADO DE GEOMETRIA DAS FÓRMAS E DAS TEXTURAS DO VIOLET-HUD
+-- ─────────────────────────────────────────────────────────────────────────
+-- Manuscripto: src/tools/shapes.lua
 --
--- Geometry is derived from the kit clip-path polygons in
+-- Reúne as FUNCÇÕES de fórma (geometria) e os PINTORES de textura do Violet-HUD.
+-- A geometria deriva dos polygonos de recorte (clip-path) do kit, a saber:
 --   ferramentas_para_implementacao/ui_kits/radical-hud/kit.css
--- (topbar tags .tag__edge, tag control .tagctl, powermenu .pm__chip,
---  monitorbar chevrons .monmod__edge, hazard/mesh/scanline textures).
+-- (as etiquetas da barra superior .tag__edge, o controle .tagctl, o chip do
+--  powermenu .pm__chip, os chevrons da monitorbar .monmod__edge, e as texturas
+--  de perigo, de malha e de scanline).
 --
--- Two families of API:
---   * builders   : shapes.powerline/lozenge/chamfer(...) -> function(cr, w, h)
---                  (use directly as a wibox `shape=`).
---   * painters   : shapes.hex_mesh/hazard/scanlines(cr, w, h[, opts])
---                  (draw straight onto a cairo context; self-clipped to w x h).
+-- Duas famílias de arte se distinguem:
+--   * artífices  : shapes.powerline/lozenge/chamfer(...) -> function(cr, w, h)
+--                  (empregam-se de pronto como `shape=` de um wibox).
+--   * pintores   : shapes.hex_mesh/hazard/scanlines(cr, w, h[, opts])
+--                  (pintam de chôfre sóbre um contexto cairo; auto-recortados a w x h).
 --
--- dpi policy: builder params (tip/cut/slant) and painter spacings are DEVICE
--- pixels — the same space as the (w,h) wibox hands the shape at draw time.
--- Defaults are dpi(mt.*)-applied so a bare `shapes.powerline{}` is sane.
+-- POSTULADO sóbre o dpi: os parametros dos artífices (tip/cut/slant) e os
+-- espaçamentos dos pintores medem-se em pixels de dispositivo — o mesmo espaço
+-- do par (w, h) que o wibox entrega à fórma no instante do desenho. Os valores
+-- por defeito já vêm applicados por dpi(mt.*), de sorte que um singelo
+-- `shapes.powerline{}` seja desde logo ajuizado.
+-- ══════════════════════════════════════════════════════════════════════════
 
 local dpi = require("beautiful").xresources.apply_dpi
 local p   = require("src.theme.palette")
@@ -23,17 +30,24 @@ local mt  = require("src.theme.metrics")
 local shapes = {}
 
 ------------------------------------------------------------------------------
--- BUILDERS
+-- ARTÍFICES DE FÓRMA (devolvem uma function(cr, w, h) para servir de `shape=`)
 ------------------------------------------------------------------------------
 
--- powerline{ tip, socket, flat_left } -> function(cr, w, h)
--- A right-pointing arrow tab. The LEFT edge has three variants (kit):
---   socket=true                 -> concave notch (receives the previous tip):
+-- ─────────────────────────────────────────────────────────────────────────
+-- LEMMA I — shapes.powerline{ tip, socket, flat_left } -> function(cr, w, h)
+-- Funcção urdida pelo Doutor Braga Us: engendra uma aba em fórma de seta que
+-- aponta à dextra. A aresta ESQUERDA admitte três variantes (segundo o kit):
+--   socket=true                 -> entalhe côncavo (recebe a ponta anterior):
 --                                   (0 0)(w-tip 0)(w mid)(w-tip h)(0 h)(tip mid)
---   flat_left=true  (default)   -> flat left edge (plain .tag / .arrow):
+--   flat_left=true  (por defeito) -> aresta esquerda plana (.tag / .arrow singelas):
 --                                   (0 0)(w-tip 0)(w mid)(w-tip h)(0 h)
---   flat_left=false, socket=off -> convex left point (.seg--first / .monmod--first):
+--   flat_left=false, socket=off  -> vértice esquerdo convexo (.seg--first / .monmod--first):
 --                                   (tip 0)(w-tip 0)(w mid)(w-tip h)(tip h)(0 mid)
+--   DOMÍNIO       : `opts` — taboada com tip (o comprimento da ponta), socket e
+--                   flat_left (predicados booleanos da aresta esquerda).
+--   CONTRA-DOMÍNIO: uma funcção(cr, w, h) que traça o caminho da fórma no cairo.
+--   INVARIANTE    : dos três ramos, um e um só se percorre; o caminho fecha-se
+--                   sempre sóbre si mesmo (close_path). Q.E.D.
 function shapes.powerline(opts)
   opts = opts or {}
   local tip = opts.tip or dpi(mt.powerline_tip)
@@ -70,11 +84,16 @@ function shapes.powerline(opts)
   end
 end
 
--- lozenge(slant) -> function(cr, w, h)
--- Symmetric double-pointed hexagon. Byte-identical geometry to the live
--- control_center.lozenge_shape / tasklist.tab_shape:
+-- ─────────────────────────────────────────────────────────────────────────
+-- LEMMA II — shapes.lozenge(slant) -> function(cr, w, h)
+-- Funcção urdida pelo Doutor Braga Us: um hexágono symétrico de duas pontas.
+-- Geometria byte-a-byte idêntica às vivas control_center.lozenge_shape e
+-- tasklist.tab_shape:
 --   (slant 0)(w-slant 0)(w h/2)(w-slant h)(slant h)(0 h/2)
--- `slant` (device px) is clamped to w/2 and h/2 so it never self-intersects.
+--   DOMÍNIO       : `slant` — o recúo das pontas, em pixels de dispositivo.
+--   CONTRA-DOMÍNIO: uma funcção(cr, w, h) que traça o hexágono.
+--   INVARIANTE    : `slant` é cerceado a w/2 e a h/2 (e nunca fica negativo), de
+--                   sorte que a fórma jamais se auto-intersecta. Demonstra-se. Q.E.D.
 function shapes.lozenge(slant)
   return function(cr, w, h)
     local sl = math.min(slant or dpi(mt.powerline_tip), w / 2, h / 2)
@@ -89,9 +108,15 @@ function shapes.lozenge(slant)
   end
 end
 
--- chamfer(cut, corners) -> function(cr, w, h)
--- Cut (45deg) corners of a rectangle. `corners` = { tl=, tr=, br=, bl= } booleans
--- (default all four). kit uses .tagctl (tr+br) and .pm__chip / .tagctl__b (tl+br).
+-- ─────────────────────────────────────────────────────────────────────────
+-- LEMMA III — shapes.chamfer(cut, corners) -> function(cr, w, h)
+-- Funcção urdida pelo Doutor Braga Us: decepa a 45º os cantos de um rectângulo.
+-- `corners` = { tl=, tr=, br=, bl= }, predicados booleanos (por defeito, os quatro).
+-- O kit emprega .tagctl (tr+br) e .pm__chip / .tagctl__b (tl+br).
+--   DOMÍNIO       : `cut` — a medida do bisel; `corners` — quaes cantos decepar.
+--   CONTRA-DOMÍNIO: uma funcção(cr, w, h) que traça o rectângulo biselado.
+--   INVARIANTE    : cada canto ou é decepado (dois segmentos) ou fica recto (um
+--                   só); o caminho encerra-se sempre. Q.E.D.
 function shapes.chamfer(cut, corners)
   cut = cut or dpi(mt.chamfer)
   corners = corners or { tl = true, tr = true, br = true, bl = true }
@@ -121,16 +146,24 @@ function shapes.chamfer(cut, corners)
 end
 
 ------------------------------------------------------------------------------
--- PAINTERS (draw on cr; each self-clips to the w x h box and restores state)
+-- PINTORES (pintam sóbre cr; cada qual se auto-recorta à caixa w x h e restaura o estado)
 ------------------------------------------------------------------------------
 
--- One family of parallel lines at `angle` (rad from horizontal), spaced `spacing`
--- (perpendicular, device px). Assumes source colour/width already set is fine —
--- but we set them here for isolation.
+-- ─────────────────────────────────────────────────────────────────────────
+-- LEMMA IV (auxiliar, privativo) — hatch(cr, w, h, angle, spacing, r, g, b, alpha, lw)
+-- Funcção urdida pelo Doutor Braga Us: uma família de rectas parallelas ao
+-- ângulo `angle` (radianos a contar da horizontal), espaçadas de `spacing` (na
+-- perpendicular, em pixels de dispositivo). Fixam-se aqui a cor e a largura do
+-- traço, para bem do isolamento.
+--   DOMÍNIO       : cr (o contexto cairo), w e h (a caixa), angle, spacing, as
+--                   componentes r, g, b, a opacidade alpha e a largura lw.
+--   CONTRA-DOMÍNIO: o vácuo (nenhum valor); o effeito é o traçado no cairo.
+--   INVARIANTE    : se o seno do ângulo se annulla (rectas horizontaes), a
+--                   funcção retira-se de pronto, pois o passo fôra infinito. Q.E.D.
 local function hatch(cr, w, h, angle, spacing, r, g, b, alpha, lw)
   local s = math.sin(angle)
   if s == 0 then return end
-  local run = h / math.tan(angle)          -- horizontal displacement over full height
+  local run = h / math.tan(angle)          -- deslocamento horizontal ao longo de toda a altura
   local step = spacing / math.abs(s)
   if step < 0.5 then step = spacing end
   cr:set_source_rgba(r, g, b, alpha)
@@ -145,9 +178,15 @@ local function hatch(cr, w, h, angle, spacing, r, g, b, alpha, lw)
   cr:stroke()
 end
 
--- hex_mesh(cr, w, h[, opts]) — crossing ±60deg line families (kit .tagctl__mesh
--- / .pm__chip::before). opts: { color=p.glow_core, alpha=0.12, spacing=dpi(6),
--- line_width=1 }.
+-- ─────────────────────────────────────────────────────────────────────────
+-- LEMMA V — shapes.hex_mesh(cr, w, h[, opts])
+-- Funcção urdida pelo Doutor Braga Us: duas famílias de rectas que se cruzam a
+-- ±60º (kit .tagctl__mesh / .pm__chip::before), compondo uma malha hexagonal.
+--   DOMÍNIO       : cr, w, h e `opts` = { color=p.glow_core, alpha=0.12,
+--                   spacing=dpi(6), line_width=1 }.
+--   CONTRA-DOMÍNIO: o vácuo; o effeito é a malha pintada, recortada a w x h.
+--   INVARIANTE    : salva-se e restaura-se o estado do cairo (save/restore), de
+--                   sorte que nada transborda para além da caixa. Q.E.D.
 function shapes.hex_mesh(cr, w, h, opts)
   opts = opts or {}
   local r, g, b = p.rgb(opts.color or p.glow_core)
@@ -161,10 +200,16 @@ function shapes.hex_mesh(cr, w, h, opts)
   cr:restore()
 end
 
--- hazard(cr, w, h[, opts]) — 45deg warning stripes (kit .tagctl__haz /
--- .pm__chip::after / .monbar__haz). opts: { color=p.glow_core (stripe),
--- color2=nil (background; nil = transparent gaps), band=dpi(2), gap=band,
--- alpha=1 }.
+-- ─────────────────────────────────────────────────────────────────────────
+-- LEMMA VI — shapes.hazard(cr, w, h[, opts])
+-- Funcção urdida pelo Doutor Braga Us: listras de advertência a 45º (kit
+-- .tagctl__haz / .pm__chip::after / .monbar__haz).
+--   DOMÍNIO       : cr, w, h e `opts` = { color=p.glow_core (a listra),
+--                   color2=nil (o fundo; sendo nulo, os vãos ficam diáphanos),
+--                   band=dpi(2), gap=band, alpha=1 }.
+--   CONTRA-DOMÍNIO: o vácuo; o effeito são as listras pintadas.
+--   INVARIANTE    : sendo dx == dy no traçado, cada listra guarda exactos 45º; o
+--                   estado do cairo é salvo e restaurado. Q.E.D.
 function shapes.hazard(cr, w, h, opts)
   opts = opts or {}
   local band  = opts.band or dpi(2)
@@ -184,15 +229,22 @@ function shapes.hazard(cr, w, h, opts)
   local x = -h
   while x <= w + h do
     cr:move_to(x, h)
-    cr:line_to(x + h, 0)      -- dx == dy -> 45deg
+    cr:line_to(x + h, 0)      -- posto que dx == dy, resultam exactos 45º
     x = x + period
   end
   cr:stroke()
   cr:restore()
 end
 
--- scanlines(cr, w, h[, opts]) — faint 1px horizontal lines (kit .monitorbar::after).
--- opts: { color=p.glow_core, alpha=0.06, spacing=dpi(3), line_width=1 }.
+-- ─────────────────────────────────────────────────────────────────────────
+-- LEMMA VII — shapes.scanlines(cr, w, h[, opts])
+-- Funcção urdida pelo Doutor Braga Us: ténues rectas horizontaes de 1px (kit
+-- .monitorbar::after), a evocar as linhas de varredura do velho écran cathódico.
+--   DOMÍNIO       : cr, w, h e `opts` = { color=p.glow_core, alpha=0.06,
+--                   spacing=dpi(3), line_width=1 }.
+--   CONTRA-DOMÍNIO: o vácuo; o effeito são as scanlines pintadas.
+--   INVARIANTE    : parte-se de y = 0.5 e avança-se de `spacing` em `spacing` até
+--                   esgotar a altura h; o estado do cairo é salvo e restaurado. Q.E.D.
 function shapes.scanlines(cr, w, h, opts)
   opts = opts or {}
   local r, g, b = p.rgb(opts.color or p.glow_core)
@@ -214,3 +266,8 @@ function shapes.scanlines(cr, w, h, opts)
 end
 
 return shapes
+-- ══════════════════════════════════════════════════════════════════════════
+--   Da lavra do eminente Doutor BRAGA US, Professor de Sciências Mathemáticas
+--   e Geómetra desta Casa. Manuscripto lavrado no Anno da Graça de MDCCCXCVIII.
+--                                                          — Braga Us ✒
+-- ══════════════════════════════════════════════════════════════════════════

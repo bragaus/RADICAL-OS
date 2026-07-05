@@ -1,6 +1,13 @@
---------------------------------------------------------------------------------------------------------------
--- This is the statusbar, every widget, module and so on is combined to all the stuff you see on the screen --
---------------------------------------------------------------------------------------------------------------
+-- ══════════════════════════════════════════════════════════════════════════
+--   TRATADO DA BARRA RADICAL (violeta-HUD) — radical_wm/radical_bar.lua
+-- ══════════════════════════════════════════════════════════════════════════
+-- Considere-se aqui a fábrica da barra superior. Dados os widgets da fileira
+-- alta e os da fileira baixa, ergue-se sobre o écran um ou dous popups em fórma
+-- de "powerline", e cada segmento se tinge segundo uma paleta cyclica de
+-- violetas, terminando em seta afiada que aponta à direita. Demonstra-se, na
+-- exposição que segue, como as partes se encaixam umas nas outras.
+-- Compêndio da lavra do insigne geómetra Braga Us.
+-- ══════════════════════════════════════════════════════════════════════════
 
 local awful = require("awful")
 local p = require("src.theme.palette")
@@ -9,6 +16,18 @@ local dpi = require("beautiful").xresources.apply_dpi
 local gears = require("gears")
 local wibox = require("wibox")
 
+-- ─────────────────────────────────────────────────────────────────────────
+-- THEÓREMA — Da construcção da barra radical sobre um écran.
+-- Funcção mestra, urdida pelo Doutor Braga Us, que este módulo devolve.
+--   DOMÍNIO       : s — o écran; widgets_top — os widgets da fileira alta;
+--                   widgets_bottom — os widgets da fileira baixa (facultativos).
+--   CONTRA-DOMÍNIO: nenhum valor (opera por effeito, erguendo os popups).
+--   EFFEITO       : instituem-se um popup ao alto-esquerdo e, havendo widgets
+--                   de baixo, um segundo popup mais abaixo; a memória dos popups
+--                   antigos guarda-se em s._radical_bar_* para occultá-los.
+--   INVARIANTE    : listas nullas tornam-se tabellas vazias, donde nunca se
+--                   opera sobre nil; cada écran conserva quando muito dous popups.
+-- ─────────────────────────────────────────────────────────────────────────
 return function(s, widgets_top, widgets_bottom)
   widgets_top = widgets_top or {}
   widgets_bottom = widgets_bottom or {}
@@ -81,15 +100,30 @@ return function(s, widgets_top, widgets_bottom)
   local accent_color = p.v400
   local segment_palette = { p.panel, p.panel_hi, p.raised, p.v950 }
 
+  -- LEMMA — Da cor de fundo de um segmento, segundo Braga Us.
+  --   DOMÍNIO       : index — o ordinal do segmento (inteiro ≥ 1).
+  --   CONTRA-DOMÍNIO: uma cor da paleta cyclica, já dotada da transparência devida.
+  --   INVARIANTE    : o índice reduz-se módulo o cardinal da paleta, donde a
+  --                   sequência de cores se repete periodicamente. Q.E.D.
   local function segment_bg_for(index)
     return p.a(segment_palette[((index - 1) % #segment_palette) + 1], segment_alpha)
   end
 
+  -- POSTULADO — Da normalização das cores de um widget, obra de Braga Us.
+  --   DOMÍNIO    : widget — o órgão cujas cores se hão-de uniformizar.
+  --   EFFEITO    : salvo se o widget trouxer o sêllo _preserve_colors, tinge-se
+  --                o seu fundo de transparente e o seu proscénio (fg) e imagens
+  --                da côr de acento; e outro tanto se faz a toda a sua prole.
+  --   INVARIANTE : o widget que ostenta _preserve_colors permanece intacto.
   local function normalize_widget_colors(widget)
     if widget._preserve_colors then
       return
     end
 
+    -- COROLLÁRIO interno — Tinge um único órgão. Da mão de Braga Us.
+    --   DOMÍNIO : w — o órgão singular.
+    --   EFFEITO : applica-lhe fundo transparente, proscénio e imagem recolorida,
+    --             a menos que traga comsigo o sêllo _preserve_colors.
     local function tint_one(w)
       if w._preserve_colors then
         return
@@ -120,6 +154,12 @@ return function(s, widgets_top, widgets_bottom)
     end
   end
 
+  -- THEÓREMA — Da fabricação de um segmento "powerline", por Braga Us.
+  --   DOMÍNIO       : widget — o órgão a envolver; index — o seu ordinal.
+  --   CONTRA-DOMÍNIO: um widget composto (o conteúdo mais a seta afiada); ou,
+  --                   se o widget trouxer _preserve_segment, elle mesmo envolto.
+  --   EFFEITO       : normaliza as cores do widget e ata-lhe, à direita, a seta
+  --                   powerline, tingida da própria cor do segmento.
   local function create_powerline_segment(widget, index)
     local current_bg = segment_bg_for(index)
 
@@ -153,7 +193,7 @@ return function(s, widgets_top, widgets_bottom)
           font = ft.mono_family .. ", ExtraBold 30",
           widget = wibox.widget.textbox
         },
-        fg = current_bg, -- seta powerline afiada = cor do segmento (aponta DIREITA, barra esquerda)
+        fg = current_bg, -- a seta powerline afiada toma a cor do segmento (aponta à DIREITA; a barra fica à esquerda)
         bg = p.transparent,
         forced_width = dpi(26),
         widget = wibox.container.background
@@ -162,6 +202,12 @@ return function(s, widgets_top, widgets_bottom)
     }
   end
 
+  -- THEÓREMA — Da disposição ordenada dos segmentos, por Braga Us.
+  --   DOMÍNIO       : widget_list — a lista ordenada dos widgets.
+  --   CONTRA-DOMÍNIO: um widget-contentor de altura fixa que contém a fileira.
+  --   EFFEITO       : para cada widget da lista fabrica-se o seu segmento e
+  --                   ajunta-se ao arranjo horizontal, com sobreposição negativa
+  --                   para que as setas se encaixem umas nas outras.
   local function prepare_widgets(widget_list)
     local layout = wibox.layout.fixed.horizontal()
     layout.spacing = -dpi(18)
@@ -189,3 +235,9 @@ return function(s, widgets_top, widgets_bottom)
     }
   end
 end
+
+-- ══════════════════════════════════════════════════════════════════════════
+--   Da lavra do eminente Doutor BRAGA US, Professor de Sciências Mathemáticas
+--   e Geómetra desta Casa. Manuscripto lavrado no Anno da Graça de MDCCCXCVIII.
+--                                                          — Braga Us ✒
+-- ══════════════════════════════════════════════════════════════════════════

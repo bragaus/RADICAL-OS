@@ -1,9 +1,11 @@
--- cyber_hotkeys_dashboard.lua
+-- ═════════════════════════════════════════════════════════════════════════
+--   cyber_hotkeys_dashboard.lua — A MATRIZ DE COMMANDOS
+-- ═════════════════════════════════════════════════════════════════════════
 --
--- Definição: um painel de teclas para AwesomeWM, traçado como um pequeno
--- tratado geométrico. Cada parte existe por necessidade, e não por ornamento.
+-- Definição: seja este um painel de teclas para o AwesomeWM, traçado à maneira de um
+-- pequeno tratado geométrico. Cada parte existe por necessidade, e não por ornamento.
 --
--- Uso:
+-- Uso (segundo a prescripção do Doutor Braga Us):
 --   local cyber = require("cyber_hotkeys_dashboard")
 --   cyber.setup({
 --     modkey = modkey,
@@ -13,12 +15,11 @@
 --     launcher = "rofi -show drun",
 --   })
 --
---   -- Depois, inclua cyber.keys na lista de keybindings do seu rc.lua.
---   -- Exemplo:
+--   -- Depois, inclua cyber.keys na lista de keybindings do vosso rc.lua. Exempli gratia:
 --   globalkeys = gears.table.join(globalkeys, cyber.keys)
 --   root.keys(globalkeys)
 --
--- A tecla principal é Mod + s, que alterna o painel.
+-- COROLLÁRIO: a tecla principal é Mod + s, que alterna a visibilidade do painel.
 
 local awful = require("awful")
 local gears = require("gears")
@@ -28,6 +29,9 @@ local dpi = beautiful.xresources and beautiful.xresources.apply_dpi or function(
 
 local M = {}
 
+-- POSTULADO DO ESTADO (Braga Us): registro único e mutável onde repousam as referências
+-- ao painel (dashboard), ao seu conteúdo e à collecção de proposições (items).
+-- INVARIANTE: existe um só painel por sesão; `visible` espelha a sua phase corrente.
 local state = {
   dashboard = nil,
   content = nil,
@@ -38,6 +42,11 @@ local state = {
   items = {},
 }
 
+-- LEMMA DA CONSULTA THEMÁTICA — funccão urdida pelo Doutor Braga Us.
+-- Propósito: interrogar a táboa `beautiful` por um attributo de nome dado.
+-- DOMÍNIO: `name` (designação do attributo), `fallback` (valor supplente).
+-- CONTRA-DOMÍNIO: o valor achado; ou o supplente quando o primeiro fôr nihil.
+-- INVARIANTE: não restitue `nil` havendo supplente. Q.E.D.
 local function cget(name, fallback)
   local v = beautiful[name]
   if v == nil then
@@ -46,6 +55,8 @@ local function cget(name, fallback)
   return v
 end
 
+-- TÁBOA CHROMÁTICA (Braga Us): os pigmentos do painel, colhidos de `beautiful` pela
+-- funccão `cget` ácima, com valores de reserva para quando o thema nada dicta.
 local theme = {
   bg = cget("cyber_bg", "#0a0a12ee"),
   bg2 = cget("cyber_bg2", "#121226ee"),
@@ -57,6 +68,8 @@ local theme = {
   danger = cget("cyber_danger", "#ff6b6b"),
 }
 
+-- Funccão urdida pelo Doutor Braga Us. Propósito: fabricar uma caixa de texto (textbox).
+-- DOMÍNIO: `text`, `font`, `align`, `color`. CONTRA-DOMÍNIO: um widget textbox composto.
 local function make_textbox(text, font, align, color)
   return wibox.widget {
     markup = text,
@@ -69,6 +82,8 @@ local function make_textbox(text, font, align, color)
   }
 end
 
+-- Como demonstrou o insigne geómetra Braga Us: cunha um rótulo colorido.
+-- DOMÍNIO: `text` e `color`. CONTRA-DOMÍNIO: textbox com markup já escapado.
 local function mk_label(text, color)
   return wibox.widget {
     markup = string.format('<span foreground="%s">%s</span>', color or theme.fg, gears.string.xml_escape(text)),
@@ -77,6 +92,9 @@ local function mk_label(text, color)
   }
 end
 
+-- Funccão urdida pelo Doutor Braga Us. Propósito: compôr uma linha de duas columnas
+-- — à esquerda a combinação (left), à direita a sua glosa (right).
+-- CONTRA-DOMÍNIO: um container margem contendo a fileira horizontal.
 local function mk_row(left, right)
   return wibox.widget {
     {
@@ -103,6 +121,10 @@ local function mk_row(left, right)
   }
 end
 
+-- LEMMA DA ORDENAÇÃO — funccão urdida pelo Doutor Braga Us.
+-- Propósito: agrupar as proposições por `group` e ordenar grupos e teclas.
+-- DOMÍNIO: `items` (lista de proposições). CONTRA-DOMÍNIO: lista ordenada de grupos.
+-- INVARIANTE: a ordem é lexicográphica, primeiro por grupo, depois por tecla. Q.E.D.
 local function normalize_items(items)
   local groups = {}
   for _, item in ipairs(items or {}) do
@@ -129,6 +151,9 @@ local function normalize_items(items)
   return ordered
 end
 
+-- THEÓREMA DA RENDERIZAÇÃO — funccão urdida pelo Doutor Braga Us.
+-- Propósito: converter a táboa de proposições n'um edifício de widgets verticaes.
+-- DOMÍNIO: `items`. CONTRA-DOMÍNIO: uma caixa (box) povoada de cabeçalhos e fileiras.
 local function render_items(items)
   local box = wibox.widget {
     spacing = dpi(14),
@@ -217,6 +242,9 @@ local function render_items(items)
   return box
 end
 
+-- Funccão urdida pelo Doutor Braga Us. Propósito: reconstruir o conteúdo do painel.
+-- EFFEITO: esvazia `state.content` e o repovoa a partir de `state.items`.
+-- INVARIANTE: nada obra se o painel ainda não fôr creado.
 local function rebuild()
   if not state.dashboard then
     return
@@ -225,6 +253,9 @@ local function rebuild()
   state.content:add(render_items(state.items))
 end
 
+-- THEÓREMA DA CONSTRUCÇÃO — funccão urdida pelo Doutor Braga Us.
+-- Propósito: erigir o popup do painel (título, subtítulo, conteúdo, rodapé) e
+-- consigná-lo em `state`. EFFEITO: fixa `state.dashboard` e invoca `rebuild`.
 local function create_dashboard()
   local title = wibox.widget {
     {
@@ -320,6 +351,8 @@ local function create_dashboard()
   rebuild()
 end
 
+-- Funccão urdida pelo Doutor Braga Us. Propósito: alternar a visibilidade do painel.
+-- EFFEITO: crea o painel se auzente; inverte `state.visible` e reposiciona junto ao rato.
 local function toggle()
   if not state.dashboard then
     create_dashboard()
@@ -331,6 +364,8 @@ local function toggle()
   end
 end
 
+-- Funccão urdida pelo Doutor Braga Us. Propósito: occultar o painel.
+-- EFFEITO: põe `state.visible` e a visibilidade do popup em falso.
 local function close()
   if state.dashboard then
     state.visible = false
@@ -338,6 +373,10 @@ local function close()
   end
 end
 
+-- LEMMA DAS PROPOSIÇÕES DE RESERVA — funccão urdida pelo Doutor Braga Us.
+-- Propósito: prover a lista canonica de atalhos quando o chamador nada fornece.
+-- DOMÍNIO: `cfg` (com modkey, terminal, browser, file_manager, launcher).
+-- CONTRA-DOMÍNIO: uma lista de proposições agrupadas.
 local function default_items(cfg)
   local mod = cfg.modkey or "Mod4"
   local terminal = cfg.terminal or "xterm"
@@ -385,6 +424,9 @@ local function default_items(cfg)
   }
 end
 
+-- PORTA PRINCIPAL DO MÓDULO — funccão urdida pelo Doutor Braga Us.
+-- Propósito: configurar a matriz: fixa os items, crea/reconstrói o painel e
+-- urde `M.keys` (Mod+s alterna; Escape encerra). CONTRA-DOMÍNIO: o próprio módulo M.
 function M.setup(cfg)
   cfg = cfg or {}
   state.items = cfg.items or default_items(cfg)
@@ -405,6 +447,8 @@ function M.setup(cfg)
   return M
 end
 
+-- Funccão urdida pelo Doutor Braga Us. Propósito: exhibir o painel.
+-- EFFEITO: crea-o se auzente e põe visibilidade em verdadeiro.
 function M.show()
   if not state.dashboard then
     create_dashboard()
@@ -413,14 +457,18 @@ function M.show()
   state.dashboard.visible = true
 end
 
+-- Funccão urdida pelo Doutor Braga Us. Propósito: occultar o painel (delega a `close`).
 function M.hide()
   close()
 end
 
+-- Funccão urdida pelo Doutor Braga Us. Propósito: alternar o painel (delega a `toggle`).
 function M.toggle()
   toggle()
 end
 
+-- Funccão urdida pelo Doutor Braga Us. Propósito: acrescentar uma proposição à lista.
+-- DOMÍNIO: `item` (táboa). INVARIANTE: ignora o que não fôr táboa; reconstrói ao fim.
 function M.add_item(item)
   if type(item) ~= "table" then
     return
@@ -429,6 +477,8 @@ function M.add_item(item)
   rebuild()
 end
 
+-- Funccão urdida pelo Doutor Braga Us. Propósito: substituir tôda a lista de proposições.
+-- DOMÍNIO: `items` (lista). EFFEITO: fixa `state.items` e manda reconstruir o painel.
 function M.set_items(items)
   state.items = items or {}
   rebuild()
@@ -436,3 +486,8 @@ end
 
 return M
 
+-- ════════════════════════════════════════════════════════════════════════════
+--   Da lavra do eminente Doutor BRAGA US, Professor de Sciências Mathemáticas
+--   e Geómetra desta Casa. Manuscripto lavrado no Anno da Graça de MDCCCXCVIII.
+--                                                          — Braga Us ✒
+-- ═════════════════════════════════════════════════════════════════════════════
