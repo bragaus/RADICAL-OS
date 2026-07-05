@@ -175,7 +175,78 @@ client.connect_signal(
   end
 )
 
+------------------------------------------------------------------------------------------
+-- hover_stateful(w, opts) — wire enter/leave/press hover state onto a background          --
+-- container EXACTLY ONCE, at construction time.                                           --
+--                                                                                        --
+-- ⚠ NEVER register hover inside a watch / timer / sampling callback. Each call connects   --
+--   four signals; re-registering per poll leaks unbounded connections (the historic       --
+--   cpu_info:187 / gpu_info:137 "Hover_signal-in-watch" leak family). Call this once when  --
+--   the widget is built and never again.                                                  --
+--                                                                                        --
+-- opts:                                                                                   --
+--   hover_bg  bg applied on mouse::enter (restored on mouse::leave)                        --
+--   hover_fg  fg applied on mouse::enter (restored on mouse::leave)                        --
+--   press_bg  bg while the button is held (defaults to hover_bg; reverts to hover_bg on   --
+--             release, then to the baseline on leave)                                     --
+--   restore   optional { bg = , fg = } baseline to restore on leave; when omitted, the    --
+--             widget's live bg/fg at enter time is captured and restored.                 --
+--                                                                                        --
+-- Colors must already be full strings (use p.a(hex, alpha) at the call site); this helper --
+-- does NOT append alpha bytes (that quirk lives only in the legacy Hover_signal below).   --
+------------------------------------------------------------------------------------------
+---@param w widget.container.background
+---@param opts table
+local function hover_stateful(w, opts)
+  opts = opts or {}
+  local hover_bg = opts.hover_bg
+  local hover_fg = opts.hover_fg
+  local press_bg = opts.press_bg or hover_bg
+  local restore  = opts.restore -- optional { bg=, fg= } baseline; else captured at enter
+  local base_bg, base_fg, hover_wibox, prev_cursor
+
+  local function enter()
+    base_bg = (restore and restore.bg) or w.bg
+    base_fg = (restore and restore.fg) or w.fg
+    if hover_bg then w.bg = hover_bg end
+    if hover_fg then w.fg = hover_fg end
+    local cw = mouse.current_wibox
+    if cw then
+      hover_wibox, prev_cursor = cw, cw.cursor
+      cw.cursor = "hand1"
+    end
+  end
+
+  local function press()
+    if press_bg then w.bg = press_bg end
+    if hover_fg then w.fg = hover_fg end
+  end
+
+  local function release()
+    if hover_bg then w.bg = hover_bg end
+    if hover_fg then w.fg = hover_fg end
+  end
+
+  local function leave()
+    if hover_bg or press_bg then w.bg = base_bg end
+    if hover_fg then w.fg = base_fg end
+    if hover_wibox then
+      hover_wibox.cursor = prev_cursor
+      hover_wibox = nil
+    end
+  end
+
+  w:connect_signal("mouse::enter", enter)
+  w:connect_signal("button::press", press)
+  w:connect_signal("button::release", release)
+  w:connect_signal("mouse::leave", leave)
+  return w
+end
+
 --- Takes a wibox.container.background and connects four signals to it
+--- Legacy global (sanctioned). Idempotent (disconnects before reconnecting) and appends
+--- 'dd'/'bb' alpha bytes to a 7-char #RRGGBB bg. Kept AS-IS for zero live churn; new code
+--- should prefer hover_stateful (returned below) with pre-alpha'd colors via p.a().
 ---@param widget widget.container.background
 ---@param bg string
 ---@param fg string
@@ -262,3 +333,9 @@ function Hover_signal(widget, bg, fg)
   widget:connect_signal("mouse::leave", mouse_leave)
 
 end
+
+-- Module return: exposes hover_stateful WITHOUT adding a new global (R5). Every existing
+-- consumer requires this file only for the Hover_signal side effect and ignores the
+-- return, so returning a table is backward-compatible. New code:
+--   local signals = require("src.core.signals"); signals.hover_stateful(w, { ... })
+return { hover_stateful = hover_stateful }

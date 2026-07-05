@@ -25,132 +25,60 @@
 -- stdout passam por tonumber()/guarda de nil.                                            --
 ------------------------------------------------------------------------------------------
 
-local awful = require("awful")
-local gears = require("gears")
-local wibox = require("wibox")
-local dpi = require("beautiful.xresources").apply_dpi
-local p = require("src.theme.palette")
-local Icon = require("src.tools.icons") -- ícones SVG do set icons/ (§3.13)
+local awful  = require("awful")
+local gears  = require("gears")
+local wibox  = require("wibox")
+local dpi    = require("beautiful.xresources").apply_dpi
+local p      = require("src.theme.palette")
+local mt     = require("src.theme.metrics")                -- raw metric tokens (dpi() at use-site)
+local ft     = require("src.theme.typography")             -- Pango font roles
+local format = require("src.tools.format")                 -- rate/pct humanizers (tonumber-guarded)
+local shapes = require("src.tools.shapes")                 -- shared lozenge geometry (clock_trigger)
+local stat_lozenge = require("src.molecules.stat_lozenge") -- §7.2.1 clickable stat capsule
+local Icon   = require("src.tools.icons")                  -- ícones SVG do set icons/ (§3.13)
 require("src.core.signals") -- garante Hover_signal global
-
-local MONO    = "JetBrainsMono Nerd Font Bold 18" -- dockbar do meio ~200% maior
-local BAR_H   = dpi(56)
-local PILL_H  = dpi(44)
-local ICON_SZ = dpi(30) -- ícones GRANDES nas lozenges (DESIGN_SYSTEM §7.2.1)
-
--- Forma de lozenge: hexágono achatado (pontas de seta côncava), igual ao tab_shape
--- do taglist / status_dock. As pontas laterais apontam para fora (cápsula).
-local function lozenge_shape(cr, width, height)
-  local slant = math.min(dpi(13), math.floor(height * 0.4))
-
-  cr:move_to(slant, 0)
-  cr:line_to(width - slant, 0)
-  cr:line_to(width, height / 2)
-  cr:line_to(width - slant, height)
-  cr:line_to(slant, height)
-  cr:line_to(0, height / 2)
-  cr:close_path()
-end
-
--- Formata uma taxa em bytes/s para um rótulo curto em KB/s (NN) ou MB/s (NNM).
-local function fmt_rate(bps)
-  bps = tonumber(bps) or 0
-  if bps < 0 then bps = 0 end
-  if bps >= 1048576 then
-    return string.format("%.0fM", bps / 1048576)
-  else
-    return string.format("%.0f", bps / 1024)
-  end
-end
 
 return function(s, opts)
   opts = opts or {}
 
   ----------------------------------------------------------------------------------------
-  -- Cria uma lozenge (pílula hexagonal) com glyph + valor. Retorna o widget de fundo; o
-  -- textbox do valor fica em ._value e o container de fg em ._value_bg (alterna glow_hot).
+  -- toggle() is defined further below (it needs the dashboards to exist first), but the
+  -- lozenge click closures are wired at CONSTRUCTION time by stat_lozenge — so `toggle`
+  -- must already be a visible local (captured as an upvalue) when the pills are built.
   ----------------------------------------------------------------------------------------
-  local function make_lozenge(icon_name)
-    -- Ícone GRANDE (DESIGN_SYSTEM §7.2.1) e CENTRALIZADO vertical+horizontal na pílula.
-    local glyph_box = Icon(icon_name, { size = ICON_SZ }) -- ícone SVG (multitom violeta)
-    local value_box = wibox.widget {
-      text   = "--",
-      font   = MONO,
-      valign = "center",
-      align  = "center",
-      widget = wibox.widget.textbox,
-    }
-    local value_bg = wibox.widget {
-      value_box,
-      fg     = p.text_bright,
-      widget = wibox.container.background,
-    }
+  local toggle
 
-    -- container.place centraliza o grupo (ícone+valor) nos DOIS eixos dentro da pílula;
-    -- sem isso o conteúdo cola no topo (margin sem top/bottom) e fica desalinhado.
-    local content = wibox.widget {
-      {
-        { glyph_box, valign = "center", halign = "center", widget = wibox.container.place },
-        value_bg,
-        spacing = dpi(10),
-        layout  = wibox.layout.fixed.horizontal,
-      },
-      valign = "center",
-      halign = "center",
-      widget = wibox.container.place,
-    }
-
-    local pill = wibox.widget {
-      {
-        content,
-        left   = dpi(18),
-        right  = dpi(18),
-        widget = wibox.container.margin,
-      },
-      bg                 = p.a(p.panel, 0.8), -- panel@cc
-      shape              = lozenge_shape,
-      shape_border_width = dpi(1),
-      shape_border_color = p.line_base,
-      forced_height      = PILL_H,
-      widget             = wibox.container.background,
-    }
-
-    pill._value    = value_box
-    pill._value_bg = value_bg
-    return pill
-  end
-
-  -- Pinta o valor: glow_hot se >= 90, senão text_bright.
-  local function set_value(pill, text, pct_for_alert)
-    pill._value:set_text(text)
-    if pct_for_alert and pct_for_alert >= 90 then
-      pill._value_bg.fg = p.glow_hot
-    else
-      pill._value_bg.fg = p.text_bright
-    end
-  end
-
-  local pill_cpu = make_lozenge("cpu")
-  local pill_mem = make_lozenge("mem")
-  local pill_gpu = make_lozenge("gpu")
-  local pill_net = make_lozenge("net")
-  local pill_vol = make_lozenge("vol")
+  ----------------------------------------------------------------------------------------
+  -- LOZENGES — the clickable hexagonal stat capsules (molecules/stat_lozenge, §7.2.1).
+  -- The molecule owns shape/icon/value/hover/click; the owner just pushes values through
+  -- :set_value(text, pct) (glow_hot at pct >= 90). CPU/MEM/GPU -> SYSTEM, NET -> NETWORK,
+  -- VOL -> volume controller. VOL is never_hot: a 90%+ volume must NOT flash the red alert.
+  ----------------------------------------------------------------------------------------
+  local pill_cpu = stat_lozenge { icon = "cpu", on_click = function() toggle("system") end }
+  local pill_mem = stat_lozenge { icon = "mem", on_click = function() toggle("system") end }
+  local pill_gpu = stat_lozenge { icon = "gpu", on_click = function() toggle("system") end }
+  local pill_net = stat_lozenge { icon = "net", on_click = function() toggle("network") end }
+  local pill_vol = stat_lozenge {
+    icon      = "vol",
+    never_hot = true,
+    on_click  = function() awesome.emit_signal("volume_controller::toggle", s) end,
+  }
 
   -- Segmento de relógio "HH:MM  Mês DD" (clicável -> dashboard TIME).
   local clock_time = wibox.widget {
     text   = "--:--",
-    font   = MONO,
+    font   = ft.lozenge,
     valign = "center",
     widget = wibox.widget.textbox,
   }
   local clock_date = wibox.widget {
     text   = "---",
-    font   = MONO,
+    font   = ft.lozenge,
     valign = "center",
     widget = wibox.widget.textbox,
   }
   -- Trigger calendário/relógio do CANTO SUPERIOR-DIREITO (mesmo porte do dockbar esquerdo).
-  local clock_glyph = Icon("calendar", { color = p.text_heading, size = ICON_SZ }) -- ícone SVG (set icons/)
+  local clock_glyph = Icon("calendar", { color = p.text_heading, size = dpi(mt.icon_stat) }) -- ícone SVG (set icons/)
   local clock_trigger = wibox.widget {
     {
       {
@@ -175,7 +103,7 @@ return function(s, opts)
       widget = wibox.container.margin,
     },
     bg                 = p.a(p.panel, 0.85),
-    shape              = lozenge_shape,
+    shape              = shapes.lozenge(dpi(13)), -- byte-identical to the old local lozenge_shape
     shape_border_width = dpi(1),
     shape_border_color = p.line_base,
     forced_height      = dpi(48), -- igual ao dockbar do canto superior-esquerdo (tags)
@@ -210,7 +138,7 @@ return function(s, opts)
       expand = "none",
       layout = wibox.layout.align.horizontal,
     },
-    forced_height = BAR_H,
+    forced_height = dpi(mt.bar_popup_h),
     bg            = "#00000000",
     widget        = wibox.container.background,
   }
@@ -293,7 +221,7 @@ return function(s, opts)
   -- mostra apenas esse (só um aberto por vez). Liga a amostragem do grupo aberto e desliga
   -- a dos fechados — assim os painéis de dashboard NÃO amostram (ss/proc/nvidia-smi/pactl)
   -- enquanto ocultos. Maior ganho de perf: loop ocioso quando nenhum dashboard está aberto.
-  local function toggle(name)
+  function toggle(name)
     local target = dashboards[name]
     if not target then return end
     local was_visible = target.visible
@@ -309,20 +237,16 @@ return function(s, opts)
   -- CLIQUES — cada lozenge clicável vira botão (button::press via :buttons()).
   -- Hover_signal aplica cursor hand1 + glow_ice no hover (não interfere com :buttons()).
   ----------------------------------------------------------------------------------------
-  local function make_clickable(pill, on_click)
-    Hover_signal(pill, nil, p.glow_ice)
-    pill:buttons(gears.table.join(
+  -- clock_trigger is NOT a stat_lozenge (custom glyph + time/date group), so its hover +
+  -- click are wired here. The five lozenges already carry their click/hover from
+  -- stat_lozenge (wired ONCE at construction — R7); do NOT re-wire them.
+  local function make_clickable(w, on_click)
+    Hover_signal(w, nil, p.glow_ice)
+    w:buttons(gears.table.join(
       awful.button({}, 1, on_click)
     ))
   end
 
-  make_clickable(pill_cpu, function() toggle("system") end)
-  make_clickable(pill_mem, function() toggle("system") end)
-  make_clickable(pill_gpu, function() toggle("system") end)
-  make_clickable(pill_net, function() toggle("network") end)
-  make_clickable(pill_vol, function()
-    awesome.emit_signal("volume_controller::toggle", s)
-  end)
   make_clickable(clock_trigger, function() toggle("time") end)
 
   ----------------------------------------------------------------------------------------
@@ -419,7 +343,7 @@ return function(s, opts)
 
         if pct < 0 then pct = 0 elseif pct > 100 then pct = 100 end
         local rounded = math.floor(pct + 0.5)
-        set_value(pill_cpu, string.format("%d%%", rounded), rounded)
+        pill_cpu:set_value(string.format("%d%%", rounded), rounded)
       end
     )
   end
@@ -441,7 +365,7 @@ return function(s, opts)
         local pct = used / total * 100
         if pct < 0 then pct = 0 elseif pct > 100 then pct = 100 end
         local rounded = math.floor(pct + 0.5)
-        set_value(pill_mem, string.format("%d%%", rounded), rounded)
+        pill_mem:set_value(string.format("%d%%", rounded), rounded)
       end
     )
   end
@@ -457,12 +381,11 @@ return function(s, opts)
         stdout = stdout or ""
         local util = tonumber(stdout:match("%d+"))
         if not util then
-          pill_gpu._value:set_text("--")
-          pill_gpu._value_bg.fg = p.text_bright
+          pill_gpu:set_value("--", nil)
           return
         end
         if util < 0 then util = 0 elseif util > 100 then util = 100 end
-        set_value(pill_gpu, string.format("%d%%", util), util)
+        pill_gpu:set_value(string.format("%d%%", util), util)
       end
     )
   end
@@ -506,7 +429,7 @@ return function(s, opts)
         end
         prev_net_rx, prev_net_tx, prev_net_time = rx_sum, tx_sum, now
 
-        set_value(pill_net, string.format("↑%s ↓%s", fmt_rate(up_rate), fmt_rate(down_rate)))
+        pill_net:set_value(string.format("↑%s ↓%s", format.rate(up_rate, "kbps"), format.rate(down_rate, "kbps")))
       end
     )
   end
@@ -522,7 +445,7 @@ return function(s, opts)
         local vol = tonumber(stdout:match("(%d+)%%"))
         if not vol then return end
         if vol < 0 then vol = 0 end
-        set_value(pill_vol, string.format("%d%%", vol), vol)
+        pill_vol:set_value(string.format("%d%%", vol), vol)
       end
     )
   end

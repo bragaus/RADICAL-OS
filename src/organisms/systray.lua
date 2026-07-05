@@ -8,6 +8,7 @@ local p = require("src.theme.palette")
 local dpi = require("beautiful").xresources.apply_dpi
 local gears = require("gears")
 local wibox = require("wibox")
+local mt = require("src.theme.metrics")
 
 require("src.core.signals")
 
@@ -25,10 +26,13 @@ return function(s)
     },
     widget = wibox.container.background,
     shape = function(cr, width, height)
-      gears.shape.rounded_rect(cr, width, height, 5)
+      gears.shape.rounded_rect(cr, width, height, dpi(mt.radius_pill))
     end,
     bg = p.panel
   }
+
+  systray._preserve_colors = true
+
   -- Signals
   Hover_signal(systray.container, p.v500, p.text_bright)
 

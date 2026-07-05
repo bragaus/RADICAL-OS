@@ -9,6 +9,7 @@ local gears = require("gears")
 local wibox = require("wibox")
 local gfs = require("gears.filesystem")
 local p = require("src.theme.palette")
+local mt = require("src.theme.metrics")
 require("src.core.signals")
 
 local glyph_color = p.text_primary
@@ -36,11 +37,13 @@ return function(s)
     },
     bg = p.v900,
     shape = function(cr, width, height)
-      gears.shape.rounded_rect(cr, width, height, 5)
+      gears.shape.rounded_rect(cr, width, height, dpi(mt.radius_pill))
     end,
     widget = wibox.container.background,
     screen = s
   }
+
+  layout._preserve_colors = true
 
   local layout_icon_map = {
     floating = "floating.svg",

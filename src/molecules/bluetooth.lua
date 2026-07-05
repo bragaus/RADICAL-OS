@@ -21,7 +21,7 @@ return function()
       {
         {
           id = "icon",
-          image = gears.color.recolor_image(icondir .. "bluetooth-off.svg"),
+          image = gears.color.recolor_image(icondir .. "bluetooth-off.svg", p.v50),
           widget = wibox.widget.imagebox,
           resize = false
         },

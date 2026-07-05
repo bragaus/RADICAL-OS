@@ -8,16 +8,12 @@ local p = require("src.theme.palette")
 local dpi = require("beautiful").xresources.apply_dpi
 local gears = require("gears")
 local wibox = require("wibox")
-require("src.core.signals")
+local chip_button = require("src.molecules.chip_button")
 
--- Icon directory path
+-- Icon directory path (profile-picture assets live under the legacy set).
 local icondir = awful.util.getdir("config") .. "src/assets/icons/powermenu/"
--- VIOLET HUD icon set (icons/svg/) — fonte dos ícones de power (§3.13.1).
-local hud_icondir = awful.util.getdir("config") .. "icons/svg/"
 
 return function(s)
-  local panel_transparency = (user_vars.transparency and user_vars.transparency.panels) or {}
-  local overlay_alpha = panel_transparency.enabled == false and 1 or (panel_transparency.overlay or 0.55)
 
   -- Profile picture imagebox
   local profile_picture = wibox.widget {
@@ -71,61 +67,6 @@ return function(s)
   end
   update_user_name()
 
-  -- Universal Button widget
-  local button = function(name, icon, bg_color, callback)
-    local item = wibox.widget {
-      {
-        {
-          {
-            {
-              {
-                -- TODO: using gears.color to recolor a SVG will make it look super low res
-                -- currently I recolor it in the .svg file directly, but later implement
-                -- a better way to recolor a SVG
-                image = gears.color.recolor_image(icon, p.v50),
-                resize = true,
-                forced_height = dpi(30),
-                widget = wibox.widget.imagebox
-              },
-              margins = dpi(0),
-              widget = wibox.container.margin
-            },
-            {
-              {
-                text = name,
-                font = user_vars.font.extrabold,
-                widget = wibox.widget.textbox
-              },
-              margins = dpi(0),
-              widget = wibox.container.margin
-            },
-            widget = wibox.layout.fixed.horizontal
-          },
-          margins = dpi(10),
-          widget = wibox.container.margin
-        },
-        fg = p.v50,
-        bg = bg_color,
-        shape = function(cr, width, height)
-          gears.shape.rounded_rect(cr, width, height, dpi(3))
-        end,
-        widget = wibox.container.background,
-        id = 'background'
-      },
-      spacing = dpi(0),
-      layout = wibox.layout.align.vertical
-    }
-
-    item:connect_signal(
-      "button::release",
-      function()
-        callback()
-      end
-    )
-
-    return item
-  end
-
   -- Create the power menu actions
   local suspend_command = function()
     awful.spawn("systemctl suspend")
@@ -151,19 +92,13 @@ return function(s)
     awesome.emit_signal("module::powermenu:hide")
   end
 
-  -- Create the buttons with their command and name etc
-  local shutdown_button = button("Shutdown", hud_icondir .. "shutdown.svg", p.v700, shutdown_command)
-  local reboot_button = button("Reboot", hud_icondir .. "reboot.svg", p.v700, reboot_command)
-  local suspend_button = button("Suspend", hud_icondir .. "suspend.svg", p.v700, suspend_command)
-  local logout_button = button("Logout", hud_icondir .. "logout.svg", p.v700, logout_command)
-  local lock_button = button("Lock", hud_icondir .. "lock.svg", p.v700, lock_command)
-
-  -- Signals to change color on hover
-  Hover_signal(shutdown_button.background, p.v600, p.v50)
-  Hover_signal(reboot_button.background, p.v600, p.v50)
-  Hover_signal(suspend_button.background, p.v600, p.v50)
-  Hover_signal(logout_button.background, p.v600, p.v50)
-  Hover_signal(lock_button.background, p.v600, p.v50)
+  -- Military-tech power chips (VIOLET HUD): each self-manages its hover (rim -> glow,
+  -- fill gradient swap) and self-sets _preserve_colors — no external Hover_signal wiring.
+  local shutdown_button = chip_button { icon = "shutdown", label = "Shutdown", on_click = shutdown_command }
+  local reboot_button   = chip_button { icon = "reboot",   label = "Reboot",   on_click = reboot_command }
+  local suspend_button  = chip_button { icon = "suspend",  label = "Suspend",  on_click = suspend_command }
+  local logout_button   = chip_button { icon = "logout",   label = "Logout",   on_click = logout_command }
+  local lock_button     = chip_button { icon = "lock",     label = "Lock",     on_click = lock_command }
 
   -- The powermenu widget
   local powermenu = wibox.widget {
@@ -234,7 +169,7 @@ return function(s)
     type = "splash",
     visible = false,
     ontop = true,
-    bg = p.a(p.abyss, overlay_alpha),
+    bg = p.a(p.abyss, p.alpha.scrim),
     height = s.geometry.height,
     width = s.geometry.width,
     x = s.geometry.x,

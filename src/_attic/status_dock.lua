@@ -1,5 +1,6 @@
 ------------------------------------------------------------------------------------------
--- src/organisms/status_dock.lua — Fita de LOZENGES de stats para o TOPO (VIOLET HUD)        --
+-- src/_attic/status_dock.lua — QUARANTINED (dead; superseded by control_center)             --
+-- (was src/organisms; a Fita de LOZENGES de stats para o TOPO — VIOLET HUD)                 --
 --                                                                                        --
 -- Reestilizado para o "status do meio" da Image #7 (DESIGN_SYSTEM §7.2.1): uma fita de   --
 -- LOZENGES (pílulas hexagonais com ponta de seta côncava, tipo tab_shape do taglist)     --

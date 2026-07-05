@@ -193,6 +193,7 @@ function M.new(args)
     if frame_timer or #cache.gif_surfaces == 0 then
       return
     end
+    if widget._paused then return end -- honor pause() requested before the first start
 
     frame_timer = gears.timer {
       timeout = anim_interval,
@@ -237,6 +238,27 @@ function M.new(args)
     }
 
     widget._wait_timer = wait_timer
+  end
+
+  -- ── ADDITIVE (C11): pause/resume the frame animation without touching the
+  -- shared frame cache, preload order, or the convert contract. Lets a host
+  -- (e.g. status_dock) stop the GIF while hidden and resume on show — no
+  -- always-on poller, no tokens, no IO. Idempotent; guards gears.timer's
+  -- start/stop asserts via the .started flag.
+  function widget:pause()
+    self._paused = true
+    if frame_timer and frame_timer.started then
+      frame_timer:stop()
+    end
+  end
+
+  function widget:resume()
+    self._paused = false
+    if frame_timer then
+      if not frame_timer.started then frame_timer:start() end
+    else
+      start_animation() -- frames may have arrived while paused before the first start
+    end
   end
 
   return widget

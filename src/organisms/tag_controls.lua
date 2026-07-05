@@ -2,8 +2,9 @@
 -- src/organisms/tag_controls.lua — Cluster de controle de tags (VIOLET HUD)                 --
 --                                                                                        --
 -- Pequeno grupo de botões no FIM da barra de tags (Image #2): adiciona/remove tags e     --
--- move a tag atual entre os workspaces. Quatro botões clicáveis (glyphs ASCII p/ render   --
--- garantido), cada um em p.v200; hover -> p.v400 (Hover_signal), cursor hand1, bg transp. --
+-- move a tag atual entre os workspaces. Quatro botões clicáveis (icon_button), cada um    --
+-- em repouso p.v200; hover -> p.v400 (cached surface swap + cursor hand1, dentro do        --
+-- molecule). Cada icon_button SELF-seta _preserve_colors (R6); o container também.         --
 --                                                                                        --
 --   ADD   (+) : cria uma tag "NEW" nesta screen e foca nela.                             --
 --   DEL   (−) : remove a tag selecionada (mantém ao menos 1).                            --
@@ -14,40 +15,18 @@
 local awful = require("awful")
 local wibox = require("wibox")
 local dpi = require("beautiful.xresources").apply_dpi
-local gcolor = require("gears.color")
-local gfs = require("gears.filesystem")
 local p = require("src.theme.palette")
-local Icon = require("src.tools.icons") -- ícones SVG do set icons/ (§3.13)
-require("src.core.signals")
+local icon_button = require("src.molecules.icon_button")
 
-local SVG = gfs.get_configuration_dir() .. "icons/svg/"
-
--- Constrói um botão de ícone SVG clicável. `icon_name` é um arquivo de icons/svg/;
--- `action` é chamado em button 1. Repouso em p.v200, hover -> p.v400 (recolor da imagem).
+-- Constrói um botão de ícone SVG clicável (repouso p.v200, hover -> p.v400). O molecule
+-- cacheia as duas superfícies e cuida do cursor + _preserve_colors.
 local function make_button(icon_name, action)
-  local ib = Icon(icon_name, { size = dpi(16), color = p.v200 })
-  local svg = SVG .. icon_name .. ".svg"
-
-  local button = wibox.widget {
-    { ib, widget = wibox.container.place },
-    forced_width = dpi(22),
-    bg           = "#00000000",
-    widget       = wibox.container.background,
+  return icon_button {
+    icon        = icon_name,
+    rest_color  = p.v200,
+    hover_color = p.v400,
+    on_click    = action,
   }
-
-  button:buttons(awful.util.table.join(
-    awful.button({}, 1, function()
-      action()
-    end)
-  ))
-
-  -- hover -> p.v400: recolore a imagem (imagebox não muda cor via fg). Hover_signal
-  -- mantém o cursor hand1.
-  button:connect_signal("mouse::enter", function() ib.image = gcolor.recolor_image(svg, p.v400) end)
-  button:connect_signal("mouse::leave", function() ib.image = gcolor.recolor_image(svg, p.v200) end)
-  Hover_signal(button, nil, p.v400)
-
-  return button
 end
 
 return function(s)
@@ -89,7 +68,7 @@ return function(s)
     end
   end)
 
-  return wibox.widget {
+  local controls = wibox.widget {
     add_button,
     remove_button,
     move_left_button,
@@ -97,4 +76,8 @@ return function(s)
     spacing = dpi(4),
     layout  = wibox.layout.fixed.horizontal,
   }
+
+  controls._preserve_colors = true
+
+  return controls
 end

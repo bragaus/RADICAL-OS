@@ -4,7 +4,9 @@
 -- Duas info-rows key/value (§7.4.1):                                                     --
 --   IPv4  <addr>   |   IPv6  <addr>                                                       --
 -- rótulo à esquerda (text_muted, CAIXA-ALTA) / valor à direita (text_bright, mono,        --
--- ellipsize). Endereço vazio -> "—".                                                      --
+-- ellipsize). Endereço vazio -> "—". As linhas usam a molécula compartilhada             --
+-- info_row{variant="plain", key_width} (o "plain" reproduz o antigo make_row: linha nua, --
+-- largura de rótulo fixa, valor fixado à direita).                                       --
 --                                                                                        --
 -- IPv4: `ip -4 -o addr show scope global | awk '{print $4}' | head -1` (tira /mask).      --
 -- IPv6: `ip -6 -o addr show scope global | awk '{print $4}' | head -1`, com fallback     --
@@ -21,63 +23,18 @@ local wibox = require("wibox")
 local dpi = require("beautiful.xresources").apply_dpi
 local p = require("src.theme.palette")
 local Icon = require("src.tools.icons") -- ícones SVG do set icons/ (§3.13)
+local info_row = require("src.molecules.info_row") -- key/value HUD row (§7.4.1)
 
-local FONT = "JetBrainsMono Nerd Font 9"
 local EMPTY = "—"
 
 return function(args)
   args = args or {}
   local panel = require("src.tools.panel")
 
-  -- Constrói uma info-row "LABEL .... value". Retorna {row, set(value)}.
-  local function make_row(label)
-    local label_box = wibox.widget {
-      text         = tostring(label or ""):upper(),
-      font         = FONT,
-      valign       = "center",
-      forced_width = dpi(46),
-      widget       = wibox.widget.textbox,
-    }
-    local value_box = wibox.widget {
-      text      = EMPTY,
-      font      = FONT,
-      valign    = "center",
-      halign    = "right",
-      ellipsize = "end",
-      widget    = wibox.widget.textbox,
-    }
-
-    local row = wibox.widget {
-      {
-        label_box,
-        fg     = p.text_muted,
-        widget = wibox.container.background,
-      },
-      {
-        {
-          value_box,
-          fg     = p.text_bright,
-          widget = wibox.container.background,
-        },
-        left   = dpi(6),
-        widget = wibox.container.margin,
-      },
-      expand = "inside",
-      layout = wibox.layout.align.horizontal,
-    }
-
-    local container = wibox.widget {
-      row,
-      forced_height = dpi(18),
-      bg            = "#00000000",
-      widget        = wibox.container.background,
-    }
-    container._value = value_box
-    return container
-  end
-
-  local row_v4 = make_row("IPv4")
-  local row_v6 = make_row("IPv6")
+  -- Info-rows via molécula compartilhada (variant "plain" == look do antigo make_row).
+  -- Refs diretas às linhas (:set_value); nunca consultamos ids de volta pelo panel() (R1).
+  local row_v4 = info_row { key = "IPv4", value = EMPTY, variant = "plain", key_width = dpi(46) }
+  local row_v6 = info_row { key = "IPv6", value = EMPTY, variant = "plain", key_width = dpi(46) }
 
   local body = wibox.widget {
     row_v4,
@@ -102,12 +59,13 @@ return function(args)
     return (addr:gsub("/%d+$", ""))
   end
 
-  -- Define o valor de uma row, mostrando EMPTY quando vazio.
+  -- Define o valor de uma row, mostrando EMPTY quando vazio (info_row:set_value(nil)
+  -- mantém o último valor por design — por isso passamos EMPTY explicitamente).
   local function set_value(row, addr)
     if not addr or addr == "" then
-      row._value:set_text(EMPTY)
+      row:set_value(EMPTY)
     else
-      row._value:set_text(addr)
+      row:set_value(addr)
     end
   end
 

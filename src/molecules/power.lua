@@ -1,71 +1,41 @@
 --------------------------------
 -- This is the power widget --
 --------------------------------
+-- VIOLET HUD: rebuilt on the shared `pill` molecule (segment mode). The former
+-- hand-rolled icon+background capsule is gone; pill{ segment=true } self-flags
+-- `_preserve_colors` and mirrors the vestigial `_segment_*` hints so this stays a
+-- byte-faithful drop-in for the radical_bar segment (R6). Public API unchanged:
+-- `function() -> widget`; still emits `module::powermenu:show` on release and still
+-- glows to p.crit on hover via the legacy Hover_signal global.
 
 -- Awesome Libs
-local awful = require("awful")
-local color = require("src.theme.colors")
-local p = require("src.theme.palette")
-local dpi = require("beautiful").xresources.apply_dpi
-local gears = require("gears")
-local wibox = require("wibox")
+local pill = require("src.molecules.pill")
+local p    = require("src.theme.palette")
+local mt   = require("src.theme.metrics")
+local dpi  = require("beautiful").xresources.apply_dpi
 require("src.core.signals")
-
--- Icon directory path
-local icondir = awful.util.getdir("config") .. "src/assets/icons/power/"
 
 return function()
   local panel_transparency = (user_vars.transparency and user_vars.transparency.panels) or {}
   local segment_alpha = panel_transparency.enabled == false and 1 or (panel_transparency.segment or 0.90)
-  local power_icon = wibox.widget {
-    {
-      {
-        image = gears.color.recolor_image(icondir .. "power.svg", p.text_primary),
-        resize = true,
-        widget = wibox.widget.imagebox,
-      },
-      halign = "center",
-      valign = "center",
-      widget = wibox.container.place,
-    },
-    forced_width = dpi(18),
-    forced_height = dpi(18),
-    strategy = "exact",
-    widget = wibox.container.constraint,
+  -- p.a is the hardened port of colors.with_alpha (same "#RRGGBBAA" output).
+  local segment_bg = p.a(p.panel, segment_alpha)
+
+  -- Icon-only segment pill. icon_size/pad_x pinned to the ex-power values (18 / 10)
+  -- so the rendered segment is pixel-faithful; segment=true seeds the _segment_*
+  -- hints (44x46 preferred, bg==edge) exactly as the old widget did.
+  local power_widget = pill {
+    icon          = "power",
+    icon_color    = p.text_primary,
+    icon_size     = dpi(mt.icon_row),  -- 18, ex-power icon constraint
+    label_visible = false,
+    segment       = true,
+    bg            = segment_bg,
+    fg            = p.text_primary,
+    pad_x         = dpi(mt.seg_pad_x), -- 10, ex-power left/right margin
   }
 
-  local power_widget = wibox.widget {
-    {
-      {
-        power_icon,
-        halign = "center",
-        valign = "center",
-        id = "power_layout",
-        widget = wibox.container.place,
-      },
-      id = "container",
-      left = dpi(10),
-      right = dpi(10),
-      top = dpi(3),
-      bottom = dpi(3),
-      widget = wibox.container.margin
-    },
-    bg = color.with_alpha(p.panel, segment_alpha),
-    fg = p.text_primary,
-    shape = function(cr, width, height)
-      gears.shape.rounded_rect(cr, width, height, 5)
-    end,
-    widget = wibox.container.background
-  }
-
-  power_widget._preserve_colors = true
-  power_widget._segment_bg = color.with_alpha(p.panel, segment_alpha)
-  power_widget._segment_edge = color.with_alpha(p.panel, segment_alpha)
-  power_widget._segment_border_width = 0
-  power_widget._preferred_segment_width = dpi(44)
-  power_widget._preferred_segment_height = dpi(46)
-
-  -- Signals
+  -- Signals (legacy global; p.crit -> "#fb5e8add" on hover, matching the original).
   Hover_signal(power_widget, p.crit, p.text_primary)
 
   power_widget:connect_signal(

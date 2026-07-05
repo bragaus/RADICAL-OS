@@ -3,15 +3,16 @@
 -----------------------------------
 
 -- Awesome Libs
-local awful = require("awful")
-local p = require("src.theme.palette")
-local dpi = require("beautiful").xresources.apply_dpi
-local gears = require("gears")
-local wibox = require("wibox")
-local panel = require("src.tools.panel")
+local awful      = require("awful")
+local p          = require("src.theme.palette")
+local dpi        = require("beautiful").xresources.apply_dpi
+local gears      = require("gears")
+local wibox      = require("wibox")
+local mt         = require("src.theme.metrics")
+local panel      = require("src.tools.panel")
+local hud_slider = require("src.molecules.hud_slider")
+local osd_popup  = require("src.tools.osd_popup")
 
--- Icon directory path
-local icondir = awful.util.getdir("config") .. "src/assets/icons/audio/"
 -- VIOLET HUD icon set (icons/svg/): vol / volume_mute (§3.13.1), recolorido p/ text_heading.
 local hud_svg = awful.util.getdir("config") .. "icons/svg/"
 local function vol_image(muted)
@@ -37,23 +38,11 @@ return function(s)
     widget = wibox.widget.textbox,
   }
 
-  -- Trilha inset, height dpi(8) (§7.4.2), fill gradient v700 -> v500
-  local volume_slider = wibox.widget {
-    bar_shape        = gears.shape.rounded_bar,
-    bar_height       = dpi(8),
-    bar_color        = p.inset,
-    bar_active_color = {
-      type  = "linear",
-      from  = { 0, 0 },
-      to    = { dpi(232), 0 },
-      stops = { { 0, p.v700 }, { 1, p.v500 } }
-    },
-    handle_color        = p.v500,
-    handle_shape        = gears.shape.circle,
-    handle_width        = dpi(10),
-    handle_border_color = p.line_bright,
-    maximum             = 100,
-    widget              = wibox.widget.slider,
+  -- Trilha inset dpi(8) + fill gradiente v700 -> v500 (§7.4.2) via molecule. hud_slider's
+  -- baked-in syncing guard means the poller's :set_value() never re-fires on_change, so the
+  -- classic set_value -> re-poll feedback loop is gone (R8/R4).
+  local volume_slider = hud_slider {
+    span_w = dpi(232), -- gradient reach: preserves the pre-refactor `to = { dpi(232), 0 }`
   }
 
   -- Body: icon + horizontal bar (value % on the right); slider is the
@@ -74,7 +63,7 @@ return function(s)
   local volume_osd_widget = panel({
     title = "VOLUME",
     body  = osd_body,
-    w     = dpi(280),
+    w     = dpi(mt.osd_w),
   })
 
   local function is_not_a_number(value)
@@ -109,12 +98,8 @@ return function(s)
     )
   end
 
-  volume_slider:connect_signal(
-    "property::value",
-    function()
-    update_osd()
-  end
-  )
+  -- User drag re-reads the live volume (preserves the pre-refactor property::value wiring).
+  volume_slider:set_on_change(function() update_osd() end)
 
   local update_slider = function()
     awful.spawn.easy_async_with_shell(
@@ -131,8 +116,8 @@ return function(s)
           if is_not_a_number(volume_level) then
             return
           end
-          volume_slider:set_value(tonumber(volume_level))
-          update_osd()
+          volume_slider:set_value(tonumber(volume_level)) -- silent (hud_slider guard)
+          update_osd()                                    -- explicit label/icon refresh
         end
         )
       end
@@ -157,65 +142,12 @@ return function(s)
 
   update_slider()
 
-  local volume_container = awful.popup {
-    widget = wibox.container.background,
-    ontop = true,
-    bg = p.base .. "00",
-    stretch = false,
-    visible = false,
-    screen = s,
-    placement = function(c) awful.placement.bottom(c, { margins = { bottom = dpi(40) } }) end,
-    shape = function(cr, width, height)
-      gears.shape.rounded_rect(cr, width, height, dpi(4))
-    end
+  -- Transient bottom-centre popup (shared shell): show + auto-hide + hover-hold + rerun.
+  osd_popup {
+    s            = s,
+    panel_widget = volume_osd_widget,
+    show_signal  = "module::volume_osd:show",
+    rerun_signal = "widget::volume_osd:rerun",
+    timeout      = 2,
   }
-
-  local hide_volume_osd = gears.timer {
-    timeout = 2,
-    autostart = true,
-    callback = function()
-      volume_container.visible = false
-    end
-  }
-
-  volume_container:setup {
-    volume_osd_widget,
-    layout = wibox.layout.fixed.horizontal
-  }
-
-  awesome.connect_signal(
-    "module::volume_osd:show",
-    function()
-    if s == mouse.screen then
-      volume_container.visible = true
-    end
-  end
-  )
-
-  volume_container:connect_signal(
-    "mouse::enter",
-    function()
-    volume_container.visible = true
-    hide_volume_osd:stop()
-  end
-  )
-
-  volume_container:connect_signal(
-    "mouse::leave",
-    function()
-    volume_container.visible = true
-    hide_volume_osd:again()
-  end
-  )
-
-  awesome.connect_signal(
-    "widget::volume_osd:rerun",
-    function()
-    if hide_volume_osd.started then
-      hide_volume_osd:again()
-    else
-      hide_volume_osd:start()
-    end
-  end
-  )
 end

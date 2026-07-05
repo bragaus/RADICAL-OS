@@ -97,49 +97,65 @@ return function(widget)
     widget = wibox.container.background
   }
 
-  -- GPU Utilization
+  -- gpu_temp hover wired ONCE at construction. It was previously re-registered on
+  -- every 3s temp poll inside the watch (the historic gpu_info Hover_signal-in-watch
+  -- leak, R7). gpu_temp's bg tracks the temperature band, so this reads the LIVE bg
+  -- on enter and restores it on leave.
+  do
+    local pre_bg
+    gpu_temp_widget:connect_signal("mouse::enter", function()
+      pre_bg = gpu_temp_widget.bg
+      if type(pre_bg) == "string" and #pre_bg == 7 then
+        gpu_temp_widget.bg = pre_bg .. "dd"
+      end
+      gpu_temp_widget.fg = p.base
+      local w = mouse.current_wibox; if w then w.cursor = "hand1" end
+    end)
+    gpu_temp_widget:connect_signal("mouse::leave", function()
+      if pre_bg then gpu_temp_widget.bg = pre_bg end
+      local w = mouse.current_wibox; if w then w.cursor = "left_ptr" end
+    end)
+  end
+
+  -- ONE combined nvidia-smi feeds BOTH readouts (was two separate `nvidia-smi -q`
+  -- spawns every 3s). --query-gpu emits "<util>, <temp>" (nounits); every raw value
+  -- is tonumber-guarded before use so a missing/failed nvidia-smi keeps the last
+  -- reading instead of crashing on nil arithmetic (R4).
   watch(
-    [[ bash -c "nvidia-smi -q -d UTILIZATION | grep Gpu | awk '{print $3}'"]],
+    [[ nvidia-smi --query-gpu=utilization.gpu,temperature.gpu --format=csv,noheader,nounits ]],
     3,
     function(_, stdout)
-      gpu_usage_widget.container.gpu_layout.label.text = stdout:gsub("\n", "") .. "%"
-      awesome.emit_signal("update::gpu_usage_widget", tonumber(stdout))
-    end
-  )
+      local usage_s, temp_s = stdout:match("(%d+)%s*,%s*(%d+)")
+      local usage_num = tonumber(usage_s)
+      local temp_num = tonumber(temp_s)
 
-  -- GPU Temperature
-  watch(
-    [[ bash -c "nvidia-smi -q -d TEMPERATURE | grep 'GPU Current Temp' | awk '{print $5}'"]],
-    3,
-    function(_, stdout)
+      -- Utilization
+      if usage_num then
+        gpu_usage_widget.container.gpu_layout.label.text = tostring(usage_num) .. "%"
+        awesome.emit_signal("update::gpu_usage_widget", usage_num)
+      end
 
-      local temp_icon
-      local temp_color
-      local temp_num = tonumber(stdout)
-
+      -- Temperature (band -> color + thermometer icon)
+      local temp_icon, temp_color
       if temp_num then
-
         if temp_num < 50 then
           temp_color = p.ok
           temp_icon = icon_dir .. "thermometer-low.svg"
-        elseif temp_num >= 50 and temp_num < 80 then
+        elseif temp_num < 80 then
           temp_color = p.warn
           temp_icon = icon_dir .. "thermometer.svg"
-        elseif temp_num >= 80 then
+        else
           temp_color = p.crit
           temp_icon = icon_dir .. "thermometer-high.svg"
         end
       else
-        temp_num = "NaN"
         temp_color = p.ok
         temp_icon = icon_dir .. "thermometer-low.svg"
       end
-      Hover_signal(gpu_temp_widget, temp_color, p.base)
       gpu_temp_widget.container.gpu_layout.icon_margin.icon_layout.icon:set_image(temp_icon)
       gpu_temp_widget:set_bg(temp_color)
-      gpu_temp_widget.container.gpu_layout.label.text = tostring(temp_num) .. "°C"
-      awesome.emit_signal("update::gpu_temp_widget", temp_num, temp_icon)
-
+      gpu_temp_widget.container.gpu_layout.label.text = tostring(temp_num or "NaN") .. "°C"
+      awesome.emit_signal("update::gpu_temp_widget", temp_num or "NaN", temp_icon)
     end
   )
 
