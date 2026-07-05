@@ -7,16 +7,16 @@
 -- polling the backend (pactl/brightness) set the slider, which fired property::value,      --
 -- which re-ran the setter, which re-polled...                                             --
 --                                                                                        --
---   * on_change(v)      fires ONLY on user drags (never on :set_value).                    --
---   * :set_value(v)     tonumber + nil-guard (nil -> keep last); does NOT fire on_change.  --
---   * :set_on_change(fn) rebind the handler (pooled reuse).                                --
+--   * on_change(v)         fires on user drags (via the native :set_value the drag calls).  --
+--   * :set_value_silent(v) tonumber + nil-guard; sets value WITHOUT firing on_change.       --
+--   * :set_on_change(fn)   rebind the handler (pooled reuse).                                --
 --                                                                                        --
 -- Size variant (volume_controller): pass track_h = dpi(5), handle_w = dpi(15).             --
 -- Presentational only — never spawns/polls (the owning organism drives it).               --
 --                                                                                        --
 --   local hud_slider = require("src.molecules.hud_slider")                               --
 --   local s = hud_slider{ span_w = dpi(232), on_change = function(v) set_volume(v) end }   --
---   s:set_value(57)   -- from the poller; on_change stays silent                          --
+--   s:set_value_silent(57)   -- from the poller; on_change stays silent                     --
 ------------------------------------------------------------------------------------------
 
 local gears = require("gears")
@@ -58,19 +58,23 @@ local function hud_slider(args)
     widget              = wibox.widget.slider,
   }
 
-  -- syncing guard: true while a programmatic set is in flight.
+  -- syncing guard: true only while a SILENT programmatic set is in flight.
   local syncing = false
 
+  -- property::value fires on_change on user DRAGS (wibox's drag handler calls the native
+  -- public :set_value), but is swallowed during :set_value_silent so poller write-backs
+  -- never re-fire on_change (the pactl/brightness feedback loop). The public :set_value is
+  -- left NATIVE on purpose — overriding it would ALSO swallow drags and kill the slider.
   slider:connect_signal("property::value", function()
-    if syncing then return end          -- programmatic set: swallow, never re-fire
+    if syncing then return end
     if on_change then on_change(slider.value) end
   end)
 
-  -- Capture the native setter before shadowing it (same pattern as atoms/txt.lua).
+  -- Silent setter for pollers: set the value WITHOUT firing on_change. nil-guarded.
   local raw_set_value = slider.set_value
-  function slider:set_value(v)
+  function slider:set_value_silent(v)
     v = tonumber(v)
-    if v == nil then return end         -- nil-guard: keep the last value, never crash
+    if v == nil then return end         -- keep the last value, never crash
     syncing = true
     raw_set_value(self, v)              -- emits property::value synchronously -> swallowed
     syncing = false

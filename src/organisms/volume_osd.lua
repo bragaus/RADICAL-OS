@@ -39,7 +39,7 @@ return function(s)
   }
 
   -- Trilha inset dpi(8) + fill gradiente v700 -> v500 (§7.4.2) via molecule. hud_slider's
-  -- baked-in syncing guard means the poller's :set_value() never re-fires on_change, so the
+  -- baked-in syncing guard means the poller's :set_value_silent() never re-fires on_change, so the
   -- classic set_value -> re-poll feedback loop is gone (R8/R4).
   local volume_slider = hud_slider {
     span_w = dpi(232), -- gradient reach: preserves the pre-refactor `to = { dpi(232), 0 }`
@@ -116,7 +116,7 @@ return function(s)
           if is_not_a_number(volume_level) then
             return
           end
-          volume_slider:set_value(tonumber(volume_level)) -- silent (hud_slider guard)
+          volume_slider:set_value_silent(tonumber(volume_level)) -- silent (hud_slider guard)
           update_osd()                                    -- explicit label/icon refresh
         end
         )
@@ -136,7 +136,7 @@ return function(s)
   awesome.connect_signal(
     "widget::volume:update",
     function(value)
-    volume_slider:set_value(tonumber(value))
+    volume_slider:set_value_silent(tonumber(value))
   end
   )
 

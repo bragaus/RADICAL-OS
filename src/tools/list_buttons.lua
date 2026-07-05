@@ -61,7 +61,7 @@ function list_buttons.taglist()
       end
     end),
     awful.button({}, 3, function(t)
-      require("src.organisms.tag_menu").show(t)
+      require("src.organisms.tag_menu").show(t.screen, t)
     end),
     awful.button({ modkey }, 3, function(t)
       if client.focus then

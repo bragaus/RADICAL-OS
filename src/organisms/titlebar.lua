@@ -41,7 +41,7 @@ local create_click_events = function(c)
       function()
         double_click_event_handler(function()
           if c.floating then
-            c.float = false
+            c.floating = false
             return
           end
           c.maximized = not c.maximized

@@ -499,7 +499,7 @@ return function(s)
       "./.config/awesome/src/scripts/mic.sh volume",
       function(stdout)
         local volume = tonumber((stdout:gsub("%%", ""):gsub("\n", ""))) or 0
-        mic_slider:set_value(volume)
+        mic_slider:set_value_silent(volume)
         if volume > 0 then
           mic_icon:set_image(gears.color.recolor_image(icondir .. "microphone.svg", p.v400))
         else
@@ -517,7 +517,7 @@ return function(s)
       "./.config/awesome/src/scripts/mic.sh mute",
       function(stdout)
         if stdout:match("yes") then
-          mic_slider:set_value(0)
+          mic_slider:set_value_silent(0)
           mic_icon:set_image(gears.color.recolor_image(icondir .. "microphone-off.svg", p.v400))
         else
           get_mic_volume()
@@ -596,7 +596,7 @@ return function(s)
         icon = icon .. "-high"
       end
 
-      audio_slider:set_value(volume)
+      audio_slider:set_value_silent(volume)
       audio_icon:set_image(gears.color.recolor_image(icon .. ".svg", p.v500))
     end
   )
