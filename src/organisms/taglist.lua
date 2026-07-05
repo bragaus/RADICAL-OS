@@ -11,6 +11,7 @@
 local wibox = require("wibox")
 local awful = require("awful")
 local dpi = require("beautiful").xresources.apply_dpi
+local mt = require("src.theme.metrics")                 -- medidas crúas (o afastamento das abas)
 local tag_tab = require("src.molecules.tag_tab")        -- aba unilateral em fórma de "powerline" (§7.2)
 local list_buttons = require("src.tools.list_buttons")  -- botoeira commum e emenda da tecla-mod
 
@@ -53,7 +54,7 @@ end
 -- e os signaes do mouse, e a adjunge à fileira. Opera pelos seus effeitos.
 local list_update = function(widget, buttons, _, _, objects)
   widget:reset()
-  widget:set_spacing(dpi(4))
+  widget:set_spacing(-dpi(mt.powerline_tip)) -- -12: as abas SOBREPÕEM-SE (kit .tag margin-right:-12px)
 
   for _, object in ipairs(objects) do
     -- A aba (tag_tab) é senhora da sua fórma de "powerline", do enchimento em
@@ -92,13 +93,32 @@ end
 -- Assignala-se, como invariante, o _preserve_colors, para que a barra não lhe
 -- adultere as cores próprias. Q.E.D.
 return function(s)
+  -- Base horizontal cuja ORDEM DE DESENHO se inverte (as posições ficam intactas), de
+  -- sorte que a aba mais à esquerda seja pintada por ÚLTIMO — logo por CIMA da vizinha
+  -- (o kit dá z-index = tags.length - i: esquerda sobre direita). Ora o fixed.horizontal
+  -- do awful pinta na ordem de inserção — direita por cima —, o inverso do que o kit
+  -- reclama; sem a inversão, a ponta de cada aba ficaria coberta pela aresta plana da
+  -- seguinte, e ver-se-ia um rectângulo com costura vertical em logar das setas
+  -- interligadas. Ensombra-se pois o :layout da base, revertendo a lista de colocações
+  -- (captura-se antes o methodo de classe). Advertência: `awesome -k` NÃO valida a ordem
+  -- de desenho — só Xephyr o attesta. Braga Us dixit.
+  local base = wibox.layout.fixed.horizontal()
+  local fixed_layout = base.layout
+  function base:layout(ctx, width, height)
+    local res = fixed_layout(self, ctx, width, height)
+    for i = 1, math.floor(#res / 2) do
+      res[i], res[#res - i + 1] = res[#res - i + 1], res[i]
+    end
+    return res
+  end
+
   local taglist = awful.widget.taglist(
     s,
     awful.widget.taglist.filter.all,
     list_buttons.taglist(),
     {},
     list_update,
-    wibox.layout.fixed.horizontal()
+    base
   )
 
   taglist._preserve_colors = true

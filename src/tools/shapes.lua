@@ -145,6 +145,31 @@ function shapes.chamfer(cut, corners)
   end
 end
 
+-- ─────────────────────────────────────────────────────────────────────────
+-- LEMMA III-bis — shapes.socket_tail(opts) -> function(cr, w, h)
+-- Funcção urdida pelo Doutor Braga Us: a cauda do rail da monitorbar (.monrail).
+-- Um rectângulo cujos lados direito, superior e inferior ficam rectos, e cuja
+-- aresta ESQUERDA se recolhe em entalhe côncavo — para receber a ponta do último
+-- módulo. Transpõe, ponto a ponto, o clip-path do kit:
+--   polygon(0 0, 100% 0, 100% 100%, 0 100%, s 50%)
+--   DOMÍNIO       : `opts` — taboada com socket (a profundidade do entalhe, em
+--                   pixels de dispositivo; por defeito dpi(mt.mon_overlap)=16).
+--   CONTRA-DOMÍNIO: uma funcção(cr, w, h) que traça o caminho da fórma no cairo.
+--   INVARIANTE    : o vértice (s, h/2) reentra sómente à esquerda; os demais
+--                   cantos permanecem rectos; o caminho encerra-se. Q.E.D.
+function shapes.socket_tail(opts)
+  opts = opts or {}
+  local s = opts.socket or dpi(mt.mon_overlap)
+  return function(cr, w, h)
+    cr:move_to(0, 0)
+    cr:line_to(w, 0)
+    cr:line_to(w, h)
+    cr:line_to(0, h)
+    cr:line_to(s, h / 2)
+    cr:close_path()
+  end
+end
+
 ------------------------------------------------------------------------------
 -- PINTORES (pintam sóbre cr; cada qual se auto-recorta à caixa w x h e restaura o estado)
 ------------------------------------------------------------------------------

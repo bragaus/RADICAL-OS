@@ -12,7 +12,7 @@
 --           connections). Quando muito UMA célula flexível (a primeira sem largura);
 --           as rígidas antes/depois ancoram-se à esquerda/direita.
 --   align — "left" (por defeito) | "right" | "center".
---   color — fg da célula; toma por defeito text_muted num cabeçalho, text_bright numa linha de dados.
+--   color — fg da célula; toma por defeito text_faint num cabeçalho, text_bright numa linha de dados.
 --
 -- header=true -> defeitos esmaecidos, menor altura (row_header_h), sem hover.
 -- on_kill      -> um atoms/kill_btn ao fim (alvo de SIGTERM); a semântica reside no
@@ -52,8 +52,8 @@ local function build(args)
   args = args or {}
   local is_header     = args.header and true or false
   local cells_spec    = args.cells or {}
-  local default_color = is_header and p.text_muted or p.text_bright
-  local CELL_SPACING  = dpi(mt.row_gap)
+  local default_color = is_header and p.text_faint or p.text_bright -- .tr__c cabeçalho => text_faint (kit)
+  local CELL_SPACING  = dpi(mt.cell_gap)                             -- .tr gap:6px (kit; era row_gap=2)
 
   -- Constrói-se uma caixa de texto por tuplo; recorda-se a primeira célula sem
   -- largura (a flexível).

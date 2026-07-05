@@ -66,10 +66,10 @@ local function build(opts)
   local border_color = opts.focus and p.line_bright or p.line_base
   local focused      = opts.focus and true or false
 
-  -- Título em CAIXA-ALTA, papel ft.panel_title (ExtraBold, ao vivo); a côr do
-  -- fg confere-se pelo container. O atom atoms/txt aplica o :upper() e é o único
-  -- soberano do markup (aqui apenas texto puro, sem ornamento algum).
-  local title_box = txt { role = "panel_title", text = opts.title, upper = true, valign = "center" }
+  -- Título em CAIXA-ALTA, papel ft.title (ExtraBold 11, == .hp__title do kit); a
+  -- côr do fg confere-se pelo container. O atom atoms/txt aplica o :upper() e é o
+  -- único soberano do markup (aqui apenas texto puro, sem ornamento algum).
+  local title_box = txt { role = "title", text = opts.title, upper = true, valign = "center" }
 
   local header = wibox.widget {
     {
@@ -98,7 +98,7 @@ local function build(opts)
     body,
     left   = pad,
     right  = pad,
-    top    = dpi(mt.body_top_pad), -- 6 (valor ratificado; a spec do kit reza 7, via mt.body_top_pad_spec)
+    top    = dpi(mt.body_top_pad_spec), -- 7 (spec do kit .hp__bd padding-top:7px)
     bottom = pad,
     widget = wibox.container.margin,
   }
@@ -146,7 +146,7 @@ local function build(opts)
       body_wrap,
       layout = wibox.layout.fixed.vertical,
     },
-    bg                 = a(p.panel, p.alpha.panel), -- panel@0.9, fundo do conjuncto
+    bg                 = a(p.panel, p.alpha.panel), -- panel@0.92 (.hp bg do kit), fundo do conjuncto
     bgimage            = decoration,
     shape              = function(cr, w, h) gears.shape.rounded_rect(cr, w, h, radius) end,
     shape_border_width = dpi(mt.border_panel),

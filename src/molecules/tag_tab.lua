@@ -46,7 +46,7 @@ local function tag_tab(args)
   local tip = dpi(mt.powerline_tip) -- 12
 
   -- Referências directas (postulado R1).
-  local icon_img = wibox.widget { resize = true, forced_width = dpi(mt.icon_md), forced_height = dpi(mt.icon_md), widget = wibox.widget.imagebox }
+  local icon_img = wibox.widget { resize = true, forced_width = dpi(mt.tag_icon), forced_height = dpi(mt.tag_icon), widget = wibox.widget.imagebox }
   local icon_place = wibox.widget { icon_img, valign = "center", halign = "center", widget = wibox.container.place }
   local index_box = txt { role = "label", align = "center", valign = "center" }
   local name_box  = txt { role = "label", align = "center", valign = "center", upper = true }
@@ -65,40 +65,59 @@ local function tag_tab(args)
   local fg_wrap = wibox.widget { content, fg = state.fg, widget = wibox.container.background }
 
   local shape_fn = shapes.powerline { tip = tip, flat_left = true }
+  local d = dpi(mt.tick_stroke) -- 1.4, o recúo do enchimento (kit .tag__fill inset:1.4px)
 
-  -- Funcção pintora de Braga Us: verte o enchimento de gradiente vertical sob o conteúdo,
-  -- ceifado (clip) à fórma powerline. Argumentos: contexto cairo cr, largura w, altura h.
+  -- Funcção pintora de Braga Us, ora em DUAS (com o alvo, TRÊS) camadas — kit .tag__edge
+  -- + .tag__fill — em substituição da antiga orla centrada de shape_border (cuja metade
+  -- vazava para fóra da fórma e, com a sobreposição das abas, se corrompia). A saber:
+  --   (1) a orla — a fórma cheia, na côr da aresta (o rim de `d` transparece);
+  --   (2) o enchimento — a MESMA fórma, recuada de `d` por todos os flancos, vertida de
+  --       gradiente vertical;
+  --   (3) o alvo de topo — box-shadow inset 0 1px 0 rgba(214,194,255,.35), ainda no clip
+  --       interno. Argumentos: contexto cairo cr, largura w, altura h.
   local function paint_fill(_, cr, w, h)
-    local grad = gears.color { type = "linear", from = { 0, 0 }, to = { 0, h }, stops = state.fill }
+    -- camada 1 — .tag__edge
     cr:save()
     shape_fn(cr, w, h)
     cr:clip()
-    cr:set_source(grad)
+    cr:set_source_rgb(p.rgb(state.edge))
     cr:paint()
+    cr:restore()
+
+    -- camada 2 — .tag__fill inset:1.4px (fórma recuada numa caixa (w-2d)x(h-2d))
+    cr:save()
+    cr:translate(d, d)
+    shape_fn(cr, w - 2 * d, h - 2 * d)
+    cr:clip()
+    cr:set_source(gears.color { type = "linear", from = { 0, 0 }, to = { 0, h - 2 * d }, stops = state.fill })
+    cr:paint()
+    -- camada 3 — o alvo de topo (inset 0 1px 0 glow_ice@.35)
+    local hr, hg, hb = p.rgb(p.glow_ice)
+    cr:set_source_rgba(hr, hg, hb, 0.35)
+    cr:rectangle(0, 0, w - 2 * d, dpi(1))
+    cr:fill()
     cr:restore()
   end
 
   local w = wibox.widget {
     {
       fg_wrap,
-      left = dpi(mt.pad_header_x), right = dpi(mt.seg_overlap), -- extra right room for the tip
-      top = dpi(mt.pad_row_y), bottom = dpi(mt.pad_row_y),
+      left = dpi(mt.tag_pad_l), right = dpi(mt.tag_pad_r), -- kit .tag__content padding 0 20 0 18
+      top = 0, bottom = 0,
       widget = wibox.container.margin,
     },
-    bg                 = p.transparent,
-    bgimage            = paint_fill,
-    shape              = shape_fn,
-    shape_border_width = dpi(mt.tick_stroke), -- 1.4, a orla exterior (edge rim)
-    shape_border_color = state.edge,
-    widget             = wibox.container.background,
+    bg            = p.transparent,
+    bgimage       = paint_fill,    -- a orla e o enchimento pintam-se em camadas (vide supra)
+    shape         = shape_fn,      -- recorte externo: o conteúdo não transborda a fórma
+    forced_height = dpi(mt.tag_h), -- 24, altura fixa da aba (kit .tag/.tags height:24px)
+    widget        = wibox.container.background,
   }
 
   -- Funcção auxiliar de Braga Us: applica o estado corrente — verte a tinta ao invólucro,
   -- pinta a orla e requisita novo desenho (redraw). Sem argumentos; effeito puramente visual.
   local function apply()
     fg_wrap.fg = state.fg
-    w.shape_border_color = state.edge
-    w:emit_signal("widget::redraw_needed")
+    w:emit_signal("widget::redraw_needed") -- o redraw reexecuta paint_fill, lendo o novo `state`
   end
 
   -- ---- superfície de actualização (interface de Braga Us) --------------------

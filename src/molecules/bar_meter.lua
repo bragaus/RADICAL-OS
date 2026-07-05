@@ -1,13 +1,14 @@
 -- ══════════════════════════════════════════════════════════════════════════
 -- src/molecules/bar_meter.lua — Da lavra do Doutor BRAGA US.
 --
--- TRACTADO SOBRE O MEDIDOR DE PROGRESSO ROTULADO (VIOLET HUD BarMeter), engenho
--- do insigne geómetra Braga Us. Sua disposição: uma linha de cabeçalho
--- "RÓTULO ...... NN%" sobreposta a uma barra de progresso de largura plena.
---   RÓTULO — text_muted, em CAIXA-ALTA, à esquerda.
---   NN%    — à direita; text_bright em regime ordinário, p.crit quando quente.
---   barra  — enchimento v500 no ordinário, p.crit quando quente; leito violeta
---            esmaecido e borda subtil de HUD.
+-- TRACTADO SOBRE O MEDIDOR DE PROGRESSO ROTULADO (VIOLET HUD BarMeter, kit .bm),
+-- engenho do insigne geómetra Braga Us. Sua disposição, RECONDUZIDA à spec do kit,
+-- é UMA só linha horizontal: [rótulo 56px][vão 9][trilho flexível h8][vão 9][valor 38px].
+--   RÓTULO — text_muted, em CAIXA-ALTA, à esquerda, largura fixa 56px (.bm__lbl).
+--   NN%    — à direita, largura fixa 38px; text_bright em regime ordinário,
+--            p.glow_hot quando quente (.bm__val, ExtraBold 11).
+--   trilho — leito p.inset (sem borda), raio radius_bar; enchimento frio em
+--            gradiente horizontal v700->v500, ou p.glow_hot quando quente (.bm__fill).
 --
 -- DEFINIÇÃO DE "QUENTE" (hot) := alerta OU pct >= mt.pct_hot (a regra do >=90).
 -- Nenhuma amostragem se faz aqui — o dono alimenta os valores por :set_value
@@ -24,7 +25,7 @@
 --
 --   local bar_meter = require("src.molecules.bar_meter")
 --   local m = bar_meter{ label = "MASTER", pct = 42 }
---   m:set_value(97)          -- quente (>= pct_hot): enchimento crit + texto crit
+--   m:set_value(97)          -- quente (>= pct_hot): enchimento glow_hot + texto glow_hot
 --   m:set_value(30, true)    -- alerta forçado: quente a despeito do pct
 --   m:set_value(nil)         -- ignorado: conserva a última leitura
 -- ══════════════════════════════════════════════════════════════════════════
@@ -50,51 +51,65 @@ local function build(args)
   local init_hot  = (args.alert and true or false) or init_pct >= mt.pct_hot
   local init_disp = math.max(0, math.min(100, init_pct))
 
-  -- RÓTULO (esmaecido, CAIXA-ALTA) + VALOR (%). Ambos coloridos por markup via
-  -- txt (único soberano do markup).
+  -- Gradiente frio do enchimento: v700 -> v500, horizontal (.bm__fill). As
+  -- coordenadas do gears.color são absolutas; adopta-se a extensão nominal de
+  -- 140px (largura típica do trilho num painel de 236 — 56 rótulo, 38 valor, 2×9
+  -- de vão, 16 de enchimento), bastante para a transição se ler. Fixa-se uma só
+  -- vez, pois independe do valor corrente.
+  local FILL_COOL = gears.color {
+    type = "linear", from = { 0, 0 }, to = { dpi(140), 0 },
+    stops = { { 0, p.v700 }, { 1, p.v500 } },
+  }
+
+  -- RÓTULO (56px, esmaecido, CAIXA-ALTA — .bm__lbl) + VALOR (38px, à direita —
+  -- .bm__val, ExtraBold 11). Ambos coloridos por markup via txt (único soberano).
   local label_box = txt {
-    role  = "label",
-    text  = args.label,
-    color = p.text_muted,
-    upper = true,
+    role         = "label",
+    text         = args.label,
+    color        = p.text_muted,
+    upper        = true,
+    forced_width = dpi(56),
   }
   local value_box = txt {
-    role  = "bar",
-    text  = string.format("%d%%", math.floor(init_disp + 0.5)),
-    color = init_hot and p.crit or p.text_bright,
-    align = "right",
+    role         = "ir_value",
+    text         = string.format("%d%%", math.floor(init_disp + 0.5)),
+    color        = init_hot and p.glow_hot or p.text_bright,
+    align        = "right",
+    forced_width = dpi(38),
   }
 
-  -- Linha de cabeçalho: RÓTULO ...... NN%  (o meio vazio do align ancora o valor à direita).
-  local header = wibox.widget {
-    label_box,
-    nil,
-    value_box,
+  -- TRILHO: leito p.inset (SEM borda), raio radius_bar (2px); enchimento frio
+  -- (gradiente) no ordinário, p.glow_hot quando quente. Altura fixa 8px (.bm__track).
+  local bar = wibox.widget {
+    max_value        = 100,
+    value            = init_disp,
+    forced_height    = dpi(8),
+    color            = init_hot and p.glow_hot or FILL_COOL,
+    background_color = p.inset,
+    border_width     = 0,
+    shape            = function(cr, w, h) gears.shape.rounded_rect(cr, w, h, dpi(mt.radius_bar)) end,
+    bar_shape        = function(cr, w, h) gears.shape.rounded_rect(cr, w, h, dpi(mt.radius_bar)) end,
+    widget           = wibox.widget.progressbar,
+  }
+
+  -- O trilho flexiona (flex:1) e centra-se na vertical (kit .bm align-items:center):
+  -- container.place com content_fill_horizontal estica-o em largura, valign centra-o.
+  local track_wrap = wibox.widget {
+    bar,
+    valign                  = "center",
+    content_fill_horizontal = true,
+    widget                  = wibox.container.place,
+  }
+
+  -- Disposição horizontal única: [rótulo 56][vão 9][trilho flex][vão 9][valor 38].
+  -- O align.horizontal dilata o widget do meio (o trilho) ao espaço restante; os
+  -- vãos de 9px vêm de margens (.bm gap:9px — sem token dedicado, px verbatim).
+  local w = wibox.widget {
+    { label_box, right = dpi(9), widget = wibox.container.margin },
+    track_wrap,
+    { value_box, left = dpi(9), widget = wibox.container.margin },
     expand = "inside",
     layout = wibox.layout.align.horizontal,
-  }
-
-  -- Barra de progresso. Não existindo token dedicado para a espessura do medidor,
-  -- reaproveita-se o valor pad_panel (8px) como altura da barra (um limpo medidor
-  -- de HUD). Leito arredondado + enchimento + borda subtil.
-  local bar = wibox.widget {
-    max_value          = 100,
-    value              = init_disp,
-    forced_height      = dpi(mt.pad_panel),
-    color              = init_hot and p.crit or p.v500,
-    background_color   = p.a(p.v500, p.alpha.chip_bg),
-    border_width       = dpi(mt.border_panel),
-    border_color       = p.a(p.v500, p.alpha.chip_border),
-    shape              = gears.shape.rounded_bar,
-    bar_shape          = gears.shape.rounded_bar,
-    widget             = wibox.widget.progressbar,
-  }
-
-  local w = wibox.widget {
-    header,
-    bar,
-    spacing = dpi(mt.row_gap),
-    layout  = wibox.layout.fixed.vertical,
   }
 
   -- ── Superfície de actualização (muta os MESMOS sub-widgets in loco; sem reconstrucção) ──
@@ -107,8 +122,8 @@ local function build(args)
     local hot  = (alert and true or false) or pct >= mt.pct_hot
     local disp = math.max(0, math.min(100, pct))
     bar.value = disp
-    bar.color = hot and p.crit or p.v500
-    value_box:set_span(string.format("%d%%", math.floor(disp + 0.5)), hot and p.crit or p.text_bright)
+    bar.color = hot and p.glow_hot or FILL_COOL
+    value_box:set_span(string.format("%d%%", math.floor(disp + 0.5)), hot and p.glow_hot or p.text_bright)
   end
 
   -- Método w:set_label — commodidade additiva de Braga Us (o rótulo raro se altera;

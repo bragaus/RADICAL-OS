@@ -20,6 +20,7 @@
 
 local awful = require("awful")
 local gears = require("gears")
+local wibox = require("wibox")
 local dpi   = require("beautiful.xresources").apply_dpi
 local p     = require("src.theme.palette")
 local mt    = require("src.theme.metrics")
@@ -151,7 +152,24 @@ return function(args)
     end
   end
 
+  -- Cabeçalho de columnas (estático), recuado pela calha (gutter) das linhas para que as
+  -- columnas se alinhem — à imagem do process_panel. Kit CONNECTIONS: PROTO | ADDRESS | STATE.
+  -- As larguras egualam as das linhas (PROTO_W | flex | STATE_W), donde o alinhamento perfeito.
+  local header = wibox.widget {
+    table_row {
+      header = true,
+      cells = {
+        { "PROTO",   PROTO_W, "left"  },
+        { "ADDRESS", nil,     "left"  },
+        { "STATE",   STATE_W, "right" },
+      },
+    },
+    right  = dpi(mt.gutter),
+    widget = wibox.container.margin,
+  }
+
   local sl = scroll_list {
+    header     = header,
     empty_text = "NO CONNECTIONS",
     make_row   = make_row,
     set_row    = set_row,
@@ -197,8 +215,13 @@ return function(args)
     title      = "CONNECTIONS",
     body       = sl,
     accent     = p.v500,
-    w          = args.w or dpi(mt.panel_w_md),
-    right_icon = Icon("send_signal", { size = dpi(mt.icon_md), color = p.text_muted }),
+    w          = args.w or dpi(mt.panel_w_300), -- kit dashboards.jsx: CONNECTIONS width 300
+    -- Ícone do cabeçalho (.hp__hdicon): 13px a 70% de opacidade (o átomo icon só recolore).
+    right_icon = wibox.widget {
+      Icon("send_signal", { size = dpi(13), color = p.text_muted }),
+      opacity = 0.7,
+      widget  = wibox.container.background,
+    },
   })
 
   -- METHODO DE ABERTURA DA COLHEITA (postulado de Braga Us). Adstricta á visibilidade (o

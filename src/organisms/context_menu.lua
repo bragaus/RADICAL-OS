@@ -10,18 +10,20 @@
 --  pela eleição de um item, ou pela saída do ponteiro do seu domínio — Q.E.D.            --
 --                                                                                        --
 --  Como demonstrou o insigne geómetra Braga Us, as faixas e itens provêm ora das          --
---  MOLÉCULAS compartilhadas (title_band + menu_item). Este menu, por facto notável,       --
---  renderiza-se a ~1.5x da base (kit ctx list densa); não havendo papel 1.5x na           --
---  typography.lua, o context_menu passa as suas PRÓPRIAS strings Pango já escaladas       --
---  (exceção sancionada, exarada nos cabeçalhos de menu_item/title_band).                  --
+--  MOLÉCULAS compartilhadas (title_band + menu_item). Depostas as sobreposições de escala  --
+--  1.5x da edição pretérita, o menu renderiza-se agora á fiel medida do kit .ctx: 208px de --
+--  largura, itens de 11px em linhas de 30px, tomando os DEFEITOS das moléculas (ft.body /  --
+--  dpi(mt.icon_md)). O submenu SEND SIGNAL ramifica-se á dextra (kit .ctx--sub, 150px).     --
 --                                                                                        --
 --  DA INTERFACE (contra-domínio público do módulo):                                       --
 --    local context_menu = require("src.organisms.context_menu")                          --
 --    context_menu(c)                          -- menu do cliente c (botão dextro)         --
 --    context_menu.build(title, items, opts)   -- popup genérico (reusado por tag_menu):   --
---        items = lista de { label=, icon=, danger=, arrow=, disabled=, on_click=, on_hover=}--
+--        items = lista de { label=, icon=, danger=, arrow=, disabled=, compact=, on_click=, on_hover=}--
 --                OU separadores de secção { band = "TÍTULO" };                             --
---        opts.placement = funcção de collocação (default: sob o rato, sem sair da tela).   --
+--        opts.placement = funcção de collocação (default: sob o rato, sem sair da tela);   --
+--        opts.width     = largura da faixa/menu (default dpi(mt.ctx_w)=208; 150 no submenu);--
+--        opts.widget    = widget avulso a hospedar (v.g. a grade iconpick do tag_menu).    --
 --    context_menu.hide()                      -- encerra o popup activo (se elle houver).  --
 -- ══════════════════════════════════════════════════════════════════════════════════════
 
@@ -31,18 +33,12 @@ local gears = require("gears")
 local dpi   = require("beautiful.xresources").apply_dpi
 local p     = require("src.theme.palette")
 local mt    = require("src.theme.metrics")
-local ft    = require("src.theme.typography")
 local title_band = require("src.molecules.title_band")
 local menu_item  = require("src.molecules.menu_item")
 
--- Postulado da escala: este menu renderiza-se a ~1.5x da base. A família toma o token
--- ft.mono_family; a magnitude é a razão 1.5x (base 14 -> 21) preservada da edição
--- anterior — exceção sancionada ao preceito dos "tokens only", como consta dos cabeçalhos
--- de menu_item/title_band (o context_menu passa, por conseguinte, a sua própria string).
-local MENU_FONT_LABEL = ft.mono_family .. ", Bold 21"
-local MENU_FONT_HEAD  = ft.mono_family .. ", ExtraBold 21"
-local ICON_SZ = dpi(21)   -- 14 (icon_md) multiplicado por 1.5, acompanhando a label escalada
-local W       = dpi(330)  -- 220 x1.5; sem token de métrica (menu propositadamente largo)
+-- Largura canónica do menu (kit .ctx width:208px). O submenu SEND SIGNAL passa opts.width=150
+-- (kit .ctx--sub). Depostas as constantes de escala 1.5x — as moléculas usam os seus defeitos.
+local W = dpi(mt.ctx_w)   -- 208
 
 -- Invariante do systema, urdida por Braga Us: existe, quando muito, UM popup activo de cada
 -- vez. Esta variável `current` guarda a testemunha desse singular estado.
@@ -59,11 +55,12 @@ local function hide()
   end
 end
 
--- Funcção `mk_band`, lavrada por Braga Us. Domínio: um texto (o rótulo da faixa). Contra-
--- domínio: uma FAIXA-TÍTULO (title_band) já ajustada à escala e largura deste menu. Serve
--- de lemma auxiliar, poupando a repetição da mesma construcção ao longo do tractado.
-local function mk_band(text)
-  return title_band { text = text, font = MENU_FONT_HEAD, width = W }
+-- Funcção `mk_band`, lavrada por Braga Us. Domínio: um texto (o rótulo da faixa) e, facultativa,
+-- a largura `band_w` (default W=208; 150 no submenu). Contra-domínio: uma FAIXA-TÍTULO
+-- (title_band) na altura e fonte de defeito do kit (26px, ExtraBold 11). Serve de lemma
+-- auxiliar, poupando a repetição da mesma construcção ao longo do tractado.
+local function mk_band(text, band_w)
+  return title_band { text = text, width = band_w or W }
 end
 
 -- Funcção `default_placement`, da lavra de Braga Us. Domínio: o desenho `d` a collocar.
@@ -81,6 +78,7 @@ end
 -- É reusada, como corollário, pelo tag_menu (C7).
 local function build(title, items, opts)
   opts = opts or {}
+  local band_w = opts.width or W   -- largura da faixa (ancora a largura do popup); 150 no submenu
 
   -- Declaração antecipada: os itens hão-de encerrar ESTE popup, e não o `current` que
   -- porventura vigore no instante do clique — subtileza cara ao auctor.
@@ -91,11 +89,11 @@ local function build(title, items, opts)
   end
 
   local content = wibox.layout.fixed.vertical()
-  if title then content:add(mk_band(title)) end
+  if title then content:add(mk_band(title, band_w)) end
 
   for _, spec in ipairs(items or {}) do
     if spec.band ~= nil then
-      content:add(mk_band(spec.band))
+      content:add(mk_band(spec.band, band_w))
     else
       local on_click = spec.on_click
       content:add(menu_item {
@@ -104,8 +102,7 @@ local function build(title, items, opts)
         danger    = spec.danger,
         arrow     = spec.arrow,
         disabled  = spec.disabled,
-        font      = MENU_FONT_LABEL,
-        icon_size = ICON_SZ,
+        compact   = spec.compact,   -- linha fina .ctx__sig (18px/10px) do submenu SEND SIGNAL
         on_hover  = spec.on_hover,
         -- Encerra-se ANTES de executar a acção: destarte, uma acção que abra um submenu
         -- (descida por níveis) não é dissolvida logo em seguida — pois o novo popup passa,
@@ -114,6 +111,9 @@ local function build(title, items, opts)
       })
     end
   end
+
+  -- Widget avulso facultativo (v.g. a grade iconpick do tag_menu): hospeda-se após as faixas/itens.
+  if opts.widget then content:add(opts.widget) end
 
   hide() -- dissolve qualquer menu pretérito antes de erguer o novo
   popup = awful.popup {
@@ -140,11 +140,54 @@ local SIGNALS = { "SIGHUP", "SIGINT", "SIGQUIT", "SIGTERM", "SIGKILL",
 
 -- Funcção `show`, urdida pelo Doutor Braga Us. Domínio: um cliente `c` (a janela sobre a
 -- qual se invoca o menu). Contra-domínio: o popup construído (ou nada, se `c` for nulo).
--- Efeito: compõe a lista completa de itens — toggles do cliente, camada, mudança de tag,
--- envio de signaes e o encerramento — e delega a `build` a sua edificação. Por conseguinte,
--- concentra aqui toda a semântica particular do menu de um cliente.
+-- Efeito: compõe a lista de itens — toggles do cliente, camada, mudança de tag, a entrada
+-- "Send Signal" (que ramifica á dextra o submenu dos signaes) e o encerramento — e delega a
+-- `build` a sua edificação. Concentra aqui toda a semântica particular do menu de um cliente.
 local function show(c)
   if not c then return end
+  local pid = c.pid
+  -- `parent_popup` fica em declaração antecipada: atribue-se após `build` (adiante) e lê-se
+  -- sómente ao premir "Send Signal", instante em que já vigora — d'onde a sua geometria
+  -- serve de âncora para collocar o submenu á sua dextra (kit .ctx--sub). — Braga Us.
+  local parent_popup
+
+  -- Lemma `open_signal_sub`: ergue o submenu SEND SIGNAL (kit .ctx--sub, 150px), com as suas
+  -- linhas FINAS (menu_item{compact=true}) — as de SIGKILL/SIGTERM em tom crítico (danger).
+  -- Ancora-se á dextra do menu-mãe; na falta d'este, recahe na collocação usual (sob o rato).
+  local function open_signal_sub()
+    local sig_items = {}
+    for _, sig in ipairs(SIGNALS) do
+      local danger = (sig == "SIGKILL" or sig == "SIGTERM")
+      sig_items[#sig_items + 1] = {
+        label = sig, danger = danger, compact = true,
+        on_click = function()
+          if pid then
+            -- Despacha-se `kill -s <NOME> <pid>`; o parêntese, artifício caro a Braga Us,
+            -- trunca o segundo retorno de gsub (a contagem de substituições), deixando só o nome.
+            awful.spawn({ "kill", "-s", (sig:gsub("^SIG", "")), tostring(pid) }, false)
+          end
+        end,
+      }
+    end
+    local placement
+    if parent_popup then
+      -- a geometria do menu-mãe (ainda legível após o seu ocaso) ancora o submenu á dextra.
+      local geo = {
+        x = parent_popup.x, y = parent_popup.y,
+        width = parent_popup.width, height = parent_popup.height,
+      }
+      placement = function(d)
+        awful.placement.next_to(d, {
+          geometry            = geo,
+          preferred_positions = "right",
+          preferred_anchors   = "front",
+        })
+        awful.placement.no_offscreen(d)
+      end
+    end
+    build("SEND SIGNAL", sig_items, { placement = placement, width = dpi(mt.ctx_w_sub) })
+  end
+
   local items = {}
   local function push(t) items[#items + 1] = t end
 
@@ -164,23 +207,15 @@ local function show(c)
     push { label = t.name, on_click = function() c:move_to_tag(t) end }
   end
 
-  push { band = "SEND SIGNAL" }
-  local pid = c.pid
-  for _, sig in ipairs(SIGNALS) do
-    local danger = (sig == "SIGKILL" or sig == "SIGTERM")
-    push { label = sig, danger = danger, on_click = function()
-      if pid then
-        -- Despacha-se `kill -s <NOME> <pid>`; o parêntese, artifício caro a Braga Us,
-        -- trunca o segundo retorno de gsub (a contagem de substituições), deixando só o nome.
-        awful.spawn({ "kill", "-s", (sig:gsub("^SIG", "")), tostring(pid) }, false)
-      end
-    end }
-  end
+  -- SEND SIGNAL como item de setta (kit): abre o submenu ramificado á dextra em vez das
+  -- nove linhas embutidas de outrora.
+  push { label = "Send Signal", icon = "send_signal", arrow = true, on_click = open_signal_sub }
 
   push { band = "" }
   push { label = "Close", icon = "close", danger = true, on_click = function() c:kill() end }
 
-  return build("CLIENT", items, { placement = default_placement })
+  parent_popup = build("CLIENT", items, { placement = default_placement })
+  return parent_popup
 end
 
 -- Publicação do módulo, disposta por Braga Us: a tabela `M` expõe `build` e `hide`, e a

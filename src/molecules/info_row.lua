@@ -36,13 +36,14 @@ local chip   = require("src.atoms.chip")
 local swatch = require("src.atoms.swatch")
 
 -- Taboa de papéis typographicos por variante, eleita pelo Doutor Braga Us de
--- sorte a arremedar cada consumidor substituído tão de perto quanto o conjuncto
--- de tokens permitte (vide o relatório): plain/swatch são exactos; chip é
--- ExtraBold 11->12; "rule" adopta label/value (o world_clock vivia em 14pt — um
--- encolhimento deliberado, verificado em Xephyr quando C8 reconstruir o world_clock).
+-- sorte a arremedar cada consumidor tão de perto quanto o conjuncto de tokens
+-- permitte. Na presente lavra de fidelidade, plain e chip foram RECONDUZIDOS à
+-- spec do kit: chave .ir__k = label (Bold 10) e valor .ir__v = ir_value
+-- (ExtraBold 11 — o token value=12 é do lozango .seg__v, NÃO da info-row). A
+-- variante swatch conserva cell/cell_bold; "rule" adopta label/value.
 local ROLE = {
-  plain  = { key = "cell",  value = "cell" },
-  chip   = { key = "label", value = "value" },
+  plain  = { key = "label", value = "ir_value" },
+  chip   = { key = "label", value = "ir_value" },
   swatch = { key = "cell",  value = "cell_bold" },
   rule   = { key = "label", value = "value" },
 }
