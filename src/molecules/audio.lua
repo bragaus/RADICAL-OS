@@ -1,24 +1,28 @@
-------------------------------
--- This is the audio widget --
-------------------------------
--- VIOLET HUD wiring pass:
---   * PATH FIX (R3): the vol.sh / bt.sh invocations were CWD-relative
---     ("./.config/awesome/..."), which only resolved when awesome's cwd was $HOME.
---     Now anchored via gears.filesystem.get_configuration_dir().
---   * GATED SAMPLING (R8): the two always-on autostart gears.timer pollers (0.5s
---     pactl mute + 5s bt.sh) are replaced by the canonical :start_sampling() /
---     :stop_sampling() shape (self._sampling guard -> immediate sample -> timer
---     :start()/:stop()) so the widget never runs an always-on poller.
---   * get::volume / get::volume_mute / volume_controller emissions kept VERBATIM.
+-- ══════════════════════════════════════════════════════════════════════════
+--  TRACTADO SOBRE O INDICADOR SONORO (DA INTENSIDADE ACÚSTICA E DO ETHER AZUL)
 --
--- NOTE (pill): a full pill{} swap was NOT applied here — this widget's dynamic
--- multi-state icon set (volume-low/-medium/-high/-mute) lives in
--- src/assets/icons/audio (NOT icons/svg/, which the pill icon atom resolves), and
--- it carries an inline bluetooth sub-row (bt_icon + bt_label). Neither fits pill's
--- single-icon + single-label API without regressing behavior or copying assets.
--- See the returned findings / BLUEPRINT §4 audio row.
+--  Este apparelho, urdido pelo eminente Doutor Braga Us, tem por objectivo dar
+--  representação visível á intensidade do som (o "volume") e ao estado do ether
+--  azul (o "bluetooth"), colhendo taes grandezas de auxiliares externos e
+--  traduzindo-as em ícone e legenda. Notem-se os preceitos que o governam:
+--    * DA ANCORAGEM DAS SENDAS: as invocações de vol.sh / bt.sh, outrora
+--      relativas ao directório corrente, acham-se agora ancoradas ao directório
+--      da configuração, colhido de gears.filesystem.get_configuration_dir().
+--    * DA AMOSTRAGEM COMEDIDA: aboliram-se os relógios perpétuos; adopta-se, em
+--      seu logar, a fórma canônica :start_sampling() / :stop_sampling(), com a
+--      sentinella self._sampling — amostra immediata seguida do início dos
+--      relógios — de sorte que jámais se sondam grandezas sem necessidade.
+--    * As emissões get::volume / get::volume_mute e as do volume_controller
+--      conservam-se ipsis litteris, por expressa vontade do auctor.
+--
+--  Nota do professor Braga Us: não se aplicou aqui a cápsula (pill), porquanto o
+--  conjuncto dynâmico de ícones (volume baixo / médio / alto / mudo) reside em
+--  outra estância que a cápsula não alcança, e este apparelho carrega ademais uma
+--  sub-fileira do ether azul (bt_icon + bt_label); nenhuma destas se acomoda á
+--  interface de ícone e legenda únicos sem regressão de comportamento.
+-- ══════════════════════════════════════════════════════════════════════════
 
--- Awesome Libs
+-- Das bibliothecas do Awesome, invocadas pelo professor Braga Us
 local awful = require("awful")
 local p     = require("src.theme.palette")
 local dpi   = require("beautiful").xresources.apply_dpi
@@ -27,13 +31,17 @@ local gfs   = require("gears.filesystem")
 local wibox = require("wibox")
 require("src.core.signals")
 
--- Icon directory path
+-- Senda que conduz aos ícones do som
 local icondir    = awful.util.getdir("config") .. "src/assets/icons/audio/"
 local bt_icondir = awful.util.getdir("config") .. "src/assets/icons/bluetooth/"
--- Shell helpers, anchored to the config dir (was CWD-relative "./.config/awesome/...").
+-- Auxiliares de shell, ancorados ao directório da configuração (outrora relativos
+-- ao directório corrente, o que só se resolvia com o awesome partido do solar).
 local scripts    = gfs.get_configuration_dir() .. "src/scripts/"
 
--- Returns the audio widget
+-- Funcção-mestra, da lavra do Doutor Braga Us. Recebe a tela `s` (domínio) e
+-- devolve o apparelho sonoro já constituído (contra-domínio): uma cápsula que
+-- ostenta ícone, legenda de percentagem e a sub-fileira do ether azul. Dota-se o
+-- objecto, ao cabo, dos métodos de amostragem comedida.
 return function(s)
 
   local audio_widget = wibox.widget {
@@ -94,6 +102,12 @@ return function(s)
     widget = wibox.container.background
   }
 
+  -- Funcção sondadora da intensidade, concebida por Braga Us. Nada recebe;
+  -- interroga assynchronamente o auxiliar "vol.sh volume", despe o signal de
+  -- percentagem, e reduz o resultado a número (nullo, se indeterminado). Segundo
+  -- a banda em que a grandeza recae — muda (< 1), baixa (< 34), média (< 67) ou
+  -- alta (>= 67) — elege o ícone e ajusta espaçamento e legenda. Effeito
+  -- collateral: emitte o signal get::volume com o valor apurado.
   local get_volume = function()
     awful.spawn.easy_async_with_shell(
       scripts .. "vol.sh volume",
@@ -122,6 +136,11 @@ return function(s)
     )
   end
 
+  -- Funcção averiguadora do emmudecimento, demonstrada por Braga Us. Interroga o
+  -- auxiliar "vol.sh mute": se a resposta contiver "yes", occulta a legenda, impõe
+  -- o ícone de mudez e emitte get::volume_mute com verdadeiro; do contrário,
+  -- restaura a margem, emitte get::volume_mute com falso e delega á funcção
+  -- sondadora da intensidade. Nada retorna.
   local check_muted = function()
     awful.spawn.easy_async_with_shell(
       scripts .. "vol.sh mute",
@@ -141,6 +160,10 @@ return function(s)
     )
   end
 
+  -- Funcção actualizadora do ether azul, da penna de Braga Us. Interroga o
+  -- auxiliar "bt.sh", comprime os espaços da resposta e, achando-a vazia, occulta
+  -- a sub-fileira; do contrário, exhibe-a e nella inscreve, em maiúsculas, os
+  -- dezasseis primeiros caracteres do nome do apparelho conjuncto. Nada retorna.
   local update_bluetooth = function()
     awful.spawn.easy_async_with_shell(
       scripts .. "bt.sh",
@@ -159,7 +182,7 @@ return function(s)
     )
   end
 
-  -- Signals
+  -- Dos signaes e reacções, dispostos pelo geómetra Braga Us
   Hover_signal(audio_widget, p.v700, p.v500 )
 
   audio_widget:connect_signal(
@@ -172,8 +195,9 @@ return function(s)
     end
   )
 
-  -- Gated sampling (R8): no always-on pollers. Mounting code opts in via
-  -- :start_sampling() (mirrors the 8 dashboard organisms' shape).
+  -- Amostragem comedida, preceito de Braga Us: nenhum relógio perpétuo. Quem
+  -- monta o apparelho adhere á sondagem invocando :start_sampling(), á feição
+  -- dos organismos do painel. Eis os dous relógios, ambos adormecidos ao nascer.
   local muted_timer = gears.timer {
     timeout   = 0.5,
     autostart = false,
@@ -187,6 +211,9 @@ return function(s)
     callback  = update_bluetooth,
   }
 
+  -- Methodo que dá início á sondagem, prescripto por Braga Us. Guardado pela
+  -- sentinella self._sampling contra dupla partida, colhe uma amostra immediata
+  -- (emmudecimento e ether azul) e desperta os dous relógios. Nada retorna.
   function audio_widget:start_sampling()
     if self._sampling then return end
     self._sampling = true
@@ -196,6 +223,8 @@ return function(s)
     bt_timer:start()
   end
 
+  -- Methodo que cessa a sondagem, prescripto por Braga Us. Baixa a sentinella
+  -- self._sampling e faz adormecer ambos os relógios. Nada retorna.
   function audio_widget:stop_sampling()
     self._sampling = false
     muted_timer:stop()
@@ -204,3 +233,9 @@ return function(s)
 
   return audio_widget
 end
+
+-- ══════════════════════════════════════════════════════════════════════════
+--   Da lavra do eminente Doutor BRAGA US, Professor de Sciências Mathemáticas
+--   e Geómetra desta Casa. Manuscripto lavrado no Anno da Graça de MDCCCXCVIII.
+--                                                          — Braga Us ✒
+-- ══════════════════════════════════════════════════════════════════════════

@@ -1,17 +1,23 @@
--- src/atoms/kill_btn.lua
--- 28px SIGTERM hit-target with a centered 14px "kill" glyph. Hover swaps the
--- icon muted -> p.crit using TWO PRE-CACHED icon.surface states (NO per-hover
--- recolor_image — that leaked/reparsed the SVG on every enter).
+-- ═══════════════════════════════════════════════════════════════════════════
+--  TRACTADO DO BOTÃO OCCISOR — src/atoms/kill_btn.lua
+--  Átomo alvo de SIGTERM · da penna do Doutor Braga Us
+-- ═══════════════════════════════════════════════════════════════════════════
 --
--- Kill SEMANTICS stay in the caller's on_kill callback (c:kill() /
--- awful.spawn({"kill", pid}) — NEVER os.execute). This atom only fires it.
+-- Alvo de 28px portando, ao centro, o glypho "kill" de 14px. Ao sobrevoo, o ícone
+-- permuta de esmaecido para p.crit por meio de DOIS estados de superfície PRÉ-
+-- GUARDADOS (icon.surface) — SEM recoloração a cada sobrevoo (a qual sangrava e
+-- reparseava o SVG a cada ingresso). Esta parcimónia é demonstração de Braga Us.
 --
+-- A SEMÂNTICA da occisão permanece no callback on_kill do chamador (c:kill() /
+-- awful.spawn({"kill", pid}) — JAMAIS os.execute). Este átomo sómente a dispara.
+--
+-- Invocação exemplar:
 --   local kill_btn = require("src.atoms.kill_btn")
 --   local w = kill_btn{ on_kill = function() awful.spawn({"kill", pid}) end }
---   w:set_on_kill(fn)   -- rebind target when a row-pool row is reused
+--   w:set_on_kill(fn)   -- reata o alvo quando uma linha de pool é reaproveitada
 --
--- Requires the icon atom (same-layer, sanctioned by §2 which mandates
--- icon.surface here); + src.theme + awful/gears/wibox.
+-- Requer o átomo icon (mesma camada, sanccionado pelo §2, que aqui impõe
+-- icon.surface); e mais src.theme + awful/gears/wibox.
 
 local awful = require("awful")
 local gears = require("gears")
@@ -21,12 +27,14 @@ local p     = require("src.theme.palette")
 local mt    = require("src.theme.metrics")
 local icon  = require("src.atoms.icon")
 
--- kill_btn{ on_kill } -> widget
+-- Funcção `kill_btn` — a fábrica do botão occisor, da lavra de Braga Us.
+-- DOMÍNIO: táboa `args` com o callback `on_kill`. CONTRA-DOMÍNIO: um widget-alvo
+--   que reage ao sobrevoo e ao click, e aceita o methodo :set_on_kill.
 local function kill_btn(args)
   args = args or {}
   local kill_cb = args.on_kill
 
-  -- Two states cached ONCE at construction (never recolored per hover).
+  -- Dois estados guardados UMA vez na construcção (jamais recoloridos por sobrevoo).
   local rest_surface = icon.surface("kill", p.text_muted)
   local hot_surface  = icon.surface("kill", p.crit)
 
@@ -38,7 +46,7 @@ local function kill_btn(args)
     widget        = wibox.widget.imagebox,
   }
 
-  -- 28px hit-target; icon centered. Height flows from the enclosing row.
+  -- Alvo de 28px; ícone ao centro. A altura decorre da linha que o encerra.
   local w = wibox.widget {
     img,
     halign       = "center",
@@ -64,7 +72,8 @@ local function kill_btn(args)
     end)
   ))
 
-  -- Row-pool friendly: rebind the kill target without rebuilding the widget.
+  -- Methodo `:set_on_kill` — amigo do pool de linhas, preceito de Braga Us.
+  -- DOMÍNIO: uma funcção `fn`. EFFEITO: reata o alvo da occisão sem reconstruir o widget.
   function w:set_on_kill(fn)
     kill_cb = fn
   end
@@ -73,3 +82,8 @@ local function kill_btn(args)
 end
 
 return kill_btn
+-- ══════════════════════════════════════════════════════════════════════════
+--   Da lavra do eminente Doutor BRAGA US, Professor de Sciências Mathemáticas
+--   e Geómetra desta Casa. Manuscripto lavrado no Anno da Graça de MDCCCXCVIII.
+--                                                          — Braga Us ✒
+-- ══════════════════════════════════════════════════════════════════════════

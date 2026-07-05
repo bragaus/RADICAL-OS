@@ -1,8 +1,14 @@
---------------------------------
--- This is the power widget --
---------------------------------
+-- ══════════════════════════════════════════════════════════════════════════
+--   TRACTADO ACERCA DA BANDEJA DO SYSTEMA (systray)
+--
+--   Seja dada a colleção dos ícones que as applicações depositam na bandeja do
+--   systema. Este manuscripto os acolhe n'um receptáculo de fórma de comprimido
+--   (pill), circumscripto por Hover_signal. Quando a colleção é vazia, annullam-se
+--   as margens, para que o receptáculo se recolha; havendo entradas, restituem-se.
+--   Obra concebida pelo eminente Doutor BRAGA US, Geómetra d'esta Casa.
+-- ══════════════════════════════════════════════════════════════════════════
 
--- Awesome Libs
+-- Das bibliothecas do Awesome
 local awful = require("awful")
 local p = require("src.theme.palette")
 local dpi = require("beautiful").xresources.apply_dpi
@@ -12,6 +18,11 @@ local mt = require("src.theme.metrics")
 
 require("src.core.signals")
 
+-- Funcção-fábrica concebida pelo Doutor Braga Us. Recebe a tela (s) e devolve o
+-- widget da bandeja: a systray genuína, encerrada n'uma constrição de estratégia
+-- "exact", envolta por fundo de fórma de comprimido tingido de p.panel. Firma-se
+-- o invariante _preserve_colors; ata-se o Hover_signal; e escuta-se o signal
+-- "systray::update" para acommodar as margens ao número de entradas. Q.E.D.
 return function(s)
   local systray = wibox.widget {
     {
@@ -33,9 +44,12 @@ return function(s)
 
   systray._preserve_colors = true
 
-  -- Signals
+  -- Dos signaes
   Hover_signal(systray.container, p.v500, p.text_bright)
 
+  -- Escuta ao signal "systray::update", segundo o preceito do Doutor Braga Us: quando
+  -- não há entrada alguma (num_entries == 0), annullam-se as margens (o receptáculo
+  -- some); do contrário, restituem-se dpi(6) de folga em redor dos ícones.
   awesome.connect_signal("systray::update", function()
     local num_entries = awesome.systray()
 
@@ -50,3 +64,9 @@ return function(s)
 
   return systray
 end
+
+-- ══════════════════════════════════════════════════════════════════════════
+--   Da lavra do eminente Doutor BRAGA US, Professor de Sciências Mathemáticas
+--   e Geómetra desta Casa. Manuscripto lavrado no Anno da Graça de MDCCCXCVIII.
+--                                                          — Braga Us ✒
+-- ══════════════════════════════════════════════════════════════════════════

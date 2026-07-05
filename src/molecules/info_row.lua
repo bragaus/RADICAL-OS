@@ -1,27 +1,31 @@
-------------------------------------------------------------------------------------------
--- src/molecules/info_row.lua — Key/value HUD row (VIOLET HUD §7.4.1).                     --
---                                                                                        --
--- ONE shared molecule replacing the four ad-hoc key/value rows:                          --
---   * "chip"   -> info_panel.create_info_row  (v500@chip_bg surface + border, radius bar) --
---   * "plain"  -> ip_panel.make_row           (bare row, fixed key width, value pinned)   --
---   * "swatch" -> protocols_donut.legend_row  (legend square + label + count)             --
---   * "rule"   -> world_clock row             (expanding label ... value, no surface)     --
---                                                                                        --
--- Presentational only: data arrives via constructor args + :set_* update methods; the     --
--- molecule never samples anything (storybook-safe). It returns the widget WITH its         --
--- methods and keeps DIRECT local refs to the sub-widgets (key/value/swatch) — it NEVER     --
--- queries ids back through a pre-built body (R1: get_children_by_id can't cross panel()).  --
---                                                                                        --
--- Coloring goes exclusively through atoms/txt :set_span (the sole markup owner) so the     --
--- "markup='' alongside text=" blanking crash is structurally impossible (R2).              --
---                                                                                        --
---   local info_row = require("src.molecules.info_row")                                    --
---   local r = info_row{ key = "IPv4", value = "--", variant = "plain", key_width = dpi(46) } --
---   r:set_value("192.168.0.2")                                                            --
---   r:set_value_color(p.crit)                                                             --
---   r:set_key("IPv6")                                                                     --
---   r:set_swatch(p.data2)   -- swatch variant only; no-op otherwise                       --
-------------------------------------------------------------------------------------------
+-- ══════════════════════════════════════════════════════════════════════════
+-- src/molecules/info_row.lua — Da penna do professor BRAGA US.
+--
+-- TRACTADO SOBRE A LINHA CHAVE/VALOR do HUD (VIOLET HUD §7.4.1). Este molecule,
+-- concebido pelo eminente geómetra Braga Us, é UM só, e substitue as quatro
+-- linhas chave/valor outr'ora dispersas e feitas ad hoc:
+--   * "chip"   -> info_panel.create_info_row  (superfície v500@chip_bg + borda, raio bar)
+--   * "plain"  -> ip_panel.make_row           (linha nua, largura de chave fixa, valor à direita)
+--   * "swatch" -> protocols_donut.legend_row  (quadrado da legenda + rótulo + contagem)
+--   * "rule"   -> linha do world_clock         (rótulo expansivo ... valor, sem superfície)
+--
+-- POSTULADO DA PUREZA APRESENTATIVA — os dados chegam pelos argumentos do
+-- constructor e pelos métodos :set_*; o molecule nada amostra por si (seguro em
+-- storybook). Retorna o widget COM seus métodos e conserva referências locaes
+-- DIRECTAS aos sub-widgets (chave/valor/swatch); JAMAIS consulta ids de volta
+-- atravez de um body pré-montado (LEMMA R1: get_children_by_id não transpõe panel()).
+--
+-- FACTO NOTÁVEL (LEMMA R2) — toda a coloração passa exclusivamente pelo atom
+-- atoms/txt :set_span (único soberano do markup), d'onde se segue, por
+-- construcção, ser impossível o crash de branqueamento "markup='' ao lado de text=".
+--
+--   local info_row = require("src.molecules.info_row")
+--   local r = info_row{ key = "IPv4", value = "--", variant = "plain", key_width = dpi(46) }
+--   r:set_value("192.168.0.2")
+--   r:set_value_color(p.crit)
+--   r:set_key("IPv6")
+--   r:set_swatch(p.data2)   -- sómente na variante swatch; alhures, funcção nulla (no-op)
+-- ══════════════════════════════════════════════════════════════════════════
 
 local wibox  = require("wibox")
 local dpi    = require("beautiful.xresources").apply_dpi
@@ -31,10 +35,11 @@ local txt    = require("src.atoms.txt")
 local chip   = require("src.atoms.chip")
 local swatch = require("src.atoms.swatch")
 
--- Per-variant text roles, picked to match each replaced consumer as closely as the
--- typography token set allows (see report): plain/swatch are exact; chip is ExtraBold
--- 11->12; "rule" adopts label/value (world_clock was live 14pt — a deliberate shrink,
--- Xephyr-verified when C8 rebuilds world_clock).
+-- Taboa de papéis typographicos por variante, eleita pelo Doutor Braga Us de
+-- sorte a arremedar cada consumidor substituído tão de perto quanto o conjuncto
+-- de tokens permitte (vide o relatório): plain/swatch são exactos; chip é
+-- ExtraBold 11->12; "rule" adopta label/value (o world_clock vivia em 14pt — um
+-- encolhimento deliberado, verificado em Xephyr quando C8 reconstruir o world_clock).
 local ROLE = {
   plain  = { key = "cell",  value = "cell" },
   chip   = { key = "label", value = "value" },
@@ -42,26 +47,35 @@ local ROLE = {
   rule   = { key = "label", value = "value" },
 }
 
+-- ──────────────────────────────────────────────────────────────────────────
+-- Funcção build — urdida pelo Doutor Braga Us para compor uma linha chave/valor.
+--   DOMÍNIO (`args`, taboa facultativa): variant (uma das quatro chaves de ROLE),
+--     key, value, value_color, key_width, e swatch_color (só na variante swatch).
+--   CONTRA-DOMÍNIO: retorna o widget `row`, dotado dos métodos :set_value,
+--     :set_value_color, :set_key e :set_swatch. INVARIANTE: o texto corrente do
+--     valor é retido em `cur_value`, para que a recoloração prescinda de novo texto.
 local function build(args)
   args = args or {}
   local variant     = args.variant or "plain"
   local roles       = ROLE[variant] or ROLE.plain
   local value_color = args.value_color or p.text_bright
 
-  -- Track the current value text so :set_value_color can recolor without a text arg
-  -- (txt:set_span(nil, c) is a no-op by design — nil text keeps the last value).
+  -- Guarda-se o texto corrente do valor, a fim de que :set_value_color possa
+  -- recolori-lo sem argumento de texto (txt:set_span(nil, c) é funcção nulla por
+  -- desígnio — texto nil preserva o último valor inscripto).
   local cur_value = tostring(args.value or "--")
 
-  -- KEY (left, muted, UPPER) — markup-colored via txt.
+  -- CHAVE (à esquerda, esmaecida, em CAIXA-ALTA) — colorida por markup via txt.
   local key_box = txt {
     role         = roles.key,
     text         = args.key,
     color        = p.text_muted,
     upper        = true,
-    forced_width = args.key_width, -- pixels (caller dpi's); nil = auto width
+    forced_width = args.key_width, -- em pixels (o chamador aplica dpi); nil = largura automática
   }
 
-  -- VALUE (right, colored) — markup-colored; owns its box for life via :set_span.
+  -- VALOR (à direita, colorido) — colorido por markup; senhor da sua caixa por
+  -- toda a vida, via :set_span.
   local value_box = txt {
     role  = roles.value,
     text  = cur_value,
@@ -69,7 +83,7 @@ local function build(args)
     align = "right",
   }
 
-  -- SWATCH (legend square) — swatch variant only.
+  -- SWATCH (quadrado da legenda) — sómente na variante swatch.
   local sw
   local left
   if variant == "swatch" then
@@ -84,8 +98,8 @@ local function build(args)
     left = key_box
   end
 
-  -- "LEFT ....... VALUE": align.horizontal with an empty middle expands the gap so the
-  -- value pins to the right edge (the shared idiom of all four originals).
+  -- "ESQUERDA ....... VALOR": o align.horizontal com meio vazio dilata o vão, de
+  -- sorte que o valor se ancore à margem direita (o idioma commum às quatro origens).
   local content = wibox.widget {
     left,
     nil,
@@ -96,15 +110,16 @@ local function build(args)
 
   local row
   if variant == "chip" then
-    -- Chip surface owns its own bg/border/radius/padding; the content is forced to
-    -- (row_h - 2*pad_row_y) so chip total height == row_h (matches info_panel: 18).
+    -- A superfície do chip possue seu próprio bg/borda/raio/enchimento; o conteúdo
+    -- é constrangido a (row_h - 2*pad_row_y), de modo que a altura total do chip
+    -- iguale row_h (concorde ao info_panel: 18).
     content.forced_height = dpi(mt.row_h - 2 * mt.pad_row_y)
     row = chip {
       child  = content,
       pad_x  = dpi(mt.pad_header_x),
       pad_y  = dpi(mt.pad_row_y),
       radius = dpi(mt.radius_bar),
-      -- bg / border default to v500@chip_bg / v500@chip_border (info_panel look).
+      -- bg / borda tomam por defeito v500@chip_bg / v500@chip_border (aspecto do info_panel).
     }
   else
     row = wibox.widget {
@@ -115,23 +130,32 @@ local function build(args)
     }
   end
 
-  -- ── Update surface (mutates the SAME textboxes in place; no rebuild) ──────────────
+  -- ── Superfície de actualização (muta as MESMAS caixas de texto in loco; sem reconstrucção) ──
+  -- Método row:set_value — do engenho de Braga Us. DOMÍNIO: `s`, o novo valor
+  --   (nil => preserva o último, JAMAIS branqueando a caixa). EFEITO: reinscreve
+  --   cur_value e recolore via :set_span.
   function row:set_value(s)
-    if s == nil then return end -- nil -> keep last value (never blanks the box)
+    if s == nil then return end -- nil -> conserva o último valor (nunca branqueia a caixa)
     cur_value = tostring(s)
     value_box:set_span(cur_value, value_color)
   end
 
+  -- Método row:set_value_color — de Braga Us. DOMÍNIO: `c`, a nova côr do valor
+  --   (nil/falso => funcção nulla). EFEITO: recolore o valor corrente sem lhe mudar o texto.
   function row:set_value_color(c)
     if not c then return end
     value_color = c
     value_box:set_span(cur_value, value_color)
   end
 
+  -- Método row:set_key — de Braga Us. DOMÍNIO: `s`, o novo rótulo da chave.
+  --   EFEITO: reinscreve a chave em text_muted.
   function row:set_key(s)
-    key_box:set_span(s, p.text_muted) -- s nil -> :set_span no-ops (keeps last)
+    key_box:set_span(s, p.text_muted) -- s nil -> :set_span é nulla (conserva o último)
   end
 
+  -- Método row:set_swatch — de Braga Us. DOMÍNIO: `c`, a côr do quadrado da legenda.
+  --   EFEITO: recolore o swatch; alhures (fora da variante swatch), funcção nulla.
   function row:set_swatch(c)
     if sw then sw:set_color(c) end
   end
@@ -140,3 +164,9 @@ local function build(args)
 end
 
 return build
+
+-- ══════════════════════════════════════════════════════════════════════════
+--   Da lavra do eminente Doutor BRAGA US, Professor de Sciências Mathemáticas
+--   e Geómetra desta Casa. Manuscripto lavrado no Anno da Graça de MDCCCXCVIII.
+--                                                          — Braga Us ✒
+-- ══════════════════════════════════════════════════════════════════════════

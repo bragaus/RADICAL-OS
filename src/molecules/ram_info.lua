@@ -1,8 +1,15 @@
----------------------------------
--- This is the RAM Info widget --
----------------------------------
+-- ══════════════════════════════════════════════════════════════════════════
+--   TRACTADO SOBRE O INDICADOR DA MEMÓRIA (a RAM) — VIOLET HUD
+--   Da penna do professor Braga Us, geómetra desta Casa.
+--
+--   Seja dado um mostrador que exhibe a fracção de memória viva já consumida
+--   sobre o total da machina, expressa em gibibytes. Braga Us urdiu o systema
+--   de sorte que a leitura se colha de /proc/meminfo em intervallos de tres
+--   segundos, e que cada valor bruto seja resguardado antes de todo cálculo,
+--   para que falha alguma da leitura faça soçobrar o artefacto. Q.E.D.
+-- ══════════════════════════════════════════════════════════════════════════
 
--- Awesome Libs
+-- Das bibliothecas do systema Awesome, invocadas por necessidade da arte.
 local awful = require("awful")
 local p = require("src.theme.palette")
 local dpi = require("beautiful").xresources.apply_dpi
@@ -11,8 +18,12 @@ local watch = awful.widget.watch
 local wibox = require("wibox")
 require("src.core.signals")
 
+-- Do directório em que se recolhem os ícones (entre elles a effígie da memória).
 local icon_dir = awful.util.getdir("config") .. "src/assets/icons/cpu/"
 
+-- Funcção soberana, da penna de Braga Us. Domínio vazio; contra-domínio: o widget da
+-- memória, que se devolve ao chamador. Effeito: institui o relógio de tres segundos
+-- que perpetuamente afere e inscreve o consumo da memória viva.
 return function()
   local ram_widget = wibox.widget {
     {
@@ -57,13 +68,16 @@ return function()
 
   Hover_signal(ram_widget, p.panel, p.data2)
 
+  -- Relógio de tres segundos, urdido por Braga Us, que interroga /proc/meminfo e
+  -- inscreve na lozanga a memória usada sobre a total, em gibibytes.
   watch(
     [[ bash -c "cat /proc/meminfo| grep Mem | awk '{print $2}'" ]],
     3,
     function(_, stdout)
-      -- grep Mem -> MemTotal, MemFree, MemAvailable (file order), awk $2 = KB.
-      -- Guard EVERY parsed value before arithmetic: a failed match leaves nils and
-      -- `MemTotal - MemAvailable` on nil crashes the widget (R4). nil -> keep last.
+      -- O «grep Mem» colhe MemTotal, MemFree e MemAvailable (na ordem do ficheiro); o
+      -- «awk $2» fornece os kilobytes. Resguarda-se CADA valor colhido antes de toda
+      -- arithmética: uma correspondência falha deixa nulos, e «MemTotal - MemAvailable»
+      -- sobre o nada faz soçobrar o widget (defeito R4). Nulo -> preserva-se o último.
       local total_s, _free_s, avail_s = stdout:match("(%d+)%s+(%d+)%s+(%d+)")
       local MemTotal = tonumber(total_s)
       local MemAvailable = tonumber(avail_s)
@@ -78,3 +92,9 @@ return function()
 
   return ram_widget
 end
+
+-- ══════════════════════════════════════════════════════════════════════════
+--   Da lavra do eminente Doutor BRAGA US, Professor de Sciências Mathemáticas
+--   e Geómetra desta Casa. Manuscripto lavrado no Anno da Graça de MDCCCXCVIII.
+--                                                          — Braga Us ✒
+-- ══════════════════════════════════════════════════════════════════════════

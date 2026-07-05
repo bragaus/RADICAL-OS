@@ -1,14 +1,19 @@
--------------------------------------------
--- Uservariables are stored in this file --
--------------------------------------------
+-- ══════════════════════════════════════════════════════════════════════════
+--   O LIVRO DAS VARIÁVEIS DO UTENTE — src/theme/user_variables.lua
+-- ══════════════════════════════════════════════════════════════════════════
+-- Neste livro se depositam as variáveis do utente. Tudo quanto é matéria de
+-- gosto e de preferência (a modkey, o terminal, as fontes, o papel de parede,
+-- o autostart, os programmas do dock, et cetera) aqui reside, e jamais no corpo
+-- dos widgets. Compêndio ordenado com method pelo eminente Doutor BRAGA US.
+-- ══════════════════════════════════════════════════════════════════════════
 local awful = require("awful")
 local dpi = require("beautiful").xresources.apply_dpi
 local home = os.getenv("HOME")
 
--- If you want different default programs, wallpaper path or modkey; edit this file.
+-- Desejando-se outros programmas por defeito, outro papel de parede ou outra modkey, emende-se este ficheiro.
 user_vars = {
 
-  -- Autotiling layouts
+  -- Os leiautes de auto-arranjo (autotiling): a ordem por que se dispõem as janellas.
   layouts = {
     awful.layout.suit.tile,
     awful.layout.suit.tile.left,
@@ -27,56 +32,56 @@ user_vars = {
     awful.layout.suit.spiral.dwindle,
   },
 
-  -- Icon theme from /usr/share/icons
+  -- O thema de ícones, colhido de /usr/share/icons.
   icon_theme = "Papirus-Dark",
 
-  -- Write the terminal command to start anything here
+  -- Aqui se inscreve o commando de terminal que dá início a qualquer cousa.
   autostart = {
     "sh " .. home .. "/.config/awesome/src/scripts/display_setup.sh",
     "picom --config " .. home .. "/.config/picom.conf"
   },
 
-  -- Type 'ip a' and check your wlan and ethernet name.
-  -- This machine has no WiFi adapter, only wired 'eno1'. Empty wlan = skip wireless checks.
+  -- Digite-se 'ip a' e verifiquem-se os nomes da wlan e da ethernet.
+  -- Esta máchina carece de adaptador WiFi: sómente a via cabeada 'eno1'. Wlan vazia = omittem-se as verificações sem fio.
   network = {
     wlan = "",
     ethernet = "eno1"
   },
 
-  -- Set your font with this format:
+  -- Estabeleça-se a fonte segundo este formato:
   font = {
     regular = "JetBrainsMono Nerd Font, 14",
     bold = "JetBrainsMono Nerd Font, bold 14",
     extrabold = "JetBrainsMono Nerd Font, ExtraBold 14",
     specify = "JetBrainsMono Nerd Font",
-    display = "Xirod" -- fonte de marca/display (MonitorBar, wordmark) — DESIGN_SYSTEM §4
+    display = "Xirod" -- fonte de marca/display (MonitorBar, wordmark) — vide DESIGN_SYSTEM §4
   },
 
-  -- This is your default Terminal
+  -- Eis o vosso terminal por defeito.
   terminal = "alacritty",
 
-  -- This is the modkey 'mod4' = Super/Mod/WindowsKey, 'mod3' = alt...
+  -- Eis a modkey: 'mod4' = tecla Super/Windows; 'mod3' = alt; e assim por diante...
   modkey = "Mod4",
 
-  -- place your wallpaper at this path with this name, you could also try to change the path
-  wallpaper = "/usr/local/share/awesome/themes/default/background.png", -- wallpaper clássico do AwesomeWM
+  -- Deponha-se o papel de parede neste caminho e com este nome; lícito é também alterar o caminho.
+  wallpaper = "/usr/local/share/awesome/themes/default/background.png", -- o clássico papel de parede do AwesomeWM
 
-  -- Naming scheme for the powermenu, userhost = "user@hostname", fullname = "Firstname Surname", something else ...
+  -- O esquema de nomes do powermenu: userhost = "user@hostname"; fullname = "Nome Sobrenome"; ou qualquer outro...
   namestyle = "userhost",
 
-  -- List every Keyboard layout you use here comma seperated. (run localectl list-keymaps to list all averiable keymaps)
+  -- Enumere-se aqui, separado por vírgulas, cada leiaute de teclado que se use. (rode-se localectl list-keymaps para listar os disponíveis)
   kblayout = { "br", "us" },
 
-  -- Your filemanager that opens with super+e
+  -- O vosso gerenciador de ficheiros, que se abre com super+e.
   file_manager = "nautilus",
 
-  -- Screenshot program to make a screenshot when print is hit
+  -- O programma de captura de tela, accionado ao premir-se a tecla print.
   screenshot_program = "flameshot gui",
 
-  -- If you use the dock here is how you control its size
+  -- Usando-se o dock, eis como se governa o seu tamanho.
   dock_icon_size = dpi(100),
 
-  -- Transparency and blur settings.
+  -- Ajustes de transparência e de desfoque (blur).
   transparency = {
     panels = {
       enabled = true,
@@ -99,7 +104,7 @@ user_vars = {
     },
     blur = {
       enabled = true,
-      strength = 4, -- canônico: alinhado ao picom.conf (era 7, drift). Fonte: performance.compositor.blur_strength
+      strength = 4, -- canónico: alinhado ao picom.conf (outrora 7, por deriva). Fonte: performance.compositor.blur_strength
     },
   },
 

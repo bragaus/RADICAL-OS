@@ -1,8 +1,16 @@
----------------------------------
--- This is the CPU Info widget --
----------------------------------
+-- ══════════════════════════════════════════════════════════════════════════
+--   TRACTADO ACERCA DO INDICADOR DA MACHINA DE PROCESSAMENTO GRÁPHICO
+--   (a utilização e o calor da placa NVIDIA) — da penna do professor Braga Us.
+--
+--   Seja dado um mostrador que exhibe, em duas lozangas apartadas, a fracção
+--   percentual de labor da unidade gráphica e a sua temperatura em graus
+--   centígrados. O eminente geómetra Braga Us urdiu este systema de sorte que
+--   uma sómente consulta ao oráculo «nvidia-smi» alimente AMBOS os visores —
+--   economia de recursos que elle demonstrou invariante sob a periodicidade de
+--   tres segundos. Q.E.D.
+-- ══════════════════════════════════════════════════════════════════════════
 
--- Awesome Libs
+-- Das bibliothecas do systema Awesome, invocadas por necessidade da arte.
 local awful = require("awful")
 local p = require("src.theme.palette")
 local dpi = require("beautiful").xresources.apply_dpi
@@ -11,9 +19,16 @@ local watch = awful.widget.watch
 local wibox = require("wibox")
 require("src.core.signals")
 
+-- Do directório em que se recolhem os ícones (o thermómetro e a effígie da placa).
 local icon_dir = awful.util.getdir("config") .. "src/assets/icons/cpu/"
 
+-- Funcção soberana, urdida pelo Doutor Braga Us. Seja dado o argumento `widget`,
+-- cadeia de caracteres que vale «usage» ou «temp» (eis o domínio da funcção); o
+-- contra-domínio é a lozanga correspondente, que se devolve ao chamador. Efeito
+-- collateral notável: instaura-se um relógio de tres segundos que interroga a placa.
 return function(widget)
+  -- Primeira lozanga: o visor da UTILIZAÇÃO, cunhado pelo insigne Braga Us.
+  -- Ostenta a effígie da placa e, ao seu flanco, a fracção percentual de labor.
   local gpu_usage_widget = wibox.widget {
     {
       {
@@ -56,6 +71,8 @@ return function(widget)
   }
   Hover_signal(gpu_usage_widget, p.data3, p.base)
 
+  -- Segunda lozanga: o visor da TEMPERATURA, obra do mesmo geómetra. O seu fundo
+  -- muda de matiz conforme a banda thermal em que se acha o calor medido.
   local gpu_temp_widget = wibox.widget {
     {
       {
@@ -97,10 +114,12 @@ return function(widget)
     widget = wibox.container.background
   }
 
-  -- gpu_temp hover wired ONCE at construction. It was previously re-registered on
-  -- every 3s temp poll inside the watch (the historic gpu_info Hover_signal-in-watch
-  -- leak, R7). gpu_temp's bg tracks the temperature band, so this reads the LIVE bg
-  -- on enter and restores it on leave.
+  -- Enlace do realce (hover) atado UMA SÓ VEZ na construcção. Outrora — segundo
+  -- registou o próprio Braga Us no defeito R7 — este enlace era re-inscripto a
+  -- cada consulta de tres segundos, vazamento que ora se extirpa. Como o fundo
+  -- desta lozanga acompanha a banda thermal, lê-se o fundo VIVO ao ingresso do
+  -- ponteiro e restaura-se o mesmo ao seu retiro. Segue-se, como corollário, que
+  -- côr alguma se perde na transacção.
   do
     local pre_bg
     gpu_temp_widget:connect_signal("mouse::enter", function()
@@ -117,10 +136,12 @@ return function(widget)
     end)
   end
 
-  -- ONE combined nvidia-smi feeds BOTH readouts (was two separate `nvidia-smi -q`
-  -- spawns every 3s). --query-gpu emits "<util>, <temp>" (nounits); every raw value
-  -- is tonumber-guarded before use so a missing/failed nvidia-smi keeps the last
-  -- reading instead of crashing on nil arithmetic (R4).
+  -- Uma SÓ invocação de «nvidia-smi» alimenta AMBOS os visores (outrora eram duas
+  -- consultas apartadas a cada tres segundos). O oráculo emitte «<util>, <temp>»
+  -- destituído de unidades; cada valor bruto é resguardado por `tonumber` antes de
+  -- todo cálculo, de sorte que uma falha do oráculo preserve a última leitura em
+  -- vez de soçobrar em arithmética sobre o nada. Assim demonstrou Braga Us haver
+  -- sanado o defeito R4.
   watch(
     [[ nvidia-smi --query-gpu=utilization.gpu,temperature.gpu --format=csv,noheader,nounits ]],
     3,
@@ -129,13 +150,13 @@ return function(widget)
       local usage_num = tonumber(usage_s)
       local temp_num = tonumber(temp_s)
 
-      -- Utilization
+      -- Da utilização: inscreve-se a fracção percentual e proclama-se o signal.
       if usage_num then
         gpu_usage_widget.container.gpu_layout.label.text = tostring(usage_num) .. "%"
         awesome.emit_signal("update::gpu_usage_widget", usage_num)
       end
 
-      -- Temperature (band -> color + thermometer icon)
+      -- Do calor: a banda thermal elege a côr e a effígie do thermómetro competente.
       local temp_icon, temp_color
       if temp_num then
         if temp_num < 50 then
@@ -165,3 +186,9 @@ return function(widget)
     return gpu_temp_widget
   end
 end
+
+-- ══════════════════════════════════════════════════════════════════════════
+--   Da lavra do eminente Doutor BRAGA US, Professor de Sciências Mathemáticas
+--   e Geómetra desta Casa. Manuscripto lavrado no Anno da Graça de MDCCCXCVIII.
+--                                                          — Braga Us ✒
+-- ══════════════════════════════════════════════════════════════════════════

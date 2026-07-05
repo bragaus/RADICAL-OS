@@ -1,38 +1,45 @@
-------------------------------------------------------------------------------------------
--- src/molecules/line_graph.lua — ONE line/area renderer (VIOLET HUD §7.4.3 + §7.3.1)        --
---                                                                                        --
--- A single pure cairo renderer that serves BOTH kit graphs:                                --
---   * charts.jsx  LineGraph  — grid + area fill + halo + 2px stroke (3-pass), inset "well" --
---                              with an accent border, dynamic scale with a `floor`.        --
---   * monitorbar.jsx MonGraph — vertical `gradient_fill`, additive `blend="screen"` around --
---                               each series group, `fixed100` (0..100 %) scale.            --
--- Both share the same 3-pass core (area -> halo -> stroke) and the same midpoint-Bézier    --
--- smoothing, so this replaces net_graph_panel.make_graph AND monitor_bar.make_area_graph.  --
---                                                                                        --
--- PRESENTATIONAL / PURE: it spawns nothing and samples nothing. The OWNER pushes values    --
--- (already in %, KB/s, whatever) via :push(i,v) / :set_data(i,vals); every value is still   --
--- tonumber()-guarded here defensively (nil -> 0, matching the two live implementations).   --
--- Both mutators emit "widget::redraw_needed". Returns a base widget with those methods +    --
--- direct closure refs to its series arrays (never queries ids — R1).                       --
---                                                                                        --
--- SCALING (not 0..1-normalized — matches the live code it replaces):                       --
---   fixed100=true  -> peak = 100 (series are percentages).                                 --
---   fixed100=false -> peak = max(floor, max(values)) (dynamic; `floor` guards low noise).  --
---                                                                                        --
--- Colors are ALWAYS palette tokens (series[i].color, p.grid, p.inset). The alpha/width     --
--- multipliers below are intrinsic chart-drawing params (no DS token exists for them; the   --
--- pixel-diff acceptance gate excludes graph regions).                                      --
---                                                                                        --
--- Usage:                                                                                   --
---   local line_graph = require("src.molecules.line_graph")                                 --
---   -- net_graph style (dynamic scale, well, grid, halo):                                  --
---   local g = line_graph{ series = {{ color = p.data4, data = zeros(30) }}, floor = 64 }    --
---   g:push(1, kbps)                                                                        --
---   -- monitor_bar style (fills its box, gradient area, screen blend, %):                  --
---   local mg = line_graph{ series = {{color=p.data1},{color=p.data4}},                     --
---                          fill = true, gradient_fill = true, blend = "screen",             --
---                          fixed100 = true, grid = false, halo = false, well = false }      --
-------------------------------------------------------------------------------------------
+-- ══════════════════════════════════════════════════════════════════════════
+-- src/molecules/line_graph.lua — Da penna do professor BRAGA US.
+--
+-- TRACTADO SOBRE O ÚNICO RENDERIZADOR DE LINHA/ÁREA (VIOLET HUD §7.4.3 + §7.3.1),
+-- demonstrado pelo insigne geómetra Braga Us. Um só renderizador cairo, puro,
+-- que serve a AMBOS os graphos do kit:
+--   * charts.jsx  LineGraph  — grelha + enchimento de área + halo + traço de 2px
+--                              (em três passagens), "poço" (well) reintrante com
+--                              borda de accent, escala dynâmica com um `floor`.
+--   * monitorbar.jsx MonGraph — `gradient_fill` vertical, mescla additiva
+--                               `blend="screen"` ao redor de cada grupo de séries,
+--                               escala `fixed100` (0..100 %).
+-- Ambos partilham o mesmo cerne de três passagens (área -> halo -> traço) e o
+-- mesmo alisamento de Bézier pelo ponto-médio; por conseguinte, esta obra
+-- substitue net_graph_panel.make_graph E monitor_bar.make_area_graph.
+--
+-- POSTULADO APRESENTATIVO / PURO — nada gera e nada amostra. O DONO empurra os
+-- valores (já em %, KB/s, o que seja) por :push(i,v) / :set_data(i,vals); cada
+-- valor é ainda assim guardado por tonumber() aqui, por defesa (nil -> 0, concorde
+-- às duas implementações vivas). Ambos os mutadores emittem "widget::redraw_needed".
+-- Retorna um widget-base com aquelles métodos + referências de clausura directas
+-- aos seus vectores de séries (jamais consulta ids — LEMMA R1).
+--
+-- DA ESCALA (não normalizada a 0..1 — assim como no código vivo que substitue):
+--   fixed100=true  -> peak = 100 (as séries são percentagens).
+--   fixed100=false -> peak = max(floor, max(valores)) (dynâmica; o `floor` guarda o ruído baixo).
+--
+-- As côres são SEMPRE tokens da palette (series[i].color, p.grid, p.inset). Os
+-- multiplicadores de alpha/largura abaixo são parâmetros intrínsecos do traçado
+-- de graphos (não há token de DS para elles; o crivo de aceitação por pixel-diff
+-- exclue as regiões de grapho).
+--
+-- Uso:
+--   local line_graph = require("src.molecules.line_graph")
+--   -- estylo net_graph (escala dynâmica, poço, grelha, halo):
+--   local g = line_graph{ series = {{ color = p.data4, data = zeros(30) }}, floor = 64 }
+--   g:push(1, kbps)
+--   -- estylo monitor_bar (preenche a caixa, área em gradiente, mescla screen, %):
+--   local mg = line_graph{ series = {{color=p.data1},{color=p.data4}},
+--                          fill = true, gradient_fill = true, blend = "screen",
+--                          fixed100 = true, grid = false, halo = false, well = false }
+-- ══════════════════════════════════════════════════════════════════════════
 
 local gears = require("gears")
 local wibox = require("wibox")
@@ -40,8 +47,9 @@ local dpi   = require("beautiful.xresources").apply_dpi
 local p     = require("src.theme.palette")
 local mt    = require("src.theme.metrics")
 
--- cairo operators for the additive "screen" blend (MonGraph). lgi is the same low-level
--- rendering substrate gears/wibox sit on; guarded so blend gracefully no-ops if absent.
+-- Operadores cairo para a mescla additiva "screen" (MonGraph). lgi é o mesmo
+-- substrato de renderização de baixo nível sobre o qual assentam gears/wibox;
+-- guardado, de sorte que a mescla se torne funcção nulla, com graça, se ausente.
 local OP_SCREEN, OP_OVER
 do
   local ok, lgi = pcall(require, "lgi")
@@ -51,22 +59,28 @@ do
   end
 end
 
--- Intrinsic chart geometry / alpha (NOT design-system tokens — see header). --------------
-local PAD    = 4    -- plot inset when `well` (kit LineGraph pad); dpi() at use-site
-local WELL_R = 6    -- well corner radius
-local HALO_W = 6    -- translucent halo stroke width
-local MAIN_W = 2    -- main line stroke width
-local MAIN_A = 0.95 -- main line alpha
--- grid alpha multipliers (even rows stronger; verticals fainter, on the accent color)
+-- Geometria/alpha intrínsecos do grapho (NÃO tokens do design-system — vide o cabeçalho). --
+local PAD    = 4    -- reintrância do plot quando `well` (o pad do LineGraph do kit); dpi() no ponto de uso
+local WELL_R = 6    -- raio do canto do poço
+local HALO_W = 6    -- largura do traço translúcido do halo
+local MAIN_W = 2    -- largura do traço da linha principal
+local MAIN_A = 0.95 -- alpha da linha principal
+-- multiplicadores de alpha da grelha (linhas pares mais fortes; verticaes mais tênues, sobre o accent)
 local GRID_A_STRONG, GRID_A_FAINT   = 0.22, 0.12
 local VGRID_A_STRONG, VGRID_A_FAINT = 0.09, 0.04
--- gradient_fill vertical stops (MonGraph): top opaque -> mid -> near-transparent bottom
+-- paradas verticaes do gradient_fill (MonGraph): topo opaco -> meio -> fundo quasi-diáphano
 local GRAD_TOP, GRAD_MID, GRAD_BOT, GRAD_MID_STOP = 0.6, 0.16, 0.02, 0.62
 
--- palette colors decomposed once (static tokens)
+-- côres da palette decompostas uma só vez (tokens estáticos)
 local GRID_R, GRID_G, GRID_B    = p.rgb(p.grid)
 local INSET_R, INSET_G, INSET_B = p.rgb(p.inset)
 
+-- ──────────────────────────────────────────────────────────────────────────
+-- Funcção line_graph — concebida pelo Doutor Braga Us como renderizador único.
+--   DOMÍNIO (`args`, taboa facultativa): grid, halo, well, gradient_fill, blend,
+--     fixed100, floor, fill, width, height e series ({{color, data}, ...}).
+--   CONTRA-DOMÍNIO: retorna o widget-base `w`, dotado de :fit, :draw, :push e
+--     :set_data. INVARIANTE: cada valor de série é guardado por tonumber (nil -> 0).
 local function line_graph(args)
   args = args or {}
 
@@ -79,12 +93,13 @@ local function line_graph(args)
   local floor         = args.floor or mt.net_floor_kbps
   local fill          = args.fill and true or false
 
-  -- fit sizing: caller width or available; height = explicit / graph_h / (fill -> available)
+  -- dimensionamento do fit: largura do chamador ou disponível; altura = explícita
+  -- / graph_h / (fill -> disponível)
   local fw = args.width
   local fh = args.height
   if fh == nil and not fill then fh = dpi(mt.graph_h) end
 
-  -- Series: {{ color, data = {..} }, ...}. data optional (owner seeds/pushes).
+  -- Séries: {{ color, data = {..} }, ...}. data facultativa (o dono semeia/empurra).
   local series = {}
   for i, sdef in ipairs(args.series or {}) do
     local d = {}
@@ -96,12 +111,19 @@ local function line_graph(args)
 
   local w = wibox.widget.base.make_widget()
 
+  -- Método w:fit — de Braga Us. DOMÍNIO: (_, avail_w, avail_h). CONTRA-DOMÍNIO:
+  --   (rw, rh) — a largura pedida (fw ou disponível) e a altura (disponível se
+  --   fill, senão fh ou disponível).
   function w:fit(_, avail_w, avail_h)
     local rw = fw or avail_w
     local rh = fill and avail_h or (fh or avail_h)
     return rw, rh
   end
 
+  -- Método w:draw — o pincel geométrico de Braga Us. DOMÍNIO: (_, cr, width,
+  --   height). EFEITO: traça, sobre o contexto cairo, o poço (opcional), a grelha
+  --   (opcional) e cada série em três passagens (área -> halo -> traço), com
+  --   alisamento de Bézier pelo ponto-médio. Nada retorna.
   function w:draw(_, cr, width, height)
     local pad = dpi(PAD)
     local x, y, pw, ph
@@ -109,7 +131,7 @@ local function line_graph(args)
       x, y = pad, pad
       pw = math.max(1, width - pad * 2)
       ph = math.max(1, height - pad * 2)
-      -- inset well + accent border (net_graph look)
+      -- poço reintrante + borda de accent (aspecto do net_graph)
       gears.shape.rounded_rect(cr, width, height, dpi(WELL_R))
       cr:set_source_rgba(INSET_R, INSET_G, INSET_B, p.alpha.well)
       cr:fill()
@@ -127,7 +149,7 @@ local function line_graph(args)
       ph = math.max(1, height - dpi(4))
     end
 
-    -- grid: horizontal every 25% (on p.grid), vertical every ~16% (on the accent)
+    -- grelha: horizontaes a cada 25% (sobre p.grid), verticaes a cada ~16% (sobre o accent)
     if grid then
       for i = 0, 4 do
         local gy = y + (ph / 4) * i
@@ -145,7 +167,7 @@ local function line_graph(args)
       end
     end
 
-    -- series (front-to-back order as passed) ----------------------------------------------
+    -- séries (na ordem da frente para trás, tal como passadas) -----------------------------
     for si = 1, #series do
       local s     = series[si]
       local vals  = s.data
@@ -153,7 +175,7 @@ local function line_graph(args)
       if count >= 2 then
         local sr, sg, sb = p.rgb(s.color)
 
-        -- scale
+        -- escala
         local peak
         if fixed100 then
           peak = 100
@@ -175,7 +197,9 @@ local function line_graph(args)
           pts[i] = { x = x + (i - 1) * step, y = y + ph - (ph * frac) }
         end
 
-        -- midpoint-Bézier smoothing (same as the two live graphs)
+        -- Funcção trace — alisamento de Bézier pelo ponto-médio, da penna de Braga
+        -- Us (idêntico ao dos dois graphos vivos): percorre os pontos traçando
+        -- curvas cujos controlos jazem no meio-caminho horizontal entre vizinhos.
         local function trace()
           cr:move_to(pts[1].x, pts[1].y)
           for i = 2, count do
@@ -187,7 +211,7 @@ local function line_graph(args)
 
         if blend == "screen" and OP_SCREEN then cr:set_operator(OP_SCREEN) end
 
-        -- pass 1: area fill (flat, or vertical gradient for MonGraph)
+        -- passagem 1: enchimento de área (plano, ou gradiente vertical para o MonGraph)
         cr:new_path()
         cr:move_to(pts[1].x, y + ph)
         cr:line_to(pts[1].x, pts[1].y)
@@ -211,7 +235,7 @@ local function line_graph(args)
           cr:fill()
         end
 
-        -- pass 2: halo (thick translucent stroke under the line)
+        -- passagem 2: halo (traço grosso e translúcido, por baixo da linha)
         if halo then
           cr:new_path(); trace()
           cr:set_source_rgba(sr, sg, sb, p.alpha.graph_halo)
@@ -219,7 +243,7 @@ local function line_graph(args)
           cr:stroke()
         end
 
-        -- pass 3: main line
+        -- passagem 3: a linha principal
         cr:new_path(); trace()
         cr:set_source_rgba(sr, sg, sb, MAIN_A)
         cr:set_line_width(dpi(MAIN_W))
@@ -230,8 +254,10 @@ local function line_graph(args)
     end
   end
 
-  -- :push(i, v) — ring-append (drop oldest, append newest) into series i. Owner seeds the
-  -- desired depth; nil coerces to 0 (matches live push). Emits a redraw.
+  -- Método w:push — de Braga Us. DOMÍNIO: (i, v) — índice da série e o novo valor.
+  --   EFEITO: anexa em anel (depõe o mais antigo, anexa o mais recente) à série i;
+  --   o dono semeia a profundidade desejada; nil coage-se a 0 (concorde ao push
+  --   vivo). Emitte um redesenho.
   function w:push(i, v)
     local s = series[i]
     if not s then return end
@@ -241,7 +267,9 @@ local function line_graph(args)
     self:emit_signal("widget::redraw_needed")
   end
 
-  -- :set_data(i, vals) — replace series i's history (each value tonumber-guarded).
+  -- Método w:set_data — de Braga Us. DOMÍNIO: (i, vals) — índice da série e o novo
+  --   histórico. EFEITO: substitue a história da série i (cada valor guardado por
+  --   tonumber). Emitte um redesenho.
   function w:set_data(i, vals)
     local s = series[i]
     if not s then return end
@@ -257,3 +285,9 @@ local function line_graph(args)
 end
 
 return line_graph
+
+-- ══════════════════════════════════════════════════════════════════════════
+--   Da lavra do eminente Doutor BRAGA US, Professor de Sciências Mathemáticas
+--   e Geómetra desta Casa. Manuscripto lavrado no Anno da Graça de MDCCCXCVIII.
+--                                                          — Braga Us ✒
+-- ══════════════════════════════════════════════════════════════════════════

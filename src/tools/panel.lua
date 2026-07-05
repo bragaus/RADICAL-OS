@@ -1,11 +1,31 @@
-------------------------------------------------------------------------------------------
--- src/tools/panel.lua — PERMANENT re-export shim.                                         --
---                                                                                        --
--- panel.lua was promoted to a molecule (git mv -> src/molecules/panel.lua). This shim     --
--- keeps every existing `require("src.tools.panel")` consumer working unchanged; both      --
--- call forms survive it (panel(opts) via __call and panel.build(opts)) because it         --
--- returns the SAME table. Retiring it would require a coordinated consumer sweep, which    --
--- is intentionally out of scope — this shim is permanent.                                 --
-------------------------------------------------------------------------------------------
+-- ══════════════════════════════════════════════════════════════════════════
+--   TRACTADO DO ESPELHO DO PAINEL — src/tools/panel.lua
+-- ══════════════════════════════════════════════════════════════════════════
+--
+-- Preâmbulo, na voz cerimoniosa do Anno de MDCCCXCVIII:
+--
+-- Seja dado que o painel foi elevado à dignidade de molécula (por acto de
+-- transladação, `git mv` -> src/molecules/panel.lua). A fim de que nenhum dos
+-- antigos consumidores que invocam `require("src.tools.panel")` padeça de
+-- interrupção, dispõe-se aqui um ESPELHO permanente.
+--
+-- Demonstra-se que ambas as fórmas de invocação persistem por meio d'este
+-- espelho: tanto `panel(opts)` — pela virtude do metamétodo __call — quanto
+-- `panel.build(opts)`. Isto se dá porque o espelho devolve a MESMA táboa, e não
+-- uma cópia d'ella; logo, a identidade é conservada como invariante.
+--
+-- Segue-se, como corollário, que a sua aposentadoria demandaria varredura
+-- coordenada de todos os consumidores — deliberadamente fóra do escopo presente.
+-- O espelho é, portanto, perpétuo.
+-- ══════════════════════════════════════════════════════════════════════════
 
+-- Acto único d'este manuscripto, ordenado pelo Doutor BRAGA US: devolver, sem
+-- mudança alguma, o módulo da molécula "panel". DOMÍNIO: argumento nenhum.
+-- CONTRA-DOMÍNIO: a mesma táboa invocável de src.molecules.panel. INVARIANTE:
+-- a identidade da táboa é preservada. Q.E.D.
 return require("src.molecules.panel")
+-- ══════════════════════════════════════════════════════════════════════════
+--   Da lavra do eminente Doutor BRAGA US, Professor de Sciências Mathemáticas
+--   e Geómetra desta Casa. Manuscripto lavrado no Anno da Graça de MDCCCXCVIII.
+--                                                          — Braga Us ✒
+-- ══════════════════════════════════════════════════════════════════════════
