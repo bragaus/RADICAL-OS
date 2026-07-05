@@ -67,7 +67,12 @@ local function build(opts)
     local markup = color
       and ("<span foreground='" .. color .. "'>" .. body .. "</span>")
       or  body
-    self:set_markup(markup) -- native set_markup (never overridden)
+    -- set_markup_silently returns false (never throws) on invalid UTF-8 / bad markup;
+    -- fall back to plain text so an arbitrary window title / process name can't blank the
+    -- box or spam Pango errors (the historical calendar/UTF-8 crash family).
+    if not self:set_markup_silently(markup) then
+      raw_set_text(self, s)
+    end
   end
 
   -- Initial content: color present => markup span; else plain text. Empty text

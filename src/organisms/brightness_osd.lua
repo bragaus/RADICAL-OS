@@ -115,7 +115,7 @@ return function(s)
       function(stdout)
       local value = tonumber(stdout)
       if not value then return end
-      brightness_slider:set_value(value) -- silent (hud_slider guard replaces syncing_slider)
+      brightness_slider:set_value_silent(value) -- silent (hud_slider guard replaces syncing_slider)
       refresh_label(value)
     end
     )
@@ -131,7 +131,7 @@ return function(s)
   awesome.connect_signal(
     "widget::brightness:update",
     function(value)
-    brightness_slider:set_value(tonumber(value))
+    brightness_slider:set_value_silent(tonumber(value))
   end
   )
 

@@ -214,6 +214,9 @@ return function(args)
   function outer:stop_sampling()
     self._sampling = false
     sample_timer:stop()
+    -- Drop the byte counters so the first sample after a REOPEN re-seeds (prev==nil branch)
+    -- instead of dividing a whole hidden-gap's accumulated bytes by INTERVAL -> false spike.
+    prev_rx, prev_tx = nil, nil
   end
 
   return outer
