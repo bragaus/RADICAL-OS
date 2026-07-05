@@ -184,7 +184,6 @@ return function(widget, clock_mode)
         temp_color = p.glow_hot
         temp_icon = icon_dir .. "thermometer-high.svg"
       end
-      Hover_signal(cpu_temp, temp_color, p.text_bright)
       cpu_temp.container.cpu_layout.icon_margin.icon_layout.icon:set_image(temp_icon)
       cpu_temp:set_bg(temp_color)
       cpu_temp.container.cpu_layout.label.text = math.floor(temp_num) .. "°C"
@@ -217,6 +216,26 @@ return function(widget, clock_mode)
 
   Hover_signal(cpu_usage_widget, p.v600, p.text_bright)
   Hover_signal(cpu_clock, p.v500, p.text_bright)
+
+  -- cpu_temp hover wired ONCE at construction. It was previously re-registered on
+  -- every 3s temp poll inside the watch (the historic cpu_info Hover_signal-in-watch
+  -- leak, R7) — each call connected 4 fresh signals. cpu_temp's bg tracks the
+  -- temperature band, so this reads the LIVE bg on enter and restores it on leave.
+  do
+    local pre_bg
+    cpu_temp:connect_signal("mouse::enter", function()
+      pre_bg = cpu_temp.bg
+      if type(pre_bg) == "string" and #pre_bg == 7 then
+        cpu_temp.bg = pre_bg .. "dd"
+      end
+      cpu_temp.fg = p.text_bright
+      local w = mouse.current_wibox; if w then w.cursor = "hand1" end
+    end)
+    cpu_temp:connect_signal("mouse::leave", function()
+      if pre_bg then cpu_temp.bg = pre_bg end
+      local w = mouse.current_wibox; if w then w.cursor = "left_ptr" end
+    end)
+  end
 
   if widget == "usage" then
     return cpu_usage_widget

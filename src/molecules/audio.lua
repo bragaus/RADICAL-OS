@@ -1,17 +1,37 @@
 ------------------------------
 -- This is the audio widget --
 ------------------------------
+-- VIOLET HUD wiring pass:
+--   * PATH FIX (R3): the vol.sh / bt.sh invocations were CWD-relative
+--     ("./.config/awesome/..."), which only resolved when awesome's cwd was $HOME.
+--     Now anchored via gears.filesystem.get_configuration_dir().
+--   * GATED SAMPLING (R8): the two always-on autostart gears.timer pollers (0.5s
+--     pactl mute + 5s bt.sh) are replaced by the canonical :start_sampling() /
+--     :stop_sampling() shape (self._sampling guard -> immediate sample -> timer
+--     :start()/:stop()) so the widget never runs an always-on poller.
+--   * get::volume / get::volume_mute / volume_controller emissions kept VERBATIM.
+--
+-- NOTE (pill): a full pill{} swap was NOT applied here — this widget's dynamic
+-- multi-state icon set (volume-low/-medium/-high/-mute) lives in
+-- src/assets/icons/audio (NOT icons/svg/, which the pill icon atom resolves), and
+-- it carries an inline bluetooth sub-row (bt_icon + bt_label). Neither fits pill's
+-- single-icon + single-label API without regressing behavior or copying assets.
+-- See the returned findings / BLUEPRINT §4 audio row.
+
 -- Awesome Libs
 local awful = require("awful")
-local p = require("src.theme.palette")
-local dpi = require("beautiful").xresources.apply_dpi
+local p     = require("src.theme.palette")
+local dpi   = require("beautiful").xresources.apply_dpi
 local gears = require("gears")
+local gfs   = require("gears.filesystem")
 local wibox = require("wibox")
 require("src.core.signals")
 
 -- Icon directory path
-local icondir = awful.util.getdir("config") .. "src/assets/icons/audio/"
+local icondir    = awful.util.getdir("config") .. "src/assets/icons/audio/"
 local bt_icondir = awful.util.getdir("config") .. "src/assets/icons/bluetooth/"
+-- Shell helpers, anchored to the config dir (was CWD-relative "./.config/awesome/...").
+local scripts    = gfs.get_configuration_dir() .. "src/scripts/"
 
 -- Returns the audio widget
 return function(s)
@@ -76,7 +96,7 @@ return function(s)
 
   local get_volume = function()
     awful.spawn.easy_async_with_shell(
-      "./.config/awesome/src/scripts/vol.sh volume",
+      scripts .. "vol.sh volume",
       function(stdout)
         local icon = icondir .. "volume"
         stdout = stdout:gsub("%%", "")
@@ -104,7 +124,7 @@ return function(s)
 
   local check_muted = function()
     awful.spawn.easy_async_with_shell(
-      "./.config/awesome/src/scripts/vol.sh mute",
+      scripts .. "vol.sh mute",
       function(stdout)
         if stdout:match("yes") then
           audio_widget.container.audio_layout.label.visible = false
@@ -123,7 +143,7 @@ return function(s)
 
   local update_bluetooth = function()
     awful.spawn.easy_async_with_shell(
-      "./.config/awesome/src/scripts/bt.sh",
+      scripts .. "bt.sh",
       function(stdout)
         local compact = (stdout or ""):gsub("\n", " "):gsub("%s+", " "):gsub("^%s+", ""):gsub("%s+$", "")
         local bt_status = audio_widget.container.audio_layout.bt_status
@@ -152,20 +172,35 @@ return function(s)
     end
   )
 
-  gears.timer {
-    timeout = 0.5,
-    call_now = true,
-    autostart = true,
-    callback = check_muted
+  -- Gated sampling (R8): no always-on pollers. Mounting code opts in via
+  -- :start_sampling() (mirrors the 8 dashboard organisms' shape).
+  local muted_timer = gears.timer {
+    timeout   = 0.5,
+    autostart = false,
+    call_now  = false,
+    callback  = check_muted,
+  }
+  local bt_timer = gears.timer {
+    timeout   = 5,
+    autostart = false,
+    call_now  = false,
+    callback  = update_bluetooth,
   }
 
-  gears.timer {
-    timeout = 5,
-    call_now = true,
-    autostart = true,
-    callback = update_bluetooth
-  }
+  function audio_widget:start_sampling()
+    if self._sampling then return end
+    self._sampling = true
+    check_muted()
+    update_bluetooth()
+    muted_timer:start()
+    bt_timer:start()
+  end
 
-  check_muted()
+  function audio_widget:stop_sampling()
+    self._sampling = false
+    muted_timer:stop()
+    bt_timer:stop()
+  end
+
   return audio_widget
 end

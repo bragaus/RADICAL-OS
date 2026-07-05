@@ -61,10 +61,18 @@ return function()
     [[ bash -c "cat /proc/meminfo| grep Mem | awk '{print $2}'" ]],
     3,
     function(_, stdout)
+      -- grep Mem -> MemTotal, MemFree, MemAvailable (file order), awk $2 = KB.
+      -- Guard EVERY parsed value before arithmetic: a failed match leaves nils and
+      -- `MemTotal - MemAvailable` on nil crashes the widget (R4). nil -> keep last.
+      local total_s, _free_s, avail_s = stdout:match("(%d+)%s+(%d+)%s+(%d+)")
+      local MemTotal = tonumber(total_s)
+      local MemAvailable = tonumber(avail_s)
+      if not (MemTotal and MemAvailable) then return end
 
-      local MemTotal, MemFree, MemAvailable = stdout:match("(%d+)\n(%d+)\n(%d+)\n")
-
-      ram_widget.container.ram_layout.label.text = tostring(string.format("%.1f", ((MemTotal - MemAvailable) / 1024 / 1024)) .. "/" .. string.format("%.1f", (MemTotal / 1024 / 1024)) .. "GB"):gsub(",", ".")
+      local used_gb  = (MemTotal - MemAvailable) / 1024 / 1024
+      local total_gb = MemTotal / 1024 / 1024
+      ram_widget.container.ram_layout.label.text =
+        (string.format("%.1f/%.1fGB", used_gb, total_gb)):gsub(",", ".")
     end
   )
 

@@ -25,6 +25,7 @@ local wibox = require("wibox")
 local cairo = require("lgi").cairo
 local menubar_utils = require("menubar.utils")
 local p = require("src.theme.palette")
+local ft = require("src.theme.typography")
 require("src.core.signals")
 
 local launcher_gif_path = gfs.get_configuration_dir() .. "src/assets/logo.gif"
@@ -180,9 +181,9 @@ return function(s)
     draw_in_circle(cr, app_icon_surface(cog.app), cog.x, cog.y, cog.r, cog.app.name)
     cr:arc(cog.x, cog.y, cog.r, 0, 2 * math.pi)
     if cog.focused then
-      cr:set_source(gears.color(p.glow_core)); cr:set_line_width(dpi(2.5))
+      cr:set_source(gears.color(p.launcher_ring_on)); cr:set_line_width(dpi(2.5))
     else
-      cr:set_source(gears.color(p.a(p.line_base, 0.9))); cr:set_line_width(dpi(1.5))
+      cr:set_source(gears.color(p.a(p.launcher_ring, 0.9))); cr:set_line_width(dpi(1.5))
     end
     cr:stroke()
   end
@@ -193,7 +194,7 @@ return function(s)
     cr:fill()
     draw_in_circle(cr, current_surface, CX, CY, GIF_R, nil)
     cr:arc(CX, CY, GIF_R, 0, 2 * math.pi)
-    cr:set_source(gears.color(p.glow_soft)); cr:set_line_width(dpi(2)); cr:stroke()
+    cr:set_source(gears.color(p.launcher_ring_hi)); cr:set_line_width(dpi(2)); cr:stroke()
   end
 
   function canvas:draw(_, cr, width, height)
@@ -214,7 +215,7 @@ return function(s)
         cr:move_to(CX + (ORBIT_R - dpi(5)) * c1, CY - (ORBIT_R - dpi(5)) * s1)
         cr:line_to(CX + (ORBIT_R + dpi(5)) * c1, CY - (ORBIT_R + dpi(5)) * s1)
       end
-      cr:set_source(gears.color(p.a(p.glow_soft, 0.35)))
+      cr:set_source(gears.color(p.a(p.launcher_glow, 0.35)))
       cr:set_line_width(dpi(2))
       cr:stroke()
 
@@ -401,7 +402,7 @@ PY]],
     screen    = s,
     ontop     = true,
     visible   = true,
-    bg        = "#00000000",
+    bg        = p.transparent,
     type      = "dock",
     widget    = {
       canvas,
@@ -431,7 +432,7 @@ PY]],
   -- ============================ Tooltip (nome do app no hover) ============================
   local tip_text = wibox.widget {
     markup = "",
-    font   = "JetBrainsMono Nerd Font 10",
+    font   = ft.mono_family .. " 10",
     widget = wibox.widget.textbox,
   }
   local tip = awful.popup {

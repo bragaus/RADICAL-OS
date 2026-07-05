@@ -9,8 +9,8 @@
 --                                                                                          --
 -- ARCHITECTURE.md: este arquivo é o organismo `monitor_bar`; os builders locais            --
 -- `make_module` (molécula `mon_module`) e `make_rail` (organismo `mon_rail`) seguem o       --
--- estilo de builders-internos de control_center.lua / net_graph_panel.lua. Na migração     --
--- Atomic Design ele será realocado p/ src/organisms/ (e os builders podem virar arquivos).  --
+-- estilo de builders-internos de control_center.lua / net_graph_panel.lua — e PERMANECEM    --
+-- internos a este arquivo (não promovidos a módulos próprios).                             --
 --                                                                                          --
 -- Cada MonModule = gráfico de ÁREA atrás (2 séries, cores do módulo) + rótulo grande em     --
 -- `Xirod` + sub-label + leitura grande + 4 células de rodapé. MonRail = NODE//STATUS +      --
@@ -27,29 +27,24 @@ local gears = require("gears")
 local wibox = require("wibox")
 local dpi   = require("beautiful.xresources").apply_dpi
 local p     = require("src.theme.palette")
+local ft    = require("src.theme.typography")
+local mt    = require("src.theme.metrics")
+local shapes     = require("src.tools.shapes")
+local format     = require("src.tools.format")
+local line_graph = require("src.molecules.line_graph")
 local Icon  = require("src.tools.icons") -- ícones SVG do set icons/ (§3.13)
 
-local MON_H    = dpi(80)               -- token --mon-h: 80px (§7.3.1)
+local MON_H    = dpi(mt.mon_h)         -- token --mon-h (§7.3.1)
 local SAMPLES  = 40                    -- profundidade do histórico de cada série
 local INTERVAL = 1                     -- segundos entre amostras (gráfico vivo)
 
-local XIROD   = ((user_vars.font and user_vars.font.display) or "Xirod") .. " 15" -- rótulo de módulo (marca/display, §4)
-local READOUT = "JetBrainsMono Nerd Font ExtraBold 20"  -- leitura grande
-local MICRO   = "JetBrainsMono Nerd Font Bold 8"        -- células de rodapé / micro
-local SUB     = "JetBrainsMono Nerd Font Bold 9"        -- sub-label
+local XIROD   = ft.display(15)  -- rótulo de módulo (marca/display, §4)
+local READOUT = ft.readout      -- leitura grande
+local MICRO   = ft.mon_micro    -- células de rodapé / micro
+local SUB     = ft.mon_sub      -- sub-label
 
 -- ID hex do nó (uma vez no load; os.time é barato e não bloqueia).
 local NODE_ID = string.format("0x%04X", os.time() % 0x10000)
-
--- "#RRGGBB"(+AA) -> r,g,b (0..1). Robusto a nil / formato inesperado.
-local function hex_rgb(hex)
-  hex = tostring(hex or "#ffffff"):gsub("#", "")
-  local r = tonumber(hex:sub(1, 2), 16)
-  local g = tonumber(hex:sub(3, 4), 16)
-  local b = tonumber(hex:sub(5, 6), 16)
-  if not (r and g and b) then return 1, 1, 1 end
-  return r / 255, g / 255, b / 255
-end
 
 -- array de N zeros (histórico inicial sem degrau)
 local function zeros(n)
@@ -58,95 +53,9 @@ local function zeros(n)
   return t
 end
 
--- empurra um novo valor no fim do histórico (descarta o mais antigo)
-local function push(arr, v)
-  table.remove(arr, 1)
-  arr[#arr + 1] = (tonumber(v) or 0)
-end
-
--- taxa em bytes/s -> rótulo curto com unidade ("0B" / "12K" / "1.2M")
-local function fmt_rate(bps)
-  bps = tonumber(bps) or 0
-  if bps < 0 then bps = 0 end
-  if bps >= 1048576 then return string.format("%.1fM", bps / 1048576) end
-  if bps >= 1024    then return string.format("%.0fK", bps / 1024) end
-  return string.format("%.0fB", bps)
-end
-
 -- bytes -> GiB curto ("1.2G")
 local function fmt_gib(bytes)
   return string.format("%.1fG", (tonumber(bytes) or 0) / 1073741824)
-end
-
-------------------------------------------------------------------------------------------
--- Gráfico de área de fundo: 2 séries sobrepostas (blend), sem grid, alpha baixo p/ o texto
--- por cima continuar legível. `fixed100` = escala fixa 0..100 (séries em %); senão escala
--- dinâmica pelo pico do histórico (taxas de rede). Desenhado por wibox.widget.base:draw.
-------------------------------------------------------------------------------------------
-local function make_area_graph(histA, colA, histB, colB, fixed100)
-  local w = wibox.widget.base.make_widget()
-  local ar, ag, ab = hex_rgb(colA)
-  local br, bg, bb = hex_rgb(colB)
-
-  function w:fit(_, aw, ah) return aw, ah end
-
-  local function draw_series(cr, vals, r, g, b, x, y, pw, ph)
-    local count = #vals
-    if count < 2 then return end
-    local peak = 1
-    if fixed100 then
-      peak = 100
-    else
-      for _, v in ipairs(vals) do
-        local n = tonumber(v) or 0
-        if n > peak then peak = n end
-      end
-    end
-    local step = pw / math.max(count - 1, 1)
-    local pts = {}
-    for i = 1, count do
-      local n = tonumber(vals[i]) or 0
-      local frac = n / peak
-      if frac < 0 then frac = 0 elseif frac > 1 then frac = 1 end
-      pts[i] = { x = x + (i - 1) * step, y = y + ph - (ph * frac) }
-    end
-
-    local function trace()
-      cr:move_to(pts[1].x, pts[1].y)
-      for i = 2, count do
-        local prev, cur = pts[i - 1], pts[i]
-        local mx = (prev.x + cur.x) / 2
-        cr:curve_to(mx, prev.y, mx, cur.y, cur.x, cur.y)
-      end
-    end
-
-    -- área (fill suave sob a linha)
-    cr:new_path()
-    cr:move_to(pts[1].x, y + ph)
-    cr:line_to(pts[1].x, pts[1].y)
-    trace()
-    cr:line_to(pts[count].x, y + ph)
-    cr:close_path()
-    cr:set_source_rgba(r, g, b, 0.16)
-    cr:fill()
-    -- linha fina
-    cr:new_path()
-    trace()
-    cr:set_source_rgba(r, g, b, 0.55)
-    cr:set_line_width(dpi(1.4))
-    cr:stroke()
-  end
-
-  function w:draw(_, cr, width, height)
-    local x, y = 0, dpi(2)
-    local pw = math.max(1, width)
-    local ph = math.max(1, height - dpi(4))
-    -- série B (secundária) atrás, série A (primária) na frente
-    draw_series(cr, histB, br, bg, bb, x, y, pw, ph)
-    draw_series(cr, histA, ar, ag, ab, x, y, pw, ph)
-  end
-
-  return w
 end
 
 ------------------------------------------------------------------------------------------
@@ -171,11 +80,25 @@ end
 
 ------------------------------------------------------------------------------------------
 -- MonModule (molécula): cfg = { label, sub, c1, c2, icon, cells = {l1,l2,l3,l4}, fixed100 }.
--- Retorna { widget, ha, hb, graph, set_big, set_alert, set_cells }.
+-- Gráfico de fundo = molécula line_graph (MonGraph: gradient_fill + blend "screen"; escala
+-- fixa 0..100 quando fixed100, senão dinâmica p/ taxas de rede). Séries: {c2 atrás, c1 na
+-- frente}; :push(2,v)=primária/c1, :push(1,v)=secundária/c2.
+-- Retorna { widget, push_a, push_b, set_big, set_cells }.
 ------------------------------------------------------------------------------------------
 local function make_module(cfg)
-  local ha, hb = zeros(SAMPLES), zeros(SAMPLES)
-  local graph  = make_area_graph(ha, cfg.c1, hb, cfg.c2, cfg.fixed100)
+  local graph = line_graph({
+    series = {
+      { color = cfg.c2, data = zeros(SAMPLES) }, -- B (secundária) atrás
+      { color = cfg.c1, data = zeros(SAMPLES) }, -- A (primária) na frente
+    },
+    fill          = true,
+    gradient_fill = true,
+    blend         = "screen",
+    fixed100      = cfg.fixed100,
+    grid          = false,
+    halo          = false,
+    well          = false,
+  })
 
   -- leitura grande (direita)
   local readout = wibox.widget {
@@ -249,7 +172,7 @@ local function make_module(cfg)
   local frame = wibox.widget {
     stack,
     bg                 = p.a(p.inset, 0.5),
-    shape              = function(cr, w, h) gears.shape.rounded_rect(cr, w, h, dpi(4)) end,
+    shape              = shapes.powerline({ tip = dpi(mt.powerline_tip_lg), socket = true }), -- chevron .monmod__edge
     shape_border_width = dpi(1),
     shape_border_color = p.line_faint,
     widget             = wibox.container.background,
@@ -257,10 +180,11 @@ local function make_module(cfg)
 
   return {
     widget = frame,
-    ha = ha, hb = hb, graph = graph,
+    push_a = function(v) graph:push(2, v) end, -- série primária (c1), frente
+    push_b = function(v) graph:push(1, v) end, -- série secundária (c2), fundo
     set_big = function(text, alert)
       readout:set_text(text or "--")
-      readout_bg.fg = (alert and alert >= 90) and p.glow_hot or p.text_bright
+      readout_bg.fg = (alert and alert >= mt.pct_hot) and p.glow_hot or p.text_bright
     end,
     set_cells = function(vals)
       for i = 1, 4 do cells[i]:set_text(vals[i] or "--") end
@@ -495,8 +419,7 @@ return function(s)
       local r = math.floor(pct + 0.5)
       last_cpu = r
       mod_cpu.set_big(string.format("%d%%", r), r)
-      push(mod_cpu.ha, r)
-      mod_cpu.graph:emit_signal("widget::redraw_needed")
+      mod_cpu.push_a(r)
     end)
   end
 
@@ -524,8 +447,7 @@ return function(s)
         load1 and string.format("%.2f", load1) or "--",
       }
       if temp_m then
-        push(mod_cpu.hb, math.min(100, temp_m / 1000)) -- temp °C ~ 0..100
-        mod_cpu.graph:emit_signal("widget::redraw_needed")
+        mod_cpu.push_b(math.min(100, temp_m / 1000)) -- temp °C ~ 0..100
       end
     end)
   end
@@ -553,9 +475,8 @@ return function(s)
         string.format("%d%%", swap_pct),
         cached and fmt_gib(cached * 1024) or "--",
       }
-      push(mod_mem.ha, pct)
-      push(mod_mem.hb, swap_pct)
-      mod_mem.graph:emit_signal("widget::redraw_needed")
+      mod_mem.push_a(pct)
+      mod_mem.push_b(swap_pct)
     end)
   end
 
@@ -592,9 +513,8 @@ return function(s)
           (mused and mtot and mtot > 0) and string.format("%.1fG", mused / 1024) or "--",
           fan and string.format("%d%%", math.floor(fan + 0.5)) or "--",
         }
-        push(mod_gpu.ha, r)
-        if temp then push(mod_gpu.hb, math.min(100, temp)) end
-        mod_gpu.graph:emit_signal("widget::redraw_needed")
+        mod_gpu.push_a(r)
+        if temp then mod_gpu.push_b(math.min(100, temp)) end
       end
     )
   end
@@ -625,16 +545,15 @@ return function(s)
         up_rate   = d_tx / dt
       end
       prev_rx, prev_tx, prev_net_time = rx_sum, tx_sum, now
-      mod_net.set_big(fmt_rate(down_rate))
+      mod_net.set_big(format.rate(down_rate, "compact"))
       mod_net.set_cells {
-        fmt_rate(up_rate),
+        format.rate(up_rate, "compact"),
         fmt_gib(rx_sum),
         fmt_gib(tx_sum),
         (user_vars.network and user_vars.network.ethernet) or "eno1",
       }
-      push(mod_net.ha, down_rate / 1024) -- KB/s (escala dinâmica)
-      push(mod_net.hb, up_rate / 1024)
-      mod_net.graph:emit_signal("widget::redraw_needed")
+      mod_net.push_a(down_rate / 1024) -- KB/s (escala dinâmica)
+      mod_net.push_b(up_rate / 1024)
     end)
   end
 

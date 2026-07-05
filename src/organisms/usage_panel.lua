@@ -4,10 +4,14 @@
 -- Tabela por núcleo de CPU (Image #6, coluna esquerda). Cabeçalho:                       --
 --   "  GHz  TEMP  USED%"  e uma linha por core (C1..Cn, cap em 8).                       --
 --   · GHz    — "cpu MHz" de /proc/cpuinfo por processor (MHz/1000).                      --
---   · TEMP   — "Core N:" de `sensors` (°C); ausente -> "--". >=80°C -> p.crit.            --
+--   · TEMP   — "Core N:" de `sensors` (°C); ausente -> "--". >= mt.temp_hot -> p.crit.    --
 --   · USED%  — busy% por núcleo via delta de (total-idle)/total de /proc/stat.           --
+--             >= mt.pct_hot -> p.glow_hot (alert threshold §7.4.2).                       --
 --                                                                                        --
--- Rótulos em text_muted, números right-aligned em text_bright.                           --
+-- Rótulos em text_muted, números right-aligned em text_bright. Cabeçalho + linhas usam    --
+-- a molécula compartilhada table_row: um POOL FIXO de MAX_CORES linhas construído uma vez --
+-- e atualizado com :set_cells IN PLACE (sem :reset()/rebuild por tick); cores acima da    --
+-- contagem atual são apenas escondidos (.visible=false). Refs diretas às linhas (R1).     --
 --                                                                                        --
 -- Amostragem ASSÍNCRONA (awful.spawn.easy_async_with_shell em gears.timer 2s, call_now). --
 -- NUNCA io.popen/os.execute/sync em timer — congela o WM (deadlock conhecido neste repo).--
@@ -19,12 +23,11 @@ local gears = require("gears")
 local wibox = require("wibox")
 local dpi = require("beautiful.xresources").apply_dpi
 local p = require("src.theme.palette")
+local mt = require("src.theme.metrics")
 local Icon = require("src.tools.icons") -- ícones SVG do set icons/ (§3.13)
+local table_row = require("src.molecules.table_row") -- linha de tabela de coluna fixa
 
-local MONO = "JetBrainsMono Nerd Font"
 local MAX_CORES = 8
-local HOT_TEMP = 80 -- >= -> p.crit
-local HOT_USED = 90 -- >= -> p.glow_hot (alert threshold §7.4.2)
 
 -- Comando único: per-core /proc/stat + MHz por processor + temps do sensors.
 -- Delimitadores garantem parse robusto mesmo se `sensors` faltar.
@@ -35,26 +38,11 @@ local SAMPLE_CMD = table.concat({
 }, "; ")
 
 -- Larguras das colunas (mono): rótulo do core + 3 números right-aligned.
+-- Sem token de largura de coluna no metrics.lua; dpi() literal (precedente chip.lua).
 local W_CORE = dpi(34)
 local W_GHZ  = dpi(58)
 local W_TEMP = dpi(58)
 local W_USED = dpi(58)
-
--- Célula textbox mono com cor/alinhamento/largura fixos.
-local function cell(text, color, align, width)
-  return wibox.widget {
-    {
-      text   = text or "",
-      font   = MONO .. " 9",
-      align  = align or "left",
-      valign = "center",
-      widget = wibox.widget.textbox,
-    },
-    fg           = color,
-    forced_width = width,
-    widget       = wibox.container.background,
-  }
-end
 
 return function(args)
   args = args or {}
@@ -64,22 +52,37 @@ return function(args)
   local prev_total = {}
   local prev_idle = {}
 
-  -- Lista de linhas (:reset() + repopulada a cada tick).
+  -- Cabeçalho estático: "  GHz  TEMP  USED%" (rótulos em text_muted, default de header).
+  local header = table_row {
+    header = true,
+    cells  = {
+      { "",      W_CORE, "left"  },
+      { "GHz",   W_GHZ,  "right" },
+      { "TEMP",  W_TEMP, "right" },
+      { "USED%", W_USED, "right" },
+    },
+  }
+
+  -- Pool fixo de linhas de core (construído uma vez; :set_cells in place por tick).
+  -- Começam escondidas: nada aparece até a 1ª amostra populá-las (igual ao :reset() antigo).
   local rows = wibox.widget {
     spacing = dpi(2),
     layout  = wibox.layout.fixed.vertical,
   }
-
-  -- Cabeçalho estático: "  GHz  TEMP  USED%" (rótulos em text_muted).
-  local header = wibox.widget {
-    cell("",      p.text_muted, "left",  W_CORE),
-    cell("GHz",   p.text_muted, "right", W_GHZ),
-    cell("TEMP",  p.text_muted, "right", W_TEMP),
-    cell("USED%", p.text_muted, "right", W_USED),
-    forced_height = dpi(16),
-    spacing       = dpi(4),
-    layout        = wibox.layout.fixed.horizontal,
-  }
+  local core_rows = {}
+  for i = 1, MAX_CORES do
+    local row = table_row {
+      cells = {
+        { "", W_CORE, "left",  p.text_muted }, -- rótulo do core (muted)
+        { "", W_GHZ,  "right" },               -- GHz (text_bright default)
+        { "", W_TEMP, "right" },               -- TEMP (text_bright / p.crit quando quente)
+        { "", W_USED, "right" },               -- USED% (text_bright / p.glow_hot quando quente)
+      },
+    }
+    row.visible = false
+    core_rows[i] = row
+    rows:add(row)
+  end
 
   local body = wibox.widget {
     header,
@@ -87,21 +90,6 @@ return function(args)
     spacing = dpi(4),
     layout  = wibox.layout.fixed.vertical,
   }
-
-  -- Monta a linha de um core: rótulo (muted) + GHz/TEMP/USED% (right, bright).
-  -- temp_hot=true recolora a célula TEMP para p.crit.
-  -- used_hot=true recolora a célula USED% para p.glow_hot (>= alert threshold).
-  local function build_row(label, ghz, temp, used, temp_hot, used_hot)
-    return wibox.widget {
-      cell(label, p.text_muted, "left",  W_CORE),
-      cell(ghz,   p.text_bright, "right", W_GHZ),
-      cell(temp,  temp_hot and p.crit or p.text_bright, "right", W_TEMP),
-      cell(used,  used_hot and p.glow_hot or p.text_bright, "right", W_USED),
-      forced_height = dpi(18),
-      spacing       = dpi(4),
-      layout        = wibox.layout.fixed.horizontal,
-    }
-  end
 
   -- Parse de /proc/stat: cpuN -> busy% via delta. Guarda prev por core.
   -- Retorna tabela used[i] (i = índice 0-based do core => i+1 = C{i+1}).
@@ -176,8 +164,10 @@ return function(args)
   end
 
   local function refresh(stdout)
-    rows:reset()
-    if type(stdout) ~= "string" then return end
+    if type(stdout) ~= "string" then
+      for i = 1, MAX_CORES do core_rows[i].visible = false end
+      return
+    end
 
     local stat    = stdout:match("@@STAT%s*(.-)@@CPUINFO")
     local cpuinfo = stdout:match("@@CPUINFO%s*(.-)@@SENSORS")
@@ -194,33 +184,43 @@ return function(args)
         n = i + 1
       end
     end
-    if n == 0 then n = 0 end
 
-    for i = 0, math.min(n, MAX_CORES) - 1 do
-      local label = "C" .. (i + 1)
+    for i = 0, MAX_CORES - 1 do
+      local row = core_rows[i + 1]
+      if i < n then
+        local ghz_str = "--"
+        if tonumber(ghz[i]) then
+          ghz_str = string.format("%.2f", ghz[i])
+        end
 
-      local ghz_str = "--"
-      if tonumber(ghz[i]) then
-        ghz_str = string.format("%.2f", ghz[i])
+        local temp_str = "--"
+        local temp_hot = false
+        local tv = tonumber(temp[i])
+        if tv then
+          temp_str = string.format("%d", math.floor(tv + 0.5))
+          temp_hot = tv >= mt.temp_hot
+        end
+
+        local used_str = "--"
+        local used_hot = false
+        local uv = tonumber(used[i])
+        if uv then
+          used_str = string.format("%d", math.floor(uv + 0.5))
+          used_hot = uv >= mt.pct_hot
+        end
+
+        -- :set_cells muta os MESMOS textboxes in place (sem rebuild). Cor sempre passada
+        -- explícita em TEMP/USED% p/ voltar a text_bright quando esfria.
+        row:set_cells({
+          { "C" .. (i + 1) },
+          { ghz_str },
+          { temp_str, nil, nil, temp_hot and p.crit or p.text_bright },
+          { used_str, nil, nil, used_hot and p.glow_hot or p.text_bright },
+        })
+        row.visible = true
+      else
+        row.visible = false
       end
-
-      local temp_str = "--"
-      local temp_hot = false
-      local tv = tonumber(temp[i])
-      if tv then
-        temp_str = string.format("%d", math.floor(tv + 0.5))
-        temp_hot = tv >= HOT_TEMP
-      end
-
-      local used_str = "--"
-      local used_hot = false
-      local uv = tonumber(used[i])
-      if uv then
-        used_str = string.format("%d", math.floor(uv + 0.5))
-        used_hot = uv >= HOT_USED
-      end
-
-      rows:add(build_row(label, ghz_str, temp_str, used_str, temp_hot, used_hot))
     end
   end
 

@@ -1,65 +1,42 @@
 ------------------------------
 -- This is the clock widget --
 ------------------------------
+-- VIOLET HUD: rebuilt on the shared `pill` molecule (icon + label capsule). The
+-- former hand-rolled imagebox + textclock + rounded background is gone. The time
+-- is fed into the pill via :set_text on a 60s tick (os.date, LOCAL time), which is
+-- the faithful equivalent of the retired wibox.widget.textclock (default refresh
+-- 60, local timezone). Public API unchanged: `function() -> widget`.
 
 -- Awesome Libs
-local awful = require("awful")
-local p = require("src.theme.palette")
-local dpi = require("beautiful").xresources.apply_dpi
+local pill  = require("src.molecules.pill")
+local p     = require("src.theme.palette")
+local dpi   = require("beautiful").xresources.apply_dpi
 local gears = require("gears")
-local wibox = require("wibox")
 require("src.core.signals")
-
--- VIOLET HUD icon set (icons/svg/) — clock (§3.13.1).
-local hud_svg = awful.util.getdir("config") .. "icons/svg/"
 
 -- Returns the clock widget
 return function()
 
-  local clock_widget = wibox.widget {
-    {
-      {
-        {
-          {
-            {
-              id = "icon",
-              image = gears.color.recolor_image(hud_svg .. "clock.svg", p.v400),
-              widget = wibox.widget.imagebox,
-              resize = false
-            },
-            id = "icon_layout",
-            widget = wibox.container.place
-          },
-          id = "icon_margin",
-          top = dpi(2),
-          widget = wibox.container.margin
-        },
-        spacing = dpi(10),
-        {
-          id = "label",
-          align = "center",
-          valign = "center",
-          format = "%H:%M",
-          widget = wibox.widget.textclock
-        },
-        id = "clock_layout",
-        layout = wibox.layout.fixed.horizontal
-      },
-      id = "container",
-      left = dpi(8),
-      right = dpi(8),
-      widget = wibox.container.margin
-    },
-    bg = p.panel,
-    fg = p.text_bright,
-    shape = function(cr, width, height)
-      gears.shape.rounded_rect(cr, width, height, 5)
-    end,
-    widget = wibox.container.background
+  local clock_widget = pill {
+    icon       = "clock",       -- icons/svg/clock.svg
+    icon_color = p.v400,
+    text       = os.date("%H:%M"),
+    bg         = p.panel,
+    fg         = p.text_bright,
+    -- pad_x defaults to dpi(mt.pad_header_x)==dpi(8), == ex-margin left/right.
+    spacing    = dpi(10),       -- ex icon<->label gap (no metric token fits)
   }
 
   Hover_signal(clock_widget, p.v700, p.text_bright)
 
+  -- Minute tick (equivalent to the old textclock's own always-on 60s timer; not a
+  -- sampling surface — os.date is trivial, no gating).
+  gears.timer {
+    timeout   = 60,
+    call_now  = true,
+    autostart = true,
+    callback  = function() clock_widget:set_text(os.date("%H:%M")) end,
+  }
+
   return clock_widget
 end
-

@@ -16,6 +16,8 @@ local wibox = require("wibox")
 local gears = require("gears")
 local dpi = require("beautiful.xresources").apply_dpi
 local p = require("src.theme.palette")
+local mt = require("src.theme.metrics")
+local ft = require("src.theme.typography")
 local panel = require("src.tools.panel")
 local Icon = require("src.tools.icons") -- ícones SVG do set icons/ (§3.13)
 
@@ -33,7 +35,7 @@ for _, loc in ipairs({ "C.UTF-8", "C.utf8", "C" }) do
   if os.setlocale(loc, "time") then break end
 end
 
-local CAL_FONT = "JetBrainsMono Nerd Font 9"
+local CAL_FONT = ft.cell -- mono 9 — the sanctioned calendar/list cell role (§typography)
 
 -- Re-style each calendar cell according to its flag. Returns a wibox widget that
 -- the calendar layout will add in place of the raw textbox.
@@ -42,7 +44,7 @@ local function fn_embed(widget, flag, _date)
     -- The whole month grid container: keep it transparent so the panel chrome shows.
     return wibox.widget {
       widget,
-      bg     = "#00000000",
+      bg     = p.transparent,
       widget = wibox.container.background,
     }
   end
@@ -60,7 +62,7 @@ local function fn_embed(widget, flag, _date)
         widget  = wibox.container.margin,
       },
       fg     = p.text_heading,
-      bg     = "#00000000",
+      bg     = p.transparent,
       widget = wibox.container.background,
     }
   end
@@ -70,7 +72,7 @@ local function fn_embed(widget, flag, _date)
     return wibox.widget {
       widget,
       fg     = p.text_muted,
-      bg     = "#00000000",
+      bg     = p.transparent,
       widget = wibox.container.background,
     }
   end
@@ -85,7 +87,7 @@ local function fn_embed(widget, flag, _date)
       },
       fg     = p.v50,
       bg     = p.v500,
-      shape  = function(cr, w, h) gears.shape.rounded_rect(cr, w, h, dpi(3)) end,
+      shape  = function(cr, w, h) gears.shape.rounded_rect(cr, w, h, dpi(mt.radius_chip)) end,
       widget = wibox.container.background,
     }
   end
@@ -103,7 +105,7 @@ local function fn_embed(widget, flag, _date)
   return wibox.widget {
     widget,
     fg     = fg,
-    bg     = "#00000000",
+    bg     = p.transparent,
     widget = wibox.container.background,
   }
 end
@@ -154,13 +156,13 @@ return function(args)
       {
         cal,
         cal_next,
-        spacing = dpi(8),
+        spacing = dpi(mt.gap),
         layout  = wibox.layout.fixed.vertical,
       },
       halign = "center",
       widget = wibox.container.place,
     },
-    bg     = "#00000000",
+    bg     = p.transparent,
     widget = wibox.container.background,
   }
 
@@ -168,7 +170,7 @@ return function(args)
     title      = "CALENDAR",
     body       = body,
     accent     = p.v500,
-    w          = args.w or dpi(300),
-    right_icon = Icon("calendar", { size = dpi(14), color = p.text_muted }),
+    w          = args.w or dpi(mt.panel_w_md),
+    right_icon = Icon("calendar", { size = dpi(mt.icon_md), color = p.text_muted }),
   })
 end

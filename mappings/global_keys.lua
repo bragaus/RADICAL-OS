@@ -6,6 +6,14 @@ local ruled = require("ruled")
 
 local modkey = user_vars.modkey
 
+-- Brightness config: was the globals BRIGHTNESS_SCRIPT / BACKLIGHT_SEPS set by
+-- src/organisms/brightness_osd.lua. Both consumers now read the SAME defensive
+-- user_vars.brightness fallback (script = the xrandr helper, steps = % per key press).
+local brightness = user_vars.brightness or {
+  script = awful.util.getdir("config") .. "src/scripts/brightness.sh",
+  steps  = 10,
+}
+
 return gears.table.join(
   awful.key(
     { modkey },
@@ -237,7 +245,7 @@ return gears.table.join(
     function(c)
       -- Software brightness via xrandr (no HW backlight on this desktop). See src/scripts/brightness.sh.
       awful.spawn.easy_async_with_shell(
-        BRIGHTNESS_SCRIPT .. " inc " .. tostring(BACKLIGHT_SEPS),
+        brightness.script .. " inc " .. tostring(brightness.steps),
         function(stdout)
           awesome.emit_signal("module::brightness_osd:show", true)
           awesome.emit_signal("module::brightness_slider:update")
@@ -252,7 +260,7 @@ return gears.table.join(
     "XF86MonBrightnessDown",
     function(c)
       awful.spawn.easy_async_with_shell(
-        BRIGHTNESS_SCRIPT .. " dec " .. tostring(BACKLIGHT_SEPS),
+        brightness.script .. " dec " .. tostring(brightness.steps),
         function(stdout)
           awesome.emit_signal("module::brightness_osd:show", true)
           awesome.emit_signal("module::brightness_slider:update")

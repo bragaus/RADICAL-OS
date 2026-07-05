@@ -31,8 +31,45 @@ return {
   -- STATUS (sutis)
   ok = "#5ad1a0", warn = "#f0c44c", crit = "#fb5e8a", info = "#8b5cf6",
 
+  -- ── ADDITIONS (Stage-0 tokens; the 46 colors above are unchanged) ──────────
+  -- Full-transparent sentinel (gradient stops, scrim tails, "no fill").
+  transparent = "#00000000",
+
+  -- Launcher orange family (promoted from kit.css:311-315; was raw in app_launcher).
+  launcher_ring    = "#b3561a",
+  launcher_ring_hi = "#ff8c2a",
+  launcher_ring_on = "#ff9a3a",
+  launcher_glow    = "#ff7a18", -- base for p.a(p.launcher_glow, x) recipes
+
+  -- Named alpha recipes — kills the 0.06/0.20/0.22/0.5/0.7/0.8/0.85/0.9/0.95
+  -- scatter. De-facto values are RATIFIED TO CURRENT (0.9 panel, not the kit's
+  -- 0.92, etc.) — zero visual churn is the Stage-0 invariant.
+  alpha = {
+    panel = 0.9, panel_hi = 0.95, bar = 0.8, clock_bar = 0.85, dash = 0.9,
+    chip_bg = 0.06, chip_border = 0.20,
+    divider_tail = 0.22, bevel_hi = 0.7, bevel_lo = 0.9, tick = 0.9,
+    rail = 0.5, graph_area = 0.22, graph_halo = 0.18, well = 0.96, well_border = 0.22,
+    segment = 0.90, tab = 0.88, hover_delta = 0.08, overlay = 0.55, scrim = 0.7,
+  },
+
   -- Helper de alpha em runtime: a(hex, 0..1) -> "#RRGGBBAA"
+  -- HARDENED (adopts colors.with_alpha semantics): strips an existing 8-digit
+  -- alpha byte before appending (so p.a("#RRGGBBAA", x) no longer produces a
+  -- 10-digit garbage string) and clamps alpha to [0,1].
   a = function(hex, alpha)
-    return string.format("%s%02x", hex, math.floor((alpha or 1) * 255 + 0.5))
+    if #hex == 9 then hex = hex:sub(1, 7) end
+    alpha = math.max(0, math.min(1, alpha or 1))
+    return string.format("%s%02x", hex, math.floor(alpha * 255 + 0.5))
+  end,
+
+  -- rgb(hex) -> r, g, b as three 0..1 floats for cairo (set_source_rgb / _rgba).
+  -- Replaces the duplicated hex_rgb at net_graph_panel:30 + monitor_bar:45.
+  -- Tolerates a leading '#' and an 8-digit alpha byte (only RGB is returned).
+  rgb = function(hex)
+    hex = hex:gsub("#", "")
+    local r = tonumber(hex:sub(1, 2), 16) or 0
+    local g = tonumber(hex:sub(3, 4), 16) or 0
+    local b = tonumber(hex:sub(5, 6), 16) or 0
+    return r / 255, g / 255, b / 255
   end,
 }

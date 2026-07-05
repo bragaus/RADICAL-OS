@@ -3,6 +3,9 @@
 --                                                                                        --
 -- Info-rows key/value (§7.4.1): rótulo à esquerda (text_muted, CAIXA-ALTA) · valor à    --
 -- direita (text_bright). Fundo de linha sutil v500@0.06 + borda v500@0.20, raio bar.     --
+-- As linhas usam a molécula compartilhada info_row{variant="chip"} (o "chip" reproduz    --
+-- exatamente o antigo create_info_row: superfície v500@chip_bg + borda v500@chip_border, --
+-- raio radius_bar, altura row_h).                                                        --
 --                                                                                        --
 -- Linhas:                                                                                --
 --   CPU     -> primeiro "model name" de /proc/cpuinfo                                    --
@@ -20,8 +23,7 @@ local wibox = require("wibox")
 local dpi = require("beautiful.xresources").apply_dpi
 local p = require("src.theme.palette")
 local Icon = require("src.tools.icons") -- ícones SVG do set icons/ (§3.13)
-
-local MONO = "JetBrainsMono Nerd Font"
+local info_row = require("src.molecules.info_row") -- key/value HUD row (§7.4.1)
 
 -- Encurta um valor longo (ex.: model name da CPU) com reticências.
 local function shorten(text, max)
@@ -45,68 +47,16 @@ local function fmt_uptime(secs)
   return string.format("%dh %02dm", hours, mins)
 end
 
--- Cria uma info-row reusando o look do create_info_row do chart (§7.4.1):
--- rótulo text_muted CAIXA-ALTA à esquerda, valor text_bright à direita,
--- fundo sutil v500@0.06 + borda v500@0.20, raio bar.
-local function create_info_row(label_text)
-  local label = wibox.widget {
-    text   = tostring(label_text or ""):upper(),
-    font   = MONO .. ", Bold 10",
-    valign = "center",
-    widget = wibox.widget.textbox,
-  }
-
-  local value = wibox.widget {
-    text   = "--",
-    font   = MONO .. ", ExtraBold 11",
-    align  = "right",
-    valign = "center",
-    widget = wibox.widget.textbox,
-  }
-
-  local row = wibox.widget {
-    {
-      {
-        {
-          label,
-          fg     = p.text_muted,
-          widget = wibox.container.background,
-        },
-        nil,
-        {
-          value,
-          fg     = p.text_bright,
-          widget = wibox.container.background,
-        },
-        expand = "inside",
-        layout = wibox.layout.align.horizontal,
-      },
-      left   = dpi(8),
-      right  = dpi(8),
-      top    = dpi(3),
-      bottom = dpi(3),
-      widget = wibox.container.margin,
-    },
-    forced_height = dpi(18),
-    bg            = p.a(p.v500, 0.06),
-    border_width  = dpi(1),
-    border_color  = p.a(p.v500, 0.20),
-    shape         = function(cr, w, h)
-      gears.shape.rounded_rect(cr, w, h, dpi(2))
-    end,
-    widget = wibox.container.background,
-  }
-
-  return row, value
-end
-
 return function(args)
   args = args or {}
   local panel = require("src.tools.panel")
 
-  local cpu_row, cpu_value       = create_info_row("CPU")
-  local kernel_row, kernel_value = create_info_row("KERNEL")
-  local uptime_row, uptime_value = create_info_row("UPTIME")
+  -- Info-rows via molécula compartilhada (variant "chip" == look do antigo create_info_row).
+  -- Refs diretas às linhas: a molécula devolve o widget COM :set_value; nunca consultamos
+  -- ids de volta através do corpo do panel() (R1).
+  local cpu_row    = info_row { key = "CPU",    variant = "chip" }
+  local kernel_row = info_row { key = "KERNEL", variant = "chip" }
+  local uptime_row = info_row { key = "UPTIME", variant = "chip" }
 
   local body = wibox.widget {
     cpu_row,
@@ -124,7 +74,7 @@ return function(args)
       -- Normaliza espaços internos repetidos.
       model = model:gsub("%s%s+", " ")
       if model ~= "" then
-        cpu_value:set_text(shorten(model, 26))
+        cpu_row:set_value(shorten(model, 26))
       end
     end
   )
@@ -134,7 +84,7 @@ return function(args)
     function(stdout)
       local kr = tostring(stdout or ""):gsub("^%s+", ""):gsub("%s+$", "")
       if kr ~= "" then
-        kernel_value:set_text(shorten(kr, 26))
+        kernel_row:set_value(shorten(kr, 26))
       end
     end
   )
@@ -145,7 +95,7 @@ return function(args)
       "cut -d' ' -f1 /proc/uptime 2>/dev/null",
       function(stdout)
         local secs = tonumber((tostring(stdout or ""):match("[%d%.]+")))
-        uptime_value:set_text(fmt_uptime(secs))
+        uptime_row:set_value(fmt_uptime(secs))
       end
     )
   end

@@ -3,10 +3,12 @@
 ---------------------------------
 
 local awful = require("awful")
-local color = require("src.theme.colors")
 local p = require("src.theme.palette")
 local wibox = require("wibox")
 local dpi = require("beautiful").xresources.apply_dpi
+local shapes = require("src.tools.shapes")              -- lozenge geometry
+local list_buttons = require("src.tools.list_buttons")  -- shared buttons
+local signals = require("src.core.signals")             -- hover_stateful
 require("src.tools.icon_handler")
 
 local panel_transparency = (user_vars.transparency and user_vars.transparency.panels) or {}
@@ -14,23 +16,15 @@ local tab_alpha = panel_transparency.enabled == false and 1 or (panel_transparen
 local hover_alpha = math.min(1, tab_alpha + 0.08)
 
 local palette = {
-  active_bg = color.with_alpha(p.panel_hi, tab_alpha),
-  inactive_bg = color.with_alpha(p.base, tab_alpha),
+  active_bg = p.a(p.panel_hi, tab_alpha),
+  inactive_bg = p.a(p.base, tab_alpha),
   active_fg = p.text_bright,
   inactive_fg = p.text_muted
 }
 
-local function tab_shape(cr, width, height)
-  local slant = math.min(dpi(8), math.floor(height * 0.35))
-
-  cr:move_to(slant, 0)
-  cr:line_to(width - slant, 0)
-  cr:line_to(width, height / 2)
-  cr:line_to(width - slant, height)
-  cr:line_to(slant, height)
-  cr:line_to(0, height / 2)
-  cr:close_path()
-end
+-- Symmetric double-pointed hexagon (kit lozenge); live slant was min(dpi(8), h*0.35) and
+-- shapes.lozenge clamps to h/2, so dpi(8) reproduces the same tab.
+local tab_shape = shapes.lozenge(dpi(8)) -- live tasklist slant; no metric token fits
 
 local function shorten_text(text, max_len)
   if not text or text == "" then
@@ -42,29 +36,6 @@ local function shorten_text(text, max_len)
   end
 
   return text:sub(1, max_len - 3) .. "..."
-end
-
-local function create_buttons(buttons, object)
-  if not buttons then
-    return nil
-  end
-
-  local btns = {}
-
-  for _, b in ipairs(buttons) do
-    btns[#btns + 1] = awful.button {
-      modifiers = b.modifiers,
-      button = b.button,
-      on_press = function()
-        b:emit_signal("press", object)
-      end,
-      on_release = function()
-        b:emit_signal("release", object)
-      end
-    }
-  end
-
-  return btns
 end
 
 local list_update = function(widget, buttons, _, _, objects)
@@ -119,7 +90,7 @@ local list_update = function(widget, buttons, _, _, objects)
       widget = wibox.container.background
     }
 
-    task_widget:buttons(create_buttons(buttons, object))
+    task_widget:buttons(list_buttons.create(buttons, object))
     icon:set_image(Get_icon(user_vars.icon_theme, object))
 
     local task_tool_tip = awful.tooltip {
@@ -134,35 +105,13 @@ local list_update = function(widget, buttons, _, _, objects)
 
     task_tool_tip:set_text(object.name or object.class or "Sem titulo")
 
-    local old_wibox, old_cursor, old_bg
-
-    task_widget:connect_signal("mouse::enter", function()
-      old_bg = task_widget.bg
-      task_widget.bg = is_focused and color.with_alpha(p.raised, hover_alpha) or color.with_alpha(p.inset, hover_alpha)
-
-      local current_wibox = mouse.current_wibox
-      if current_wibox then
-        old_cursor, old_wibox = current_wibox.cursor, current_wibox
-        current_wibox.cursor = "hand1"
-      end
-    end)
-
-    task_widget:connect_signal("button::press", function()
-      task_widget.bg = is_focused and color.with_alpha(p.v700, tab_alpha) or color.with_alpha(p.panel, tab_alpha)
-    end)
-
-    task_widget:connect_signal("button::release", function()
-      task_widget.bg = bg
-    end)
-
-    task_widget:connect_signal("mouse::leave", function()
-      task_widget.bg = old_bg or bg
-
-      if old_wibox then
-        old_wibox.cursor = old_cursor
-        old_wibox = nil
-      end
-    end)
+    -- Hover: darker/lighter fill on enter, deeper on press; restore the resting fill on
+    -- leave. hover_stateful wires enter/leave/press/release ONCE + manages the hand1 cursor.
+    signals.hover_stateful(task_widget, {
+      hover_bg = is_focused and p.a(p.raised, hover_alpha) or p.a(p.inset, hover_alpha),
+      press_bg = is_focused and p.a(p.v700, tab_alpha) or p.a(p.panel, tab_alpha),
+      restore  = { bg = bg, fg = fg },
+    })
 
     widget:add(task_widget)
   end
@@ -174,23 +123,7 @@ return function(s)
   local tasklist = awful.widget.tasklist(
     s,
     awful.widget.tasklist.filter.currenttags,
-    awful.util.table.join(
-      awful.button({}, 1, function(c)
-        if c == client.focus then
-          c.minimized = true
-        else
-          c.minimized = false
-          if not c:isvisible() and c.first_tag then
-            c.first_tag:view_only()
-          end
-          c:emit_signal("request::activate")
-          c:raise()
-        end
-      end),
-      awful.button({}, 3, function(c)
-        c:kill()
-      end)
-    ),
+    list_buttons.tasklist(),
     {},
     list_update,
     wibox.layout.fixed.horizontal()
