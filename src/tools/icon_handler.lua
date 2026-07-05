@@ -1,6 +1,7 @@
 -----------------------------------------------------
 -- Helper to get icons from a program/program name --
 -----------------------------------------------------
+local gfs = require("gears.filesystem")
 local icon_cache = {}
 
 -- tries to find a matching file name in /usr/share/icons/THEME/RESOLUTION/apps/ and if not found tried with first letter
@@ -46,15 +47,14 @@ function Get_icon(theme, client, program_string, class_string, is_steam)
     local resolutions = { "128x128", "96x96", "64x64", "48x48", "42x42", "32x32", "24x24", "16x16" }
     for _, res in ipairs(resolutions) do
       local iconDir = "/usr/share/icons/" .. theme .. "/" .. res .. "/apps/"
-      local ioStream = io.open(iconDir .. clientName, "r")
-      if ioStream ~= nil then
+      -- file_readable = Gio stat (non-blocking); NEVER io.open on the main loop.
+      if gfs.file_readable(iconDir .. clientName) then
         icon_cache[#icon_cache + 1] = iconDir .. clientName
         return iconDir .. clientName
       else
         clientName = clientName:gsub("^%l", string.upper)
         iconDir = "/usr/share/icons/" .. theme .. "/" .. res .. "/apps/"
-        ioStream = io.open(iconDir .. clientName, "r")
-        if ioStream ~= nil then
+        if gfs.file_readable(iconDir .. clientName) then
           icon_cache[#icon_cache + 1] = iconDir .. clientName
           return iconDir .. clientName
         elseif not class_string then
@@ -62,8 +62,7 @@ function Get_icon(theme, client, program_string, class_string, is_steam)
         else
           clientName = class_string .. ".svg"
           iconDir = "/usr/share/icons/" .. theme .. "/" .. res .. "/apps/"
-          ioStream = io.open(iconDir .. clientName, "r")
-          if ioStream ~= nil then
+          if gfs.file_readable(iconDir .. clientName) then
             icon_cache[#icon_cache + 1] = iconDir .. clientName
             return iconDir .. clientName
           else

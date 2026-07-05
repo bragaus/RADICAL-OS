@@ -36,7 +36,7 @@ Theme.border_marked = p.glow_hot
 -- Menus (§7.5 do DESIGN_SYSTEM)
 Theme.menu_height       = dpi(26)
 Theme.menu_width        = dpi(220)
-Theme.menu_bg_normal    = p.panel .. "f2"
+Theme.menu_bg_normal    = p.a(p.panel, 0.95)
 Theme.menu_bg_focus     = p.v700
 Theme.menu_fg_normal    = p.text_primary
 Theme.menu_fg_focus     = p.v50
@@ -52,7 +52,7 @@ Theme.taglist_bg_focus = p.v500
 
 -- Tooltip
 Theme.tooltip_border_color = p.line_base
-Theme.tooltip_bg           = p.panel .. "f2"
+Theme.tooltip_bg           = p.a(p.panel, 0.95)
 Theme.tooltip_fg           = p.text_bright
 Theme.tooltip_border_width = dpi(1)
 Theme.tooltip_gaps         = dpi(10)
@@ -72,7 +72,7 @@ Theme.titlebar_maximized_button_inactive = icondir .. "maximize.svg"
 Theme.systray_icon_spacing = dpi(6)
 
 -- Hotkeys popup
-Theme.hotkeys_bg = p.panel .. "f2"
+Theme.hotkeys_bg = p.a(p.panel, 0.95)
 Theme.hotkeys_fg = p.text_primary
 Theme.hotkeys_border_width = dpi(1)
 Theme.hotkeys_border_color = p.line_base

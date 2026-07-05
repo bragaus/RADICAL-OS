@@ -3,7 +3,8 @@
 --------------------------------------------------------------------------------------------------------------
 
 local awful = require("awful")
-local color = require("src.theme.colors")
+local p = require("src.theme.palette")
+local ft = require("src.theme.typography")
 local dpi = require("beautiful").xresources.apply_dpi
 local gears = require("gears")
 local wibox = require("wibox")
@@ -18,7 +19,7 @@ return function(s, widgets_top, widgets_bottom)
     screen = s,
     widget = wibox.container.background,
     ontop = false,
-    bg = "#00000000",
+    bg = p.transparent,
     visible = true,
     maximum_width = dpi(980),
     placement = function(c)
@@ -44,7 +45,7 @@ return function(s, widgets_top, widgets_bottom)
       screen = s,
       widget = wibox.container.background,
       ontop = false,
-      bg = "#00000000",
+      bg = p.transparent,
       visible = true,
       maximum_width = dpi(980),
       placement = function(c)
@@ -77,16 +78,11 @@ return function(s, widgets_top, widgets_bottom)
     }
   end
 
-  local accent_color = "#9d6ff6" -- p.v400
-  local segment_palette = {
-    "#130a24", -- panel
-    "#1b1030", -- panel_hi
-    "#241640", -- raised
-    "#2e1065", -- v950
-  }
+  local accent_color = p.v400
+  local segment_palette = { p.panel, p.panel_hi, p.raised, p.v950 }
 
   local function segment_bg_for(index)
-    return color.with_alpha(segment_palette[((index - 1) % #segment_palette) + 1], segment_alpha)
+    return p.a(segment_palette[((index - 1) % #segment_palette) + 1], segment_alpha)
   end
 
   local function normalize_widget_colors(widget)
@@ -100,7 +96,7 @@ return function(s, widgets_top, widgets_bottom)
       end
 
       if w.bg ~= nil then
-        w.bg = "#00000000"
+        w.bg = p.transparent
       end
 
       if w.fg ~= nil then
@@ -154,11 +150,11 @@ return function(s, widgets_top, widgets_bottom)
           text = "",
           align = "center",
           valign = "center",
-          font = "JetBrainsMono Nerd Font, ExtraBold 30",
+          font = ft.mono_family .. ", ExtraBold 30",
           widget = wibox.widget.textbox
         },
         fg = current_bg, -- seta powerline afiada = cor do segmento (aponta DIREITA, barra esquerda)
-        bg = "#00000000",
+        bg = p.transparent,
         forced_width = dpi(26),
         widget = wibox.container.background
       },
