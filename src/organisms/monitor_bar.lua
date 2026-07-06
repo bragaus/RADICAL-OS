@@ -59,6 +59,14 @@ local MON_H    = dpi(mt.mon_h)         -- altura canónica, do symbolo --mon-h (
 local SAMPLES  = mt.mon_samples        -- profundidade do histórico de cada série
 local INTERVAL = 1                     -- segundos que medeiam entre duas amostras (gráfico vivo)
 
+-- ACCENTO LARANJA do grapho (a pedido): a linha e o enchimento em degradê tomam a MESMA cor
+-- do contorno das janellas (launcher_ring_hi). Cada módulo traça UMA só série — a métrica
+-- REAL primária (uso% de GPU/CPU/MEM, taxa de NET) — sem as séries accessórias (temp/swap/up)
+-- que d'antes toldavam o grapho e o faziam parecer alheio ao que o hardware fazia. O
+-- gradient_fill do line_graph já produz o degradê pedido: laranja opaco/saturado junto à
+-- linha, esmaecendo a diáphano no fundo. — Braga Us.
+local GRAPH_ACCENT = p.launcher_ring_hi
+
 -- IDENTIFICADOR HEXADECIMAL do nó, cunhado uma só vez no carregamento (os.time
 -- é de custo ínfimo e não bloqueia o systema).
 local NODE_ID = string.format("0x%04X", os.time() % 0x10000)
@@ -140,8 +148,7 @@ local function make_module(s, cfg)
   local graph = line_graph({
     series        = sdefs,
     fill          = true,
-    gradient_fill = true,
-    blend         = "screen",
+    gradient_fill = true,   -- degradê vertical laranja: opaco junto à linha -> diáphano no fundo
     fixed100      = cfg.fixed100,
     grid          = true,   -- grelha faint (kit MonGraph)
     halo          = true,   -- halo do traço (kit MonGraph)
@@ -161,16 +168,13 @@ local function make_module(s, cfg)
   end
 
   -- ── bloco identificador (rótulo de marca Xirod + sub-rótulo com ícone) ──
-  local label_tb = wibox.widget {
-    { text = cfg.label, font = ft.display(cfg.lbl), valign = "top", widget = wibox.widget.textbox },
-    fg = p.text_bright, widget = wibox.container.background,
-  }
+  -- refs directas aos textboxes internos (para os rótulos dynâmicos do hardware real).
+  local label_inner = wibox.widget { text = cfg.label, font = ft.display(cfg.lbl), valign = "top", widget = wibox.widget.textbox }
+  local sub_inner   = wibox.widget { text = cfg.sub, font = ft.mon_sub, valign = "center", widget = wibox.widget.textbox }
+  local label_tb = wibox.widget { label_inner, fg = p.text_bright, widget = wibox.container.background }
   local sub_tb = wibox.widget {
     { Icon(cfg.icon, { size = dpi(9), color = p.text_muted }), valign = "center", widget = wibox.container.place },
-    {
-      { text = cfg.sub, font = ft.mon_sub, valign = "center", widget = wibox.widget.textbox },
-      fg = p.text_muted, widget = wibox.container.background,
-    },
+    { sub_inner, fg = p.text_muted, widget = wibox.container.background },
     spacing = dpi(4),
     layout  = wibox.layout.fixed.horizontal,
   }
@@ -295,6 +299,9 @@ local function make_module(s, cfg)
     set_cell = function(i, text)
       if cells[i] then cells[i]:set_text(text or "--") end
     end,
+    -- set_label / set_sub: rótulos dynâmicos do hardware real (marca em Xirod / sub-rótulo).
+    set_label = function(text) if text and text ~= "" then label_inner:set_text(text) end end,
+    set_sub   = function(text) if text and text ~= "" then sub_inner:set_text(text) end end,
   }
 end
 
@@ -553,26 +560,70 @@ return function(s)
   local iface = (user_vars and user_vars.network and user_vars.network.ethernet) or "eno1"
 
   -- os quatro módulos de telemetria — manifesto verbatim do kit (monitorbar.jsx).
+  -- UMA série por módulo (a métrica REAL primária), toda em GRAPH_ACCENT (laranja das janellas).
+  -- Os rótulos partem de um valor prudente e são CORRIGIDOS ao hardware real logo abaixo.
   local mod_gpu = make_module(s, {
-    label = "RTX", lbl = 24, sub = "GPU // RTX CORE", icon = "gpu",
-    colors = { p.data1, p.data4 }, group = "system", fixed100 = true, first = true,
+    label = "GPU", lbl = 24, sub = "GPU", icon = "gpu",
+    colors = { GRAPH_ACCENT }, group = "system", fixed100 = true, first = true,
     cells = { "USE", "TEMP", "CLK", "VRAM" },
   })
   local mod_cpu = make_module(s, {
-    label = "AMD", lbl = 24, sub = "CPU // RYZEN 16T", icon = "cpu",
-    colors = { p.glow_core, p.data2, p.v400 }, group = "system", fixed100 = true,
+    label = "CPU", lbl = 24, sub = "CPU", icon = "cpu",
+    colors = { GRAPH_ACCENT }, group = "system", fixed100 = true,
     cells = { "LOAD", "TEMP", "CLK", "CORES" },
   })
   local mod_mem = make_module(s, {
-    label = "MEMORY", lbl = 15, sub = "RAM // DDR5 16G", icon = "mem",
-    colors = { p.data2, p.data5 }, group = "system", fixed100 = true,
+    label = "MEMORY", lbl = 15, sub = "RAM", icon = "mem",
+    colors = { GRAPH_ACCENT }, group = "system", fixed100 = true,
     cells = { "USED", "CACHE", "SWAP", "BUFF" },
   })
   local mod_net = make_module(s, {
-    label = "WWW", lbl = 22, sub = "NET // UPLINK " .. iface, icon = "net",
-    colors = { p.data4, p.glow_hot }, group = "network", fixed100 = false,
+    label = "NET", lbl = 22, sub = "NET // " .. iface, icon = "net",
+    colors = { GRAPH_ACCENT }, group = "network", fixed100 = false,
     cells = { "DOWN", "UP", "PING", "CONN" },
   })
+
+  -- ── DETECÇÃO ASSÍNCRONA DO HARDWARE REAL (rótulos fiéis) ────────────────────
+  -- Colhe, uma só vez, o modelo do CPU + nº de threads (/proc/cpuinfo, nproc), a
+  -- memória total (/proc/meminfo) e o nome da GPU (nvidia-smi), e reescreve os
+  -- rótulos — de sorte que a barra nomeie o que a máquina DE FACTO possue (aqui,
+  -- v.g., Intel i5-10400F · 12T, 8G, RTX 3060), e não uma marca fixa e falaz.
+  awful.spawn.easy_async_with_shell(
+    "echo \"CPU:$(grep -m1 'model name' /proc/cpuinfo | sed 's/.*: //')\"; " ..
+    "echo \"THREADS:$(nproc 2>/dev/null)\"; " ..
+    "echo \"MEMGB:$(awk '/MemTotal/{printf \"%.0f\", $2/1048576}' /proc/meminfo)\"; " ..
+    "echo \"GPU:$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | head -n1)\"",
+    function(out)
+      out = out or ""
+      local cpu_model = out:match("CPU:([^\n]*)") or ""
+      local threads   = out:match("THREADS:(%d+)")
+      local mem_gb    = out:match("MEMGB:(%d+)")
+      local gpu_name  = out:match("GPU:([^\n]*)") or ""
+
+      -- CPU: marca (INTEL/AMD) no rótulo grande; modelo curto + threads no sub.
+      local brand = cpu_model:match("Intel") and "INTEL" or cpu_model:match("AMD") and "AMD" or "CPU"
+      -- modelo curto, apurado com guarda de nil (nunca :gsub sobre nil):
+      local short = cpu_model:match("(i%d%-%w+)")   -- Intel Core iN-XXXX (v.g. i5-10400F)
+      if not short then
+        local ryz = cpu_model:match("Ryzen[%s%w]+")  -- família Ryzen
+        if ryz then short = (ryz:gsub("%s+$", "")) end
+      end
+      short = short or cpu_model:match("Core[%s%w%-]+") or "CPU"
+      mod_cpu.set_label(brand)
+      mod_cpu.set_sub("CPU // " .. short .. (threads and (" " .. threads .. "T") or ""))
+
+      -- MEM: memória total em gibibytes no sub.
+      if mem_gb then mod_mem.set_sub("RAM // " .. mem_gb .. "G") end
+
+      -- GPU: extrahe a família curta (v.g. "RTX 3060") do nome pleno da nvidia-smi.
+      if gpu_name ~= "" then
+        local gshort = gpu_name:match("(RTX%s*%w+)") or gpu_name:match("(GTX%s*%w+)")
+          or gpu_name:gsub("^NVIDIA%s+GeForce%s+", ""):gsub("^NVIDIA%s+", "")
+        mod_gpu.set_label((gshort:match("RTX") or gshort:match("GTX")) and "RTX" or "GPU")
+        mod_gpu.set_sub("GPU // " .. gshort)
+      end
+    end
+  )
 
   local strip = make_strip()
   local rail  = make_rail(s)
@@ -722,14 +773,8 @@ return function(s)
       mod_cpu.set_cell(2, temp_m and string.format("%d°", math.floor(temp_m / 1000 + 0.5)) or "--")
       mod_cpu.set_cell(3, mhz and string.format("%.1fG", mhz / 1000) or "--")
       mod_cpu.set_cell(4, cores and tostring(cores) or "--")
-      if temp_m then
-        mod_cpu.push(2, math.min(100, temp_m / 1000)) -- temperatura em ~0..100
-      end
-      if load1 and cores and cores > 0 then
-        mod_cpu.push(3, math.max(0, math.min(100, load1 / cores * 100))) -- carga em % dos núcleos
-      elseif load1 then
-        mod_cpu.push(3, math.max(0, math.min(100, load1 * 12.5)))
-      end
+      -- (temp/carga já não alimentam o grapho: a série única traça SÓ o uso% real do CPU;
+      --  temperatura e clock vivem nas células do rodapé.) — Braga Us.
     end)
   end
 
@@ -760,8 +805,7 @@ return function(s)
         string.format("%d%%", swap_pct),
         buffers and fmt_gib(buffers * 1024) or "--",
       }
-      mod_mem.push(1, pct)
-      mod_mem.push(2, swap_pct)
+      mod_mem.push(1, pct) -- série única: uso% real da memória (swap fica na célula)
     end)
   end
 
@@ -799,8 +843,7 @@ return function(s)
           clk and string.format("%d", math.floor(clk + 0.5)) or "--",   -- CLK
           (mused and mtot and mtot > 0) and string.format("%.1fG", mused / 1024) or "--", -- VRAM
         }
-        mod_gpu.push(1, r)
-        if temp then mod_gpu.push(2, math.min(100, temp)) end
+        mod_gpu.push(1, r) -- série única: utilização% real da GPU (temp fica na célula)
       end
     )
   end
@@ -838,8 +881,7 @@ return function(s)
       mod_net.set_big("↓", format.rate(down_rate, "compact"), "/s")
       mod_net.set_cell(1, format.rate(down_rate, "compact")) -- DOWN
       mod_net.set_cell(2, format.rate(up_rate, "compact"))   -- UP
-      mod_net.push(1, down_rate / 1024) -- em kibibytes por segundo (escala dynâmica)
-      mod_net.push(2, up_rate / 1024)
+      mod_net.push(1, down_rate / 1024) -- série única: descarga real em KiB/s (escala dynâmica; up na célula)
     end)
   end
 
