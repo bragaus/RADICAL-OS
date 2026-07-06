@@ -160,9 +160,12 @@ local function make_module(s, cfg)
   local darken = wibox.widget.base.make_widget()
   function darken:fit(_, w, h) return w, h end
   function darken:draw(_, cr, w, h)
+    -- Véu MUITO mais tênue que d'antes (0.22->0.72 apagava a parte baixa do grapho, donde
+    -- este parecia "cortado" à esquerda). Agora quasi-diáphano no topo, ténue no fundo: o
+    -- grapho laranja lê-se de borda a borda, e o texto (brilhante) continua legível. — Braga Us.
     cr:set_source(gears.color({
       type = "linear", from = { 0, 0 }, to = { 0, h },
-      stops = { { 0, p.a(p.abyss, 0.22) }, { 1, p.a(p.abyss, 0.72) } },
+      stops = { { 0, p.transparent }, { 0.55, p.a(p.abyss, 0.10) }, { 1, p.a(p.abyss, 0.38) } },
     }))
     cr:rectangle(0, 0, w, h); cr:fill()
   end
@@ -703,15 +706,22 @@ return function(s)
     ontop     = false,
     visible   = true,
     screen    = s,
+    type      = "dock",       -- DOCA: reserva a sua faixa na área de trabalho (struts, abaixo)
     bg        = "#00000000", -- a doca pinta o seu próprio gradiente; o popup é diáphano
     placement = function(c) awful.placement.bottom_left(c, { margins = 0 }) end,
   }
   s._monitor_bar = bar
 
-  -- REAJUSTA a largura e a posição sempre que a geometria da tela se altere.
+  -- DOCKBAR (a pedido): reserva a sua faixa de MON_H no rodapé, de sorte que os clientes
+  -- ladrilhados E os maximizados parem no SEU TOPO — tal qual a barra superior — em vez de
+  -- correr por baixo d'ella. É a reserva de workarea (struts) que o impõe. — Braga Us.
+  bar:struts({ bottom = MON_H })
+
+  -- REAJUSTA a largura, a posição e a reserva sempre que a geometria da tela se altere.
   s:connect_signal("property::geometry", function()
     bar_widget.forced_width = s.geometry.width
     awful.placement.bottom_left(bar, { margins = 0 })
+    bar:struts({ bottom = MON_H })
   end)
 
   -- ── ESTADO PERSISTENTE entre ticks ─────────────────────────────────────────
