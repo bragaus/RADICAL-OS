@@ -514,19 +514,12 @@ return function(s)
   end
   set_input_shape()
 
-  -- FORMA CIRCULAR da janella (bounding shape). O picom borra segundo a FORMA da janella, não
-  -- a sua caixa: d'antes o popup era um RECTÂNGULO CANVAS×CANVAS sempre visível => o picom
-  -- pintava um QUADRADO borrado fixo ao canto. Dando-lhe forma de CÍRCULO — o disco do hub
-  -- quando fechado, o disco da órbita (RIN) quando aberto — o blur passa a seguir a RODA e o
-  -- quadrado desapparece; fechado, o círculo cinge-se ao hub (que, quasi opaco, o encobre —
-  -- d'onde "apenas o launcher"). — Braga Us.
-  set_bounding_shape = function()
-    local r = expanded and RIN or (GIF_R + dpi(3))
-    host.shape = function(cr, _, _)
-      cr:arc(CX, CY, r, 0, 2 * math.pi)
-      cr:close_path()
-    end
-  end
+  -- NOTA (Braga Us): a forma-de-janella circular (host.shape = círculo no canto) revelou-se
+  -- deletéria — a máscara, cingida ao canvas, degenerava n'um arco disforme que cobria a tela.
+  -- REVERTE-SE: a janella torna a ser o rectângulo diáphano de outrora (o clique já se cinge ao
+  -- devido por shape_input). O expurgo do "quadrado de blur" há-de fazer-se por outra via (dois
+  -- popups: hub sempre patente + órbita só ao abrir), com o vagar que a fidelidade requer.
+  set_bounding_shape = function() end
   set_bounding_shape()
 
   -- ═══════════════ DO RÓTULO DO FOCO (kit .orbit__lbl, acima do dente focado) ═══════════════
