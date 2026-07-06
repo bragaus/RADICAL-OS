@@ -35,6 +35,9 @@ local txt = require("src.atoms.txt")
 require("src.core.signals")
 
 local launcher_gif_path = gfs.get_configuration_dir() .. "src/assets/logo.gif"
+-- O mesmo repositório de uso partilhado com o menu rofi (app_usage.py): d'aqui vem a
+-- ordem "último aberto primeiro" (MRU) e para aqui se lança o `bump` a cada lançamento.
+local usage_script = gfs.get_configuration_dir() .. "src/scripts/app_usage.py"
 
 -- Funcção urdida pelo Doutor Braga Us para depurar o comando de lançamento. Domínio:
 -- o identificador da entrada .desktop (app_id) e a sua linha "Exec". Contra-domínio:
@@ -100,11 +103,13 @@ return function(s)
       if t then t:stop() end
     end
     if s._app_launcher_anim then s._app_launcher_anim:stop() end
+    if s._app_launcher_search_grabber then s._app_launcher_search_grabber:stop() end
     for _, cn in ipairs(s._app_launcher_conns or {}) do
       cn.obj.disconnect_signal(cn.name, cn.fn)
     end
     s._app_launcher_host.visible = false
     if s._app_launcher_tip then s._app_launcher_tip.visible = false end
+    if s._app_launcher_search then s._app_launcher_search.visible = false end
   end
   s._app_launcher_timers = {}
   s._app_launcher_conns  = {}
@@ -118,12 +123,19 @@ return function(s)
   end
 
   -- ═══════════════════════════ DO ESTADO ═══════════════════════════
-  local apps = {}
+  local apps = {}               -- a lista VISÍVEL (filtrada pela busca) que a órbita percorre
+  local all_apps = {}           -- a lista COMPLETA (MRU), donde a busca filtra
+  local query = ""              -- o texto de busca corrente
+  local search_grabber = nil    -- o caçador de teclas da busca (awful.keygrabber)
   local cogs = {}
   local sel        = 1
   local sel_target = 1
   local expanded   = false      -- a engrenagem nasce fechada (sómente o GIF se mostra)
   local anim_timer = nil
+
+  -- Declarações antecipadas (fechos que se cruzam): o filtro da busca, o actualizador do
+  -- texto da barra de busca, o lançador do foco e a forma circular da janella.
+  local apply_filter, update_search_text, launch_focused, set_bounding_shape
 
   -- Declaração antecipada do rotulador do foco (definido adiante, junto ao balão): canvas:draw
   -- invoca-o, e o seu fecho léxico precisa de o capturar como upvalue ANTES da sua atribuição.
@@ -438,64 +450,23 @@ return function(s)
   -- separados por tabulação, o nome, o identificador, a linha Exec e o ícone. De volta,
   -- depura cada linha, compõe o comando de lançamento e povoa a lista apps. Assíncrono.
   local function scan_apps()
-    awful.spawn.easy_async_with_shell([[
-python3 - <<'PY'
-from pathlib import Path
-import configparser
-
-paths = [Path('/usr/share/applications'), Path.home() / '.local/share/applications']
-entries = []
-seen = set()
-
-for root in paths:
-    if not root.exists():
-        continue
-    for desktop_file in sorted(root.glob('*.desktop')):
-        app_id = desktop_file.name
-        if app_id in seen:
-            continue
-        seen.add(app_id)
-        parser = configparser.ConfigParser(interpolation=None, strict=False)
-        try:
-            parser.read(desktop_file, encoding='utf-8')
-        except Exception:
-            continue
-        if 'Desktop Entry' not in parser:
-            continue
-        entry = parser['Desktop Entry']
-        if entry.get('Type') != 'Application':
-            continue
-        if entry.get('NoDisplay', 'false').lower() == 'true':
-            continue
-        if entry.get('Hidden', 'false').lower() == 'true':
-            continue
-        name = entry.get('Name', '').strip()
-        exec_line = entry.get('Exec', '').strip()
-        icon = entry.get('Icon', '').strip()
-        if not name or not exec_line:
-            continue
-        entries.append((name.lower(), name, app_id, exec_line, icon))
-
-def clean(v):
-    return v.replace('\t', ' ').replace('\n', ' ')
-
-for _, name, app_id, exec_line, icon in sorted(entries):
-    print(f"{clean(name)}\t{app_id}\t{clean(exec_line)}\t{clean(icon)}")
-PY]],
+    -- Delega ao app_usage.py (list-tsv) — a MESMA fonte e ordem do menu rofi: MRU (último
+    -- aberto primeiro), depois mais-usado, depois alfabético. Cada linha traz nome, app_id,
+    -- Exec e ícone, separados por tabulação. Guarda-se o app_id (para o `bump` no lançamento).
+    awful.spawn.easy_async_with_shell("python3 " .. string.format("%q", usage_script) .. " list-tsv",
       function(stdout)
         local list = {}
-        for line in stdout:gmatch('[^\r\n]+') do
+        for line in (stdout or ""):gmatch('[^\r\n]+') do
           local name, app_id, exec_line, icon = line:match('^(.-)\t(.-)\t(.-)\t(.*)$')
           if name and app_id and exec_line then
             local command = desktop_entry_command(app_id, exec_line)
             if command then
-              list[#list + 1] = { name = name, cmd = command, icon_name = icon }
+              list[#list + 1] = { name = name, cmd = command, icon_name = icon, app_id = app_id }
             end
           end
         end
-        apps = list
-        sel = 1; sel_target = 1
-        canvas:emit_signal("widget::redraw_needed")
+        all_apps = list
+        apply_filter()   -- reconstrue a lista visível segundo a busca corrente (vazia => tudo)
       end
     )
   end
@@ -542,6 +513,21 @@ PY]],
     img:finish()
   end
   set_input_shape()
+
+  -- FORMA CIRCULAR da janella (bounding shape). O picom borra segundo a FORMA da janella, não
+  -- a sua caixa: d'antes o popup era um RECTÂNGULO CANVAS×CANVAS sempre visível => o picom
+  -- pintava um QUADRADO borrado fixo ao canto. Dando-lhe forma de CÍRCULO — o disco do hub
+  -- quando fechado, o disco da órbita (RIN) quando aberto — o blur passa a seguir a RODA e o
+  -- quadrado desapparece; fechado, o círculo cinge-se ao hub (que, quasi opaco, o encobre —
+  -- d'onde "apenas o launcher"). — Braga Us.
+  set_bounding_shape = function()
+    local r = expanded and RIN or (GIF_R + dpi(3))
+    host.shape = function(cr, _, _)
+      cr:arc(CX, CY, r, 0, 2 * math.pi)
+      cr:close_path()
+    end
+  end
+  set_bounding_shape()
 
   -- ═══════════════ DO RÓTULO DO FOCO (kit .orbit__lbl, acima do dente focado) ═══════════════
   -- A caixa textual recahe em atoms/txt (o ÚNICO senhor do markup, R7): papel "cell" (mono 10),
@@ -592,6 +578,108 @@ PY]],
     tip.visible = true
   end
 
+  -- ═══════════════ DA BUSCA (barra de pesquisa + filtro + caçador de teclas) ═══════════════
+  -- Uma barra ao alto-esquerdo do lançador, patente SÓ com a engrenagem aberta, mostra o
+  -- texto digitado. O caçador de teclas (awful.keygrabber) colhe a digitação; cada tecla
+  -- refina o filtro por sub-cadeia do nome; Enter lança o foco; Backspace apaga; Escape
+  -- recolhe. Assim o operador acha depressa o programa sem girar toda a roda. — Braga Us.
+  local search_text = txt { role = "cell", color = p.glow_ice, valign = "center" }
+  local search_bar = awful.popup {
+    screen       = s,
+    ontop        = true,
+    visible      = false,
+    bg           = p.a(p.abyss, 0.9),
+    border_color = p.launcher_ring_hi,   -- orla laranja (como o hub e o contorno das janellas)
+    border_width = dpi(1),
+    shape        = function(cr, w, h) gears.shape.rounded_rect(cr, w, h, dpi(mt.radius_chip)) end,
+    widget       = {
+      { search_text, left = dpi(9), right = dpi(11), top = dpi(4), bottom = dpi(4), widget = wibox.container.margin },
+      forced_width = dpi(150),
+      widget       = wibox.container.constraint,
+    },
+  }
+  s._app_launcher_search = search_bar
+
+  -- update_search_text (fecho antecipado): reescreve o texto da barra (convite se vazio; o
+  -- termo + cursor se digitado) e recolloca-a ao alto-esquerdo do canvas do lançador.
+  update_search_text = function()
+    if query == "" then
+      search_text:set_span("BUSCAR…", p.text_muted)
+    else
+      search_text:set_span(query .. "▏", p.glow_ice)
+    end
+    search_bar.x = math.floor(host.x + dpi(6))
+    search_bar.y = math.floor(host.y + dpi(6))
+    search_bar.visible = expanded
+  end
+
+  -- apply_filter (fecho antecipado): reconstrue `apps` a partir de `all_apps` (a lista MRU
+  -- completa), retendo as applicações cujo nome CONTENHA `query` (insensível a caixa, busca
+  -- literal — sem padrões de Lua). Vazia a busca, mostra tudo. Reinicia a selecção e repinta.
+  apply_filter = function()
+    if query == "" then
+      apps = all_apps
+    else
+      local q = query:lower()
+      local out = {}
+      for _, a in ipairs(all_apps) do
+        if a.name:lower():find(q, 1, true) then out[#out + 1] = a end
+      end
+      apps = out
+    end
+    sel = 1; sel_target = 1
+    if update_search_text then update_search_text() end
+    canvas:emit_signal("widget::redraw_needed")
+  end
+
+  -- close_search: detém o caçador de teclas e oculta a barra.
+  local function close_search()
+    if search_grabber then search_grabber:stop(); search_grabber = nil end
+    s._app_launcher_search_grabber = nil
+    search_bar.visible = false
+  end
+
+  -- open_search: zera a busca, mostra a barra e principia o caçador de teclas.
+  local function open_search()
+    query = ""
+    apply_filter()
+    if not search_grabber then
+      search_grabber = awful.keygrabber {
+        keypressed_callback = function(_, _, key)
+          if key == "Escape" then
+            expanded = false; hide_tip(); close_search(); set_input_shape(); set_bounding_shape()
+            canvas:emit_signal("widget::redraw_needed")
+          elseif key == "Return" or key == "KP_Enter" then
+            launch_focused()
+          elseif key == "BackSpace" then
+            query = query:sub(1, -2); apply_filter()
+          elseif key == "space" then
+            query = query .. " "; apply_filter()
+          elseif #key == 1 and key:byte() >= 32 then
+            query = query .. key; apply_filter()
+          end
+        end,
+      }
+      search_grabber:start()
+      s._app_launcher_search_grabber = search_grabber
+    end
+    update_search_text()
+  end
+
+  -- launch_focused (fecho antecipado): lança a applicação em FOCO (ou a 1ª da lista filtrada),
+  -- regista o uso pelo `bump` (donde a próxima abertura a trará ao topo — MRU) e recolhe tudo.
+  launch_focused = function()
+    local target
+    for _, cog in ipairs(cogs) do if cog.focused then target = cog.app; break end end
+    target = target or apps[1]
+    if target then
+      awful.spawn.with_shell(target.cmd)
+      if target.app_id then awful.spawn({ "python3", usage_script, "bump", target.app_id }) end
+    end
+    expanded = false; hide_tip(); close_search(); set_input_shape(); set_bounding_shape()
+    canvas:emit_signal("widget::redraw_needed")
+  end
+
   -- ═══════════════ DA APALPAÇÃO (hit-test), CLIQUE E RODA ═══════════════
   -- Funcção de Braga Us que converte as coordenadas do mouse do referencial da tela ao
   -- referencial local do popup (subtrahindo a origem host.x, host.y). Devolve o par (lx, ly).
@@ -613,21 +701,22 @@ PY]],
   canvas:buttons(gears.table.join(
     awful.button({}, 1, function()
       local lx, ly = local_coords()
-      -- ao centro: abre ou fecha a engrenagem
+      -- ao centro: abre ou fecha a engrenagem (abrindo, principia a busca; fechando, cessa-a)
       if (lx - CX) ^ 2 + (ly - CY) ^ 2 <= GIF_R ^ 2 then
         expanded = not expanded
-        if not expanded then hide_tip() end
-        set_input_shape()
+        if expanded then open_search() else hide_tip(); close_search() end
+        set_input_shape(); set_bounding_shape()
         canvas:emit_signal("widget::redraw_needed")
         return
       end
-      -- sobre um dente: lança a applicação e recolhe a engrenagem
+      -- sobre um dente: lança a applicação, regista o uso (bump -> MRU) e recolhe a engrenagem
       local cog = cog_at(lx, ly)
       if cog then
         awful.spawn.with_shell(cog.app.cmd)
+        if cog.app.app_id then awful.spawn({ "python3", usage_script, "bump", cog.app.app_id }) end
         expanded = false
-        hide_tip()
-        set_input_shape()
+        hide_tip(); close_search()
+        set_input_shape(); set_bounding_shape()
         canvas:emit_signal("widget::redraw_needed")
       end
     end),
@@ -659,7 +748,7 @@ PY]],
       end
     end
     host.visible = not hide
-    if hide then expanded = false; hide_tip(); set_input_shape() end
+    if hide then expanded = false; hide_tip(); close_search(); set_input_shape(); set_bounding_shape() end
   end
 
   -- Procedimento de Braga Us: ao eleger-se uma tag desta tela, reavalia a visibilidade.

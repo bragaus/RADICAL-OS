@@ -24,28 +24,37 @@ CACHE = Path(os.environ.get("XDG_CACHE_HOME", str(Path.home() / ".cache"))) / "a
 APP_DIRS = [Path("/usr/share/applications"), Path.home() / ".local/share/applications"]
 
 
-def load_counts():
-    counts = {}
+# Store lines: "<app_id>\t<count>\t<last>". `last` is a monotonic launch sequence
+# (bigger = opened more recently) so the carousel can put the LAST-OPENED app first,
+# then fall back to most-used, then alphabetical. Old 2-field lines parse as last=0.
+def load_store():
+    store = {}
     try:
         for line in CACHE.read_text(encoding="utf-8").splitlines():
-            if "\t" in line:
-                aid, c = line.rsplit("\t", 1)
+            parts = line.split("\t")
+            if len(parts) >= 2:
+                aid = parts[0]
                 try:
-                    counts[aid] = int(c)
+                    count = int(parts[1])
                 except ValueError:
-                    pass
+                    count = 0
+                try:
+                    last = int(parts[2]) if len(parts) >= 3 else 0
+                except ValueError:
+                    last = 0
+                store[aid] = {"count": count, "last": last}
     except FileNotFoundError:
         pass
-    return counts
+    return store
 
 
-def save_counts(counts):
+def save_store(store):
     CACHE.parent.mkdir(parents=True, exist_ok=True)
     fd, tmp = tempfile.mkstemp(dir=str(CACHE.parent), prefix=".app_usage.")
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as f:
-            for aid, c in counts.items():
-                f.write(f"{aid}\t{c}\n")
+            for aid, rec in store.items():
+                f.write(f"{aid}\t{rec['count']}\t{rec['last']}\n")
         os.replace(tmp, str(CACHE))  # atomic; no half-written file (cf. rules.txt lesson)
     except Exception:
         try:
@@ -53,6 +62,14 @@ def save_counts(counts):
         except OSError:
             pass
         raise
+
+
+def bump_app(aid):
+    store = load_store()
+    nxt = max((r["last"] for r in store.values()), default=0) + 1
+    rec = store.get(aid, {"count": 0, "last": 0})
+    store[aid] = {"count": rec["count"] + 1, "last": nxt}
+    save_store(store)
 
 
 def scan():
@@ -89,10 +106,13 @@ def scan():
 
 
 def sorted_apps():
-    counts = load_counts()
+    store = load_store()
     apps = scan()
-    # most-used first (-count), ties broken alphabetically.
-    apps.sort(key=lambda a: (-counts.get(a["app_id"], 0), a["name"].lower()))
+    # LAST-OPENED first (-last, MRU), then most-used (-count), ties alphabetical.
+    def key(a):
+        r = store.get(a["app_id"], {"count": 0, "last": 0})
+        return (-r["last"], -r["count"], a["name"].lower())
+    apps.sort(key=key)
     return apps
 
 
@@ -116,10 +136,7 @@ def main():
 
     elif cmd == "bump":
         if len(sys.argv) > 2:
-            aid = sys.argv[2]
-            counts = load_counts()
-            counts[aid] = counts.get(aid, 0) + 1
-            save_counts(counts)
+            bump_app(sys.argv[2])
 
     elif cmd == "launch-index":
         if len(sys.argv) > 2:
@@ -130,9 +147,7 @@ def main():
             apps = sorted_apps()
             if 0 <= i < len(apps):
                 a = apps[i]
-                counts = load_counts()
-                counts[a["app_id"]] = counts.get(a["app_id"], 0) + 1
-                save_counts(counts)
+                bump_app(a["app_id"])
                 subprocess.Popen(
                     ["gtk-launch", a["app_id"]],
                     stdout=subprocess.DEVNULL,
