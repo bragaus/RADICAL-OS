@@ -9,3 +9,11 @@ especificacoes_tecnicas/
 
 # Claude Code local (settings/skills locais, nao versionar)
 .claude/
+
+# Docs/agents locais (nao versionar)
+.agents/
+AGENTS.md
+ARCHITECTURE.md
+CLAUDE.md
+DESIGN_SYSTEM.md
+skills-lock.json
