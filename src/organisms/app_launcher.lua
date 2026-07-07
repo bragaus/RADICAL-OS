@@ -10,7 +10,8 @@
 --   programa (tooltip); premido, LANÇA-o e recolhe a engrenagem.
 --
 --   Toda a figura habita um ÚNICO widget Cairo dentro de um awful.popup diáphano
---   (type="dock", ontop). A diaphaneidade pende do picom em execução. O shape_input
+--   (type="menu", ontop — o type dá-lhe o selector pelo qual o picom.conf o exclue do
+--   blur/sombra, matando o "quadrado"). A diaphaneidade pende do picom em execução. O shape_input
 --   circumscreve sómente o disco do GIF quando fechado (o resto deixa passar o
 --   clique), ou o disco inteiro da engrenagem quando aberta.
 --
@@ -479,7 +480,10 @@ return function(s)
     ontop     = true,
     visible   = true,
     bg        = p.transparent,
-    type      = "dock",
+    -- type="menu" (NÃO "dock"): dá ao launcher um _NET_WM_WINDOW_TYPE exclusivo (nenhum outro
+    -- popup o usa), pelo qual o picom.conf o exclue do blur e da sombra — matando o "quadrado"
+    -- em ambos os estados, sem tocar na monitor_bar (que segue type="dock"). — Braga Us.
+    type      = "menu",
     widget    = {
       canvas,
       forced_width  = CANVAS,
@@ -514,11 +518,14 @@ return function(s)
   end
   set_input_shape()
 
-  -- NOTA (Braga Us): a forma-de-janella circular (host.shape = círculo no canto) revelou-se
-  -- deletéria — a máscara, cingida ao canvas, degenerava n'um arco disforme que cobria a tela.
-  -- REVERTE-SE: a janella torna a ser o rectângulo diáphano de outrora (o clique já se cinge ao
-  -- devido por shape_input). O expurgo do "quadrado de blur" há-de fazer-se por outra via (dois
-  -- popups: hub sempre patente + órbita só ao abrir), com o vagar que a fidelidade requer.
+  -- NOTA (Braga Us): NÃO se talha aqui a forma-de-janella. Dar-lhe forma por shape_bounding
+  -- directo é vão — o wibox, a cada property::geometry (v.g. o apply_size deferido do popup),
+  -- corre _apply_shape, que, sendo host.shape (self._shape) nullo, repõe shape_bounding=nil e
+  -- apaga a máscara (wibox/init.lua:403,649). E a via de alto nível host.shape=funcção não
+  -- serve ao estado ABERTO: o disco jaz na quina do canvas, donde um círculo que abarque a
+  -- órbita cobre quasi todo o rectângulo (o tal "arco disforme"). O "quadrado de blur" expurga-
+  -- se, pois, no picom: a janella é agora type="menu" (vide o hospedeiro) e o picom.conf exclue
+  -- window_type='menu' do blur e da sombra. A máscara de CLIQUE (shape_input) permanece. — Braga Us.
   set_bounding_shape = function() end
   set_bounding_shape()
 

@@ -60,12 +60,14 @@ local SAMPLES  = mt.mon_samples        -- profundidade do histórico de cada sé
 local INTERVAL = 1                     -- segundos que medeiam entre duas amostras (gráfico vivo)
 
 -- ACCENTO LARANJA do grapho (a pedido): a linha e o enchimento em degradê tomam a MESMA cor
--- do contorno das janellas (launcher_ring_hi). Cada módulo traça UMA só série — a métrica
--- REAL primária (uso% de GPU/CPU/MEM, taxa de NET) — sem as séries accessórias (temp/swap/up)
--- que d'antes toldavam o grapho e o faziam parecer alheio ao que o hardware fazia. O
--- gradient_fill do line_graph já produz o degradê pedido: laranja opaco/saturado junto à
--- linha, esmaecendo a diáphano no fundo. — Braga Us.
-local GRAPH_ACCENT = p.launcher_ring_hi
+-- do contorno das janellas (launcher_ring_hi). GPU/CPU/MEM traçam UMA só série — a métrica
+-- REAL primária (uso%) — sem as séries accessórias (temp/swap) que d'antes toldavam o grapho.
+-- EXCEPÇÃO deliberada: o NET traça DUAS séries sobrepostas — download (laranja GRAPH_ACCENT)
+-- e upload (amarelo-neon GRAPH_ACCENT_UP) — na MESMA escala partilhada, com mescla aditiva
+-- "screen" (o cruzamento acende em néon). O gradient_fill do line_graph produz o degradê
+-- pedido: opaco junto à linha, esmaecendo a diáphano no fundo. — Braga Us.
+local GRAPH_ACCENT    = p.launcher_ring_hi -- download (laranja)
+local GRAPH_ACCENT_UP = p.graph_up         -- upload (amarelo-neon), par do laranja no NET
 
 -- IDENTIFICADOR HEXADECIMAL do nó, cunhado uma só vez no carregamento (os.time
 -- é de custo ínfimo e não bloqueia o systema).
@@ -150,6 +152,7 @@ local function make_module(s, cfg)
     fill          = true,
     gradient_fill = true,   -- degradê vertical laranja: opaco junto à linha -> diáphano no fundo
     fixed100      = cfg.fixed100,
+    blend         = cfg.blend, -- nil na maioria; "screen" só no NET (mescla aditiva das 2 séries)
     grid          = true,   -- grelha faint (kit MonGraph)
     halo          = true,   -- halo do traço (kit MonGraph)
     well          = false,
@@ -582,7 +585,10 @@ return function(s)
   })
   local mod_net = make_module(s, {
     label = "NET", lbl = 22, sub = "NET // " .. iface, icon = "net",
-    colors = { GRAPH_ACCENT }, group = "network", fixed100 = false,
+    -- DUAS séries sobrepostas: {download (frente, laranja), upload (trás, amarelo-neon)}.
+    -- blend "screen" acende o cruzamento; escala partilhada (fixed100=false) mede ambas igual.
+    colors = { GRAPH_ACCENT, GRAPH_ACCENT_UP }, blend = "screen",
+    group = "network", fixed100 = false,
     cells = { "DOWN", "UP", "PING", "CONN" },
   })
 
@@ -891,7 +897,8 @@ return function(s)
       mod_net.set_big("↓", format.rate(down_rate, "compact"), "/s")
       mod_net.set_cell(1, format.rate(down_rate, "compact")) -- DOWN
       mod_net.set_cell(2, format.rate(up_rate, "compact"))   -- UP
-      mod_net.push(1, down_rate / 1024) -- série única: descarga real em KiB/s (escala dynâmica; up na célula)
+      mod_net.push(1, down_rate / 1024) -- série 1 (frente, laranja): download real em KiB/s
+      mod_net.push(2, up_rate   / 1024) -- série 2 (trás, amarelo-neon): upload real em KiB/s (escala partilhada)
     end)
   end
 
