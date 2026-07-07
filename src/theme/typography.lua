@@ -58,6 +58,10 @@ return {
   mon_rail_loadu = mono..", Bold 11",      -- .monrail__loadv i (o signo '%')
   mon_strip_lbl  = mono..", ExtraBold 9",  -- .monbar__rec / rótulos da fita (9px)
 
+  -- ── Papel da BUSCA do lançador (Xirod; excepção deliberada ao DS §4, a pedido
+  --    expresso do usuário: o prompt "BUSCAR:" é peça de marca, não dado) ──────
+  search = disp.." 10",
+
   -- ── Funcção `display` — a fonte de marca, ao serviço de Braga Us ─────────
   -- Propósito: compor a cadeia da fonte Xirod SÓMENTE para o wordmark e para os
   --   rótulos de marca da MonitorBar — nunca para dados (vide DS §4).

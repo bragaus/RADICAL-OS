@@ -33,6 +33,7 @@ local menubar_utils = require("menubar.utils")
 local p = require("src.theme.palette")
 local mt = require("src.theme.metrics")
 local txt = require("src.atoms.txt")
+local shapes = require("src.tools.shapes")
 require("src.core.signals")
 
 local launcher_gif_path = gfs.get_configuration_dir() .. "src/assets/logo.gif"
@@ -288,25 +289,31 @@ return function(s)
     compute_cogs()
 
     if expanded then
-      -- (1) fulgor radial alaranjado atrás dos dentes (kit .orbit__glow), centrado no hub
-      local glow_r = ORBIT_R + FOCUS_R
+      -- (1) fulgor radial NEON alaranjado atrás dos dentes (kit .orbit__glow), centrado no
+      -- hub: núcleo bem mais quente que outr'ora, alpha ainda VISÍVEL ao cruzar a guia
+      -- (parada ancorada em ORBIT_R/glow_r) e esmaecimento até o nada um pouco ALÉM d'ella
+      -- — o brilho atravessa a linha e morre aos poucos, como pediu o operador. — Braga Us.
+      local glow_r  = ORBIT_R + FOCUS_R
+      local at_line = ORBIT_R / glow_r
       cr:set_source(gears.color {
         type  = "radial",
         from  = { CX, CY, 0 },
         to    = { CX, CY, glow_r },
         stops = {
-          { 0,   p.a(p.launcher_glow, 0.45) },
-          { 0.5, p.a(p.launcher_glow, 0.18) },
-          { 1,   p.a(p.launcher_glow, 0) },
+          { 0,       p.a(p.launcher_glow, 0.85) },
+          { 0.55,    p.a(p.launcher_glow, 0.35) },
+          { at_line, p.a(p.launcher_glow, 0.20) },
+          { 1,       p.a(p.launcher_glow, 0) },
         },
       })
       cr:arc(CX, CY, glow_r, 0, 2 * math.pi)
       cr:fill()
 
-      -- (2) guia TRACEJADA (kit .orbit__guide): anel pontilhado 1px no raio da órbita
+      -- (2) guia TRACEJADA (kit .orbit__guide): anel pontilhado no raio da órbita — traço
+      -- TRIPLICADO (3px; era 1px do kit) a pedido do operador.
       cr:set_dash({ dpi(4), dpi(4) }, 0)
       cr:set_source(gears.color(p.a(p.launcher_glow, 0.40)))
-      cr:set_line_width(dpi(1))
+      cr:set_line_width(dpi(3))
       cr:arc(CX, CY, ORBIT_R, 0, 2 * math.pi)
       cr:stroke()
       cr:set_dash({}, 0)   -- restitue o traço contínuo
@@ -480,9 +487,10 @@ return function(s)
     ontop     = true,
     visible   = true,
     bg        = p.transparent,
-    -- type="menu" (NÃO "dock"): dá ao launcher um _NET_WM_WINDOW_TYPE exclusivo (nenhum outro
-    -- popup o usa), pelo qual o picom.conf o exclue do blur e da sombra — matando o "quadrado"
-    -- em ambos os estados, sem tocar na monitor_bar (que segue type="dock"). — Braga Us.
+    -- type="menu" (NÃO "dock"): dá ao launcher o _NET_WM_WINDOW_TYPE pelo qual o picom.conf o
+    -- exclue do blur e da sombra — matando o "quadrado" em ambos os estados, sem tocar na
+    -- monitor_bar (que segue type="dock"). A barra de busca (adiante) usa o MESMO type="menu",
+    -- pela mesma razão. — Braga Us.
     type      = "menu",
     widget    = {
       canvas,
@@ -583,33 +591,91 @@ return function(s)
   -- texto digitado. O caçador de teclas (awful.keygrabber) colhe a digitação; cada tecla
   -- refina o filtro por sub-cadeia do nome; Enter lança o foco; Backspace apaga; Escape
   -- recolhe. Assim o operador acha depressa o programa sem girar toda a roda. — Braga Us.
-  local search_text = txt { role = "cell", color = p.glow_ice, valign = "center" }
+  -- Dimensões da barra: LARGA (≈ metade da tela, search_w_pct%), corpo na banda de BAIXO e
+  -- cauda que SOBE pela direita até cravar no hub. A ALTURA deriva-se — é a distância do
+  -- centro do hub (onde a ponta (w, 0) se ancora) ao topo da monitorbar: assim os DOIS
+  -- extremos ficam pinados por construção (ponta no hub; base COLADA na monitorbar), e
+  -- seguem sós qualquer mudança de mon_h/launcher_edge. A conta, em espelho da collocação
+  -- do host: folga sob o host (launcher_edge − HUB_EDGE_GAP) + ponta→base do canvas (CANVAS − CY).
+  local SEARCH_BODY_H   = dpi(mt.search_body_h)
+  local SEARCH_TAIL     = dpi(mt.search_tail)
+  local SEARCH_POPUP_W  = math.floor((mt.search_w_pct / 100) * s.geometry.width)
+  local SEARCH_POPUP_H  = (dpi(mt.launcher_edge) - HUB_EDGE_GAP) + (CANVAS - CY)
+  local SEARCH_RISE     = SEARCH_POPUP_H - SEARCH_BODY_H   -- subida da cauda (derivada)
+
+  -- Duas caixas txt (R7: set_span é mono-cor; duas tintas = duas caixas), ambas no papel
+  -- "search" (Xirod, a fonte de marca): o convite "BUSCAR:" em laranja, fixo; a consulta
+  -- digitada (+ cursor pulsante) em glow_ice. Alinham-se à ESQUERDA da banda (fixed.horizontal).
+  local search_label = txt { role = "search", text = "BUSCAR:", color = p.launcher_ring_hi, upper = true, valign = "center" }
+  local search_query = txt { role = "search", color = p.glow_ice, upper = true, valign = "center" }
+
+  -- O CURSOR PULSANTE: estado + renderizador (o timer que o pulsa vem adiante, junto de
+  -- open/close_search). O cursor mora no FIM da cadeia => pulsar não desloca coisa alguma.
+  local cursor_on = true
+  local function render_query()
+    search_query:set_span(query .. (cursor_on and "|" or " "), p.glow_ice)
+  end
+
+  -- A JANELLA é um rectângulo 100% TRANSPARENTE (como o host): pixmap inteiro pintado a cada
+  -- quadro => nenhum pixel órphão. NÃO se dá shape á janella: com shape, o wibox só pinta
+  -- DENTRO da fórma e o resto do pixmap fica por inicializar — em NVIDIA, isso é VRAM
+  -- estagnada (quadros velhos: a barra antiga, pedaços de wallpaper), e o picom (glx) compõe
+  -- a textura do rectângulo INTEIRO, ignorando o recorte do X-shape => o lixo apparece. O
+  -- pentágono (fill + orla laranja) desenha-se, pois, como WIDGET (container.background),
+  -- sempre repintado. type="menu": o picom.conf exclue-o de blur E sombra (como o host).
+  -- Nota: sem shape_bounding, cliques na zona transparente caem neste popup (não passam ao
+  -- de baixo) — tolerável, a barra só existe com a busca aberta; se incommodar, replicar o
+  -- set_input_shape A1 do host. — Braga Us.
   local search_bar = awful.popup {
-    screen       = s,
-    ontop        = true,
-    visible      = false,
-    bg           = p.a(p.abyss, 0.9),
-    border_color = p.launcher_ring_hi,   -- orla laranja (como o hub e o contorno das janellas)
-    border_width = dpi(1),
-    shape        = function(cr, w, h) gears.shape.rounded_rect(cr, w, h, dpi(mt.radius_chip)) end,
-    widget       = {
-      { search_text, left = dpi(9), right = dpi(11), top = dpi(4), bottom = dpi(4), widget = wibox.container.margin },
-      forced_width = dpi(150),
-      widget       = wibox.container.constraint,
+    screen  = s,
+    ontop   = true,
+    visible = false,
+    type    = "menu",
+    bg      = p.transparent,
+    widget  = {
+      { -- o pentágono é WIDGET: fill violáceo + orla laranja desenhados pelo próprio wibox
+        -- o texto habita a BANDA de baixo (o corpo), do INÍCIO à esquerda: a margem superior
+        -- empurra-o p/ abaixo da subida da cauda; a direita afasta-o da cauda.
+        { { search_label, search_query, spacing = dpi(8), layout = wibox.layout.fixed.horizontal },
+          left = dpi(12), right = SEARCH_TAIL + dpi(10),
+          top = SEARCH_RISE + dpi(3), bottom = dpi(3),
+          widget = wibox.container.margin },
+        bg                 = p.a(p.abyss, 0.9),
+        shape              = shapes.search_tail { tail = SEARCH_TAIL, body_h = SEARCH_BODY_H, rise = true },
+        shape_border_width = dpi(1),
+        shape_border_color = p.launcher_ring_hi,   -- orla laranja (como o hub e o contorno das janellas)
+        widget             = wibox.container.background,
+      },
+      strategy = "exact",
+      width    = SEARCH_POPUP_W,
+      height   = SEARCH_POPUP_H,
+      widget   = wibox.container.constraint,
     },
   }
   s._app_launcher_search = search_bar
 
-  -- update_search_text (fecho antecipado): reescreve o texto da barra (convite se vazio; o
-  -- termo + cursor se digitado) e recolloca-a ao alto-esquerdo do canvas do lançador.
+  -- O timer do pulso: UM só, urdido aqui e registado UMA vez (higiene do desmonte); as
+  -- funcções open/close_search adiante o accendem e apagam.
+  local blink_timer = gears.timer {
+    timeout   = 0.55,
+    autostart = false,
+    callback  = function()
+      cursor_on = not cursor_on
+      render_query()
+    end,
+  }
+  table.insert(s._app_launcher_timers, blink_timer)
+
+  -- update_search_text (fecho antecipado): re-renderiza a consulta (render_query cuida do
+  -- cursor) e ancora a PONTA da cauda no CENTRO do disco do hub. A ponta é o canto SUPERIOR-
+  -- direito local (SEARCH_POPUP_W, 0); logo o canto superior-esquerdo do popup assenta em
+  -- (host.x+CX - largura, host.y+CY). Sendo a altura DERIVADA (centro-do-hub → topo-da-
+  -- monitorbar), a base do corpo cola exactamente no topo da monitorbar — abaixo dos dentes;
+  -- a largura>CX recúa a barra bem à esquerda. — Braga Us.
   update_search_text = function()
-    if query == "" then
-      search_text:set_span("BUSCAR…", p.text_muted)
-    else
-      search_text:set_span(query .. "▏", p.glow_ice)
-    end
-    search_bar.x = math.floor(host.x + dpi(6))
-    search_bar.y = math.floor(host.y + dpi(6))
+    render_query()
+    search_bar.x = math.floor(host.x + CX - SEARCH_POPUP_W)
+    search_bar.y = math.floor(host.y + CY)
     search_bar.visible = expanded
   end
 
@@ -632,19 +698,23 @@ return function(s)
     canvas:emit_signal("widget::redraw_needed")
   end
 
-  -- close_search: detém o caçador de teclas e oculta a barra.
+  -- close_search: detém o caçador de teclas, apaga o pulso do cursor e oculta a barra.
   local function close_search()
     if search_grabber then search_grabber:stop(); search_grabber = nil end
     s._app_launcher_search_grabber = nil
+    blink_timer:stop()
     search_bar.visible = false
   end
 
-  -- open_search: zera a busca, mostra a barra e principia o caçador de teclas.
+  -- open_search: zera a busca, accende o pulso do cursor, mostra a barra e principia o
+  -- caçador de teclas.
   local function open_search()
     query = ""
+    cursor_on = true
+    blink_timer:again()
     apply_filter()
     if not search_grabber then
-      search_grabber = awful.keygrabber {
+      local g = awful.keygrabber {
         keypressed_callback = function(_, _, key)
           if key == "Escape" then
             expanded = false; hide_tip(); close_search(); set_input_shape(); set_bounding_shape()
@@ -660,10 +730,26 @@ return function(s)
           end
         end,
       }
-      search_grabber:start()
-      s._app_launcher_search_grabber = search_grabber
+      search_grabber = g
+      s._app_launcher_search_grabber = g
+      -- Defere o :start ao próximo tique. Aberto por clique, o servidor mantém ainda o
+      -- grab implícito do ponteiro (botão premido) e o XGrabKeyboard do caçador pode
+      -- malograr — d'onde a busca "não funcionava". Diferido, o teclado prende-se limpo
+      -- (e a invocação por tecla, sem ponteiro pendente, já prendia). Só arranca se este
+      -- ainda fôr o caçador vigente (guarda contra reabertura veloz). — Braga Us.
+      gears.timer.delayed_call(function()
+        if search_grabber == g then g:start() end
+      end)
     end
     update_search_text()
+    -- Re-ergue o host acima da barra (esta, criada depois, empilha por cima): assim o disco
+    -- do hub desenha POR CIMA e a PONTA da cauda tuca-se sob elle, em vez de cobrir o ícone.
+    -- Diferido, para correr após o popup assentar a sua geometria/visibilidade. — Braga Us.
+    gears.timer.delayed_call(function()
+      if s._app_launcher_host == host and host.visible then
+        host.ontop = false; host.ontop = true
+      end
+    end)
   end
 
   -- launch_focused (fecho antecipado): lança a applicação em FOCO (ou a 1ª da lista filtrada),
@@ -750,6 +836,22 @@ return function(s)
     host.visible = not hide
     if hide then expanded = false; hide_tip(); close_search(); set_input_shape(); set_bounding_shape() end
   end
+
+  -- ═══════════════ DA INVOCAÇÃO POR TECLA (Leader/modkey + r) ═══════════════
+  -- Abre/fecha a engrenagem por atalho, tal qual o clique no centro do disco (abrindo,
+  -- principia a busca; fechando, cessa-a). Disparado por signal — sem grab de ponteiro
+  -- pendente —, o caçador de teclas prende-se de pronto. Só actua sendo esta a instância
+  -- corrente e estando o popup visível (recolhido em tela cheia, nada faz). — Braga Us.
+  local function toggle_expanded()
+    if not is_current() or not host.visible then return end
+    expanded = not expanded
+    if expanded then open_search() else hide_tip(); close_search() end
+    set_input_shape(); set_bounding_shape()
+    canvas:emit_signal("widget::redraw_needed")
+  end
+  track_conn(awesome, "app_launcher::toggle", function(scr)
+    if scr == nil or scr == s then toggle_expanded() end
+  end)
 
   -- Procedimento de Braga Us: ao eleger-se uma tag desta tela, reavalia a visibilidade.
   local function on_tag_selected(t)
