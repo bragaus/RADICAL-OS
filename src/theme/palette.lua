@@ -49,6 +49,11 @@ return {
   launcher_ring_on = "#ff9a3a",
   launcher_glow    = "#ff7a18", -- base sobre a qual operam as receitas p.a(p.launcher_glow, x)
 
+  -- Traço de UPLOAD (amarelo-neon) do MonGraph NET — o par do laranja launcher_ring_hi
+  -- (que serve de download). Escolhido com leve viés verde p/ separar-se bem do laranja
+  -- mesmo sob a mescla aditiva "screen". Valor tunável de uma linha. — Braga Us.
+  graph_up = "#eaff00",
+
   -- Receitas nomeadas de opacidade — extirpam a dispersão dos valores
   -- 0.06/0.20/0.22/0.5/0.7/0.8/0.92/0.95. Na presente lavra de fidelidade, o
   -- painel foi RECONDUZIDO à spec do kit (0.92, .hp bg = panel@92%); a fita
