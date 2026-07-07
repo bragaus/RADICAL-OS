@@ -23,7 +23,7 @@ Repo: `bragaus/RADICAL-WM`.
 | **ARCHITECTURE.md** | Composition (atoms / molecules / organisms / templates / pages) + the restructure plan. |
 | **DESIGN_SYSTEM.md** | Palette/tokens, typography, component looks — the violet HUD spec. |
 | **AGENTS.md** | Agent-facing digest of the above. |
-| **`ferramentas_para_implementacao/`** | The RADICAL Violet HUD **design toolkit** — token / type / icon / component **source of truth** (`_ds_manifest.json`, `colors_and_type.css`, `_adherence.oxlintrc.json`, `ui_kits/radical-hud/`, `fonts/Xirod.otf`, `RADICAL Violet HUD.html`). |
+| **`especificacoes_tecnicas/`** | The RADICAL Violet HUD **design toolkit** — token / type / icon / component **source of truth** (`_ds_manifest.json`, `colors_and_type.css`, `_adherence.oxlintrc.json`, `ui_kits/radical-hud/`, `fonts/Xirod.otf`, `RADICAL Violet HUD.html`). |
 
 ## Boot & verify
 

@@ -5,4 +5,7 @@
 
 # plano_gif frame cache (CLAUDE.md — extracted under /tmp, never in-tree)
 /tmp/awesome_plano_gif_frames/
-ferramentas_para_implementacao/
+especificacoes_tecnicas/
+
+# Claude Code local (settings/skills locais, nao versionar)
+.claude/
