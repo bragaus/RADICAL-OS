@@ -72,7 +72,8 @@ local GRID_A_STRONG, GRID_A_FAINT = 0.22, 0.12
 local VGRID_A = 0.06
 -- fracções das 3 linhas de grelha (horizontaes E verticaes), a 25/50/75% (kit)
 local GRID_FRACS = { 0.25, 0.5, 0.75 }
--- paradas verticaes do gradient_fill (MonGraph): topo opaco -> meio -> fundo quasi-diáphano
+-- paradas verticaes do gradient_fill (MonGraph): opaco JUNTO Á LINHA -> meio -> footer
+-- quasi-diáphano. O degradê ancora-se ao traço (vide w:draw), não ao topo do plot.
 local GRAD_TOP, GRAD_MID, GRAD_BOT, GRAD_MID_STOP = 0.6, 0.16, 0.02, 0.62
 
 -- côres da palette decompostas uma só vez (tokens estáticos)
@@ -168,6 +169,23 @@ local function line_graph(args)
       end
     end
 
+    -- PICO PARTILHADO (só escala dynâmica, fixed100=false): TODAS as séries medem-se pela
+    -- MESMA régua vertical. Sem isto, o par download/upload do NET escalaria cada qual ao
+    -- próprio máximo, e o upload (tipicamente << download) encheria a própria altura,
+    -- mentindo a magnitude. Com fixed100=true o pico é 100 (percentagens), e isto dispensa-se.
+    -- Para uma série única (v.g. net_graph_panel), o pico partilhado iguala o da série — nada muda.
+    local shared_peak
+    if not fixed100 then
+      shared_peak = floor
+      for k = 1, #series do
+        for _, v in ipairs(series[k].data) do
+          local n = tonumber(v) or 0
+          if n > shared_peak then shared_peak = n end
+        end
+      end
+      if shared_peak <= 0 then shared_peak = 1 end
+    end
+
     -- séries (na ordem da frente para trás, tal como passadas) -----------------------------
     for si = 1, #series do
       local s     = series[si]
@@ -176,17 +194,8 @@ local function line_graph(args)
       if count >= 2 then
         local sr, sg, sb = p.rgb(s.color)
 
-        -- escala
-        local peak
-        if fixed100 then
-          peak = 100
-        else
-          peak = floor
-          for _, v in ipairs(vals) do
-            local n = tonumber(v) or 0
-            if n > peak then peak = n end
-          end
-        end
+        -- escala: 100 (percentagens) sob fixed100; senão o pico PARTILHADO acima computado.
+        local peak = fixed100 and 100 or shared_peak
         if peak <= 0 then peak = 1 end
 
         local step = pw / math.max(count - 1, 1)
@@ -198,12 +207,17 @@ local function line_graph(args)
           pts[i] = { x = x + (i - 1) * step, y = y + ph - (ph * frac) }
         end
 
-        -- Funcção trace — traça a polilinha da série. Por defeito RECTA (segmentos
-        -- "L", tal como o kit LineGraph/MonGraph); sob smooth=true retoma o antigo
-        -- alisamento de Bézier pelo ponto-médio (controlos no meio-caminho horizontal
-        -- entre vizinhos). Da penna de Braga Us.
-        local function trace()
-          cr:move_to(pts[1].x, pts[1].y)
+        -- Funcção trace_segments — emitte SÓ os segmentos da polilinha (de pts[2] em
+        -- diante), SEM o move_to inicial: o chamador é quem posiciona a pena no ponto
+        -- de partida. Assim a MESMA rotina serve, sem quebrar o subpath, tanto ao
+        -- enchimento (que parte da baseline e há-de fechar por ela) quanto aos traços
+        -- (halo/linha, que partem do 1º ponto). Por defeito RECTA (segmentos "L", tal
+        -- como o kit LineGraph/MonGraph); sob smooth=true retoma o alisamento de Bézier
+        -- pelo ponto-médio (controlos no meio-caminho horizontal entre vizinhos).
+        -- NOTA CAUTELAR: um cr:move_to aqui dentro iniciaria um NOVO sub-path e faria o
+        -- enchimento fechar-se por uma DIAGONAL (canto inf-direito -> 1º ponto), donde a
+        -- área degenerava em cunha. Por isso o move_to vive SÓ no chamador. — Braga Us.
+        local function trace_segments()
           for i = 2, count do
             if smooth then
               local prev, cur = pts[i - 1], pts[i]
@@ -217,17 +231,28 @@ local function line_graph(args)
 
         if blend == "screen" and OP_SCREEN then cr:set_operator(OP_SCREEN) end
 
-        -- passagem 1: enchimento de área (plano, ou gradiente vertical para o MonGraph)
+        -- passagem 1: enchimento de área (plano, ou gradiente vertical para o MonGraph).
+        -- UM só sub-path, fechado pela BASELINE (concorde a charts.jsx areaPath /
+        -- monitorbar.jsx area): baseline-esq -> 1º ponto -> polilinha -> baseline-dir ->
+        -- close_path (volta pela baseline). É a área SOB a curva, não a cunha diagonal.
         cr:new_path()
-        cr:move_to(pts[1].x, y + ph)
-        cr:line_to(pts[1].x, pts[1].y)
-        trace()
-        cr:line_to(pts[count].x, y + ph)
-        cr:close_path()
+        cr:move_to(pts[1].x, y + ph)      -- canto inferior-esquerdo (na baseline)
+        cr:line_to(pts[1].x, pts[1].y)    -- sobe ao 1º ponto de dado
+        trace_segments()                   -- CONTINUA o mesmo sub-path (sem move_to)
+        cr:line_to(pts[count].x, y + ph)  -- desce ao canto inferior-direito (na baseline)
+        cr:close_path()                    -- fecha PELA baseline, e não por diagonal
         if gradient_fill then
+          -- O degradê ancora-se á LINHA (o ponto mais alto da série = menor y), e não ao
+          -- topo do plot: assim o laranja opaco nasce JUNTO ao traço e esmaece a diáphano
+          -- ao chegar ao footer — de sorte que TODA série (inda a de valor baixo, v.g.
+          -- CPU 6% ou GPU 8%) exiba o mesmo enchimento, e não só a de pico (NET). Sem
+          -- isto, as séries baixas cahíam na zona inferior quasi-transparente do degradê
+          -- (alpha 0.02) e semelhavam "só linha, sem enchimento". — Braga Us.
+          local top_y = pts[1].y
+          for i = 2, count do if pts[i].y < top_y then top_y = pts[i].y end end
           cr:set_source(gears.color({
             type = "linear",
-            from = { pts[1].x, y },
+            from = { pts[1].x, top_y },
             to   = { pts[1].x, y + ph },
             stops = {
               { 0,             p.a(s.color, GRAD_TOP) },
@@ -243,14 +268,14 @@ local function line_graph(args)
 
         -- passagem 2: halo (traço grosso e translúcido, por baixo da linha)
         if halo then
-          cr:new_path(); trace()
+          cr:new_path(); cr:move_to(pts[1].x, pts[1].y); trace_segments()
           cr:set_source_rgba(sr, sg, sb, p.alpha.graph_halo)
           cr:set_line_width(dpi(HALO_W))
           cr:stroke()
         end
 
         -- passagem 3: a linha principal
-        cr:new_path(); trace()
+        cr:new_path(); cr:move_to(pts[1].x, pts[1].y); trace_segments()
         cr:set_source_rgba(sr, sg, sb, MAIN_A)
         cr:set_line_width(dpi(MAIN_W))
         cr:stroke()
