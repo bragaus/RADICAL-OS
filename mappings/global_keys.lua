@@ -198,6 +198,17 @@ return gears.table.join(
     end,
     { descripton = "Application launcher", group = "Application" }
   ),
+  -- modkey+#27 (Braga Us): "Leader+r" — abre/fecha o lançador orbital (app_launcher) e a
+  -- sua busca. Emitte-se ao ecran primário (única instância). #27 = 'r'; livre sem Control
+  -- (modkey+Control+#27 segue reservado ao reinício do Awesome). — Braga Us.
+  awful.key(
+    { modkey },
+    "#27",
+    function()
+      awesome.emit_signal("app_launcher::toggle", screen.primary)
+    end,
+    { description = "Toggle app launcher", group = "Applications" }
+  ),
   -- modkey+#23 (Braga Us): abre o permutador de clientes (rofi window).
   awful.key(
     { modkey },
