@@ -170,6 +170,47 @@ function shapes.socket_tail(opts)
   end
 end
 
+-- ─────────────────────────────────────────────────────────────────────────
+-- LEMMA III-ter — shapes.search_tail{ tail, body_h, rise } -> function(cr, w, h)
+-- Funcção urdida pelo Doutor Braga Us: a barra de busca do lançador. Um corpo
+-- rectangular (banda de texto) e uma CAUDA triangular à direita que aponta ao hub.
+-- Dois modos, conforme o predicado `rise`:
+--   rise=false (defeito): corpo em CIMA, cauda DESCE à ponta (w, h) [canto inf-dir].
+--     Pentágono (0 0)(bw 0)(w h)(bw bh)(0 bh),  bh = body_h.
+--   rise=true           : corpo em BAIXO, cauda SOBE à ponta (w, 0) [canto sup-dir] —
+--     como o corpo se cola ao rodapé, a cauda ergue-se p/ cravar no hub, acima.
+--     Pentágono (0 bt)(bw bt)(w 0)(bw h)(0 h),  bt = h - body_h.
+--   Em ambos, bw = w - tail; a ponta ancora-se, pelo chamador, no centro do hub.
+--   DOMÍNIO       : `opts` — tail (comprimento horizontal da cauda), body_h (altura
+--                   da banda de texto) e rise (booleano: cauda sobe em vez de descer).
+--   CONTRA-DOMÍNIO: uma funcção(cr, w, h) que traça o caminho da fórma no cairo.
+--   INVARIANTE    : só uma aresta se inclina (a da cauda); topo e base do corpo ficam
+--                   rectos; body_h ceifa-se a h; o caminho encerra-se. Q.E.D.
+function shapes.search_tail(opts)
+  opts = opts or {}
+  local tail = opts.tail or dpi(mt.powerline_tip_lg)
+  return function(cr, w, h)
+    local bw = w - tail
+    local body_h = math.min(opts.body_h or h, h)
+    if opts.rise then
+      local bt = h - body_h
+      cr:move_to(0, bt)
+      cr:line_to(bw, bt)
+      cr:line_to(w, 0)
+      cr:line_to(bw, h)
+      cr:line_to(0, h)
+      cr:close_path()
+    else
+      cr:move_to(0, 0)
+      cr:line_to(bw, 0)
+      cr:line_to(w, h)
+      cr:line_to(bw, body_h)
+      cr:line_to(0, body_h)
+      cr:close_path()
+    end
+  end
+end
+
 ------------------------------------------------------------------------------
 -- PINTORES (pintam sóbre cr; cada qual se auto-recorta à caixa w x h e restaura o estado)
 ------------------------------------------------------------------------------

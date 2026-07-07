@@ -85,6 +85,10 @@ return {
   iconpick_tile = 20, iconpick_pad = 8, iconpick_gap = 4,
   launcher_orbit_r = 168, launcher_app_r = 27, launcher_app_focus_r = 35,
   launcher_edge = 18, win_btn = 9,
+  -- Barra de busca do lançador: base COLADA no topo da monitorbar, cauda SOBE e crava no hub.
+  -- A ALTURA não é token — deriva-se (centro-do-hub → topo-da-monitorbar), pinando os dois
+  -- extremos por construção (vide app_launcher SEARCH_POPUP_H). Largura = search_w_pct% da tela. --
+  search_w_pct = 15, search_body_h = 24, search_tail = 64,
 
   -- Espaçamento de célula das taboas (kit gap:6px) e larguras exactas dos painéis --
   cell_gap = 6,
