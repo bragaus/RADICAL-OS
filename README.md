@@ -1,16 +1,8 @@
 <div align="center">
 
-# ⟨ RADICAL-WM ⟩
+# { GNU/Linux Radical }
 
 ### TRACTADO DE MECHANICA CELESTE APPLICADA ÀS ÁREAS DE TRABALHO
-#### ou, da composição de um HUD violeta sobre o gerenciador de janellas AwesomeWM
-
-<br>
-
-![AwesomeWM](https://img.shields.io/badge/AwesomeWM-VIOLET%20HUD-a855f7?style=for-the-badge&logo=lua&logoColor=white&labelColor=0c0617)
-![Lua](https://img.shields.io/badge/Lua-5.3-7c3aed?style=for-the-badge&logo=lua&logoColor=white&labelColor=0c0617)
-![Anno](https://img.shields.io/badge/Anno-MDCCCXCVIII-c026d3?style=for-the-badge&labelColor=0c0617)
-![Node](https://img.shields.io/badge/NODE-ONLINE-22c55e?style=for-the-badge&labelColor=0c0617)
 
 <br>
 
