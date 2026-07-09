@@ -72,6 +72,7 @@ return function(s)
   local ORBIT_R  = dpi(mt.launcher_orbit_r)      -- 168 (.orbit__guide radius)
   local ITEM_R   = dpi(mt.launcher_app_r)        -- 27  (.orbit__app 54px => r27)
   local FOCUS_R  = dpi(mt.launcher_app_focus_r)  -- 35  (activo, escala 1.28)
+  local GLOW_EXT = dpi(mt.launcher_glow_ext)     -- 70  (fulgor além dos dentes; dilata o CANVAS)
   local ANG_STEP = math.rad(40)                  -- 360/9 (kit step)
   local ANCHOR   = math.rad(135)  -- a frente do carrossel (diagonal superior-esquerda)
   local VIS_LO   = math.rad(86)
@@ -82,7 +83,10 @@ return function(s)
   local _cache_home = os.getenv("XDG_CACHE_HOME") or ((os.getenv("HOME") or "/tmp") .. "/.cache")
   local frames_dir = string.format("%s/awesome/launcher_gif_v2_%d/", _cache_home, GIF_PX)
 
-  local CANVAS = math.ceil(GIF_R + ORBIT_R + FOCUS_R + dpi(14))
+  -- O CANVAS cresce GLOW_EXT além do estrictamente preciso p/ os dentes: sem isso, o fulgor
+  -- morreria ceifado na orla da janella (raio útil = CX). Tudo o mais (CX, CY, HUB_EDGE_GAP,
+  -- collocação, busca) deriva — o hub permanece pregado no mesmo ponto do écran. — Braga Us.
+  local CANVAS = math.ceil(GIF_R + ORBIT_R + FOCUS_R + dpi(14) + GLOW_EXT)
   local CX = CANVAS - GIF_R - dpi(6)
   local CY = CANVAS - GIF_R - dpi(6)
   local RIN = ORBIT_R + FOCUS_R + dpi(4)
@@ -290,20 +294,24 @@ return function(s)
 
     if expanded then
       -- (1) fulgor radial NEON alaranjado atrás dos dentes (kit .orbit__glow), centrado no
-      -- hub: núcleo bem mais quente que outr'ora, alpha ainda VISÍVEL ao cruzar a guia
-      -- (parada ancorada em ORBIT_R/glow_r) e esmaecimento até o nada um pouco ALÉM d'ella
-      -- — o brilho atravessa a linha e morre aos poucos, como pediu o operador. — Braga Us.
-      local glow_r  = ORBIT_R + FOCUS_R
-      local at_line = ORBIT_R / glow_r
+      -- hub: núcleo quente, alpha VISÍVEL ao cruzar a guia (at_line) e na borda EXTERNA dos
+      -- dentes (at_icons), e AINDA FRANCAMENTE VIVO bem além dos ícones (at_far, +60px além
+      -- carregando 0.12) antes de extinguir-se GLOW_EXT px adiante — a luz transpõe de largo
+      -- os apps e derrama-se pela treva, como pediu o operador. — Braga Us.
+      local glow_r   = ORBIT_R + FOCUS_R + GLOW_EXT
+      local at_line  = ORBIT_R / glow_r
+      local at_icons = (ORBIT_R + FOCUS_R) / glow_r
+      local at_far   = (ORBIT_R + FOCUS_R + dpi(60)) / glow_r
       cr:set_source(gears.color {
         type  = "radial",
         from  = { CX, CY, 0 },
         to    = { CX, CY, glow_r },
         stops = {
-          { 0,       p.a(p.launcher_glow, 0.85) },
-          { 0.55,    p.a(p.launcher_glow, 0.35) },
-          { at_line, p.a(p.launcher_glow, 0.20) },
-          { 1,       p.a(p.launcher_glow, 0) },
+          { 0,        p.a(p.launcher_glow, 0.85) },
+          { at_line,  p.a(p.launcher_glow, 0.42) },
+          { at_icons, p.a(p.launcher_glow, 0.30) },
+          { at_far,   p.a(p.launcher_glow, 0.12) },
+          { 1,        p.a(p.launcher_glow, 0) },
         },
       })
       cr:arc(CX, CY, glow_r, 0, 2 * math.pi)
