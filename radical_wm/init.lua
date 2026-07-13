@@ -88,6 +88,9 @@ awful.screen.connect_for_each_screen(
 
     -- Widgets — os órgãos visíveis que abaixo se instituem sobre o écran primário.
     s.taglist = require("src.organisms.taglist")(s)
+    -- A FITA DE PROGRAMMAS: os segmentos powerline dos apps abertos na tag corrente. Toma o
+    -- centro da barra superior (opts.center_widget), no logar da antiga fita de estatística.
+    s.tasklist = require("src.organisms.tasklist")(s)
     -- ═════════════════════════════════════════════════════════════════════════════════
     -- DA BARRA SUPERIOR e dos DASHBOARDS AO-CLIQUE (vide DESIGN_SYSTEM §5).
     -- Não há colunas estáticas, nem carta monolítica, nem doca: os painéis se manifestam
@@ -148,9 +151,10 @@ awful.screen.connect_for_each_screen(
     -- As colunas seguem verba a verba o kit dashboards.jsx (DESIGN_SYSTEM §5), compostas SÓ de
     -- painéis reaes existentes (satellite_panel NÃO se referencia — não há tal painel em Lua).
     require("src.organisms.control_center")(s, {
-      left_widgets = { s.taglist, s.tag_controls },   -- secção esquerda da wibar (a tagctl encaixa -22)
-      right_extra  = { s.systray, s.kblayout },        -- bandeja + teclado, entre o relógio e o poder
-      right_widget = s.powerbutton,                    -- o botão do poder, ao extremo direito
+      left_widgets  = { s.taglist, s.tag_controls },   -- secção esquerda da wibar (a tagctl encaixa -22)
+      center_widget = s.tasklist,                      -- CENTRO: a fita de programmas abertos (tasklist)
+      right_extra   = { s.systray, s.kblayout },       -- bandeja + teclado, entre o relógio e o poder
+      right_widget  = s.powerbutton,                   -- o botão do poder, ao extremo direito
       system_cols  = { { s.info_panel, s.usage_panel }, { s.system_graph_panel, s.process_panel } },
       network_cols = { { s.net_graph_panel, s.ip_panel, s.protocols_donut }, { s.connections_panel, s.apps_panel } },
       time_cols    = { { s.calendar_panel }, { s.international_panel } },

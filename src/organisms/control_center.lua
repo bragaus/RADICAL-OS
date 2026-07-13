@@ -41,8 +41,6 @@ local dpi    = require("beautiful.xresources").apply_dpi
 local p      = require("src.theme.palette")
 local mt     = require("src.theme.metrics")                -- fichas métricas cruas (o dpi() applica-se no logar de uso)
 local ft     = require("src.theme.typography")             -- os papéis typográphicos de Pango
-local format = require("src.tools.format")                 -- humanizadores de taxa/percentagem (resguardados por tonumber)
-local stat_lozenge = require("src.molecules.stat_lozenge") -- §7.2.1 capsula de estatística tangível (fita powerline)
 require("src.core.signals") -- assegura o Hover_signal global, sem o qual Braga Us nada demonstra
 
 -- Funcção-mestra, urdida e demonstrada pelo Doutor Braga Us: edifica a Barra de Comando inteira
@@ -55,29 +53,13 @@ return function(s, opts)
 
   ----------------------------------------------------------------------------------------
   -- Adverte o Doutor Braga Us: toggle() só se define mais adiante (carece que os dashboards
-  -- já existam), porém os fechos de clique dos lozangos são atados no instante da CONSTRUCÇÃO
-  -- pelo stat_lozenge — donde, por necessidade lógica, `toggle` há de ser já um local visível
-  -- (capturado como upvalue) quando as pílulas se edificam.
+  -- já existam), porém o fecho de clique da datepill captura-o como upvalue — donde `toggle`
+  -- há de ser já um local visível. A fita central deixou de ser de ESTATÍSTICA: os cinco
+  -- lozangos (cpu/mem/gpu/net/vol) cederam logar à FITA DE PROGRAMMAS (opts.center_widget, a
+  -- tasklist). A telemetria e os seus dashboards seguem accessíveis pela MonitorBar do rodapé
+  -- (que consulta s.dashboard_toggle) e o volume pelo seu controlador/OSD/teclas.
   ----------------------------------------------------------------------------------------
   local toggle
-
-  ----------------------------------------------------------------------------------------
-  -- LOZANGOS — os segmentos powerline de estatística, tangíveis (molecules/stat_lozenge,
-  -- §7.2.1). A molécula é senhora da fórma/ícone/valor/hover/clique/estado-activo; ao
-  -- proprietário cumpre apenas impellir os valores por :set_value(text, pct) (glow_hot quando
-  -- pct >= mt.pct_hot). O primeiro segmento (cpu) leva `first=true` — vértice convexo à
-  -- esquerda, terminus da fita. CPU/MEM/GPU -> SYSTEM, NET -> NETWORK, VOL -> controlador de
-  -- volume. O VOL é never_hot: um volume de 90% ou mais NÃO deve incendiar o alerta vermelho.
-  ----------------------------------------------------------------------------------------
-  local pill_cpu = stat_lozenge { icon = "cpu", first = true, on_click = function() toggle("system") end }
-  local pill_mem = stat_lozenge { icon = "mem", on_click = function() toggle("system") end }
-  local pill_gpu = stat_lozenge { icon = "gpu", on_click = function() toggle("system") end }
-  local pill_net = stat_lozenge { icon = "net", on_click = function() toggle("network") end }
-  local pill_vol = stat_lozenge {
-    icon      = "vol",
-    never_hot = true,
-    on_click  = function() awesome.emit_signal("volume_controller::toggle", s) end,
-  }
 
   ----------------------------------------------------------------------------------------
   -- RELÓGIO da secção direita (kit `.rightc`). Distinguem-se, à maneira do kit, DUAS peças:
@@ -133,11 +115,7 @@ return function(s, opts)
   local active_group
   local function refresh_active()
     local g = active_group
-    pill_cpu:set_active(g == "system")
-    pill_mem:set_active(g == "system")
-    pill_gpu:set_active(g == "system")
-    pill_net:set_active(g == "network")
-    datepill:set_active(g == "time")
+    datepill:set_active(g == "time")   -- a fita de programmas não reflecte grupo; só a datepill (TIME)
   end
 
   ----------------------------------------------------------------------------------------
@@ -173,19 +151,12 @@ return function(s, opts)
     end
   end
 
-  -- CENTRO (.topbar__center, flex:1): a fita dos cinco lozangos, sobrepostos -12px (kit .seg
-  -- margin-right:-12px), centrada por wibox.container.place — o flex reparte-lhe o resto do vão.
-  local ribbon = wibox.widget {
-    pill_cpu,
-    pill_mem,
-    pill_gpu,
-    pill_net,
-    pill_vol,
-    spacing = -dpi(mt.powerline_tip),   -- -12 (a sobreposição da fita powerline)
-    layout  = wibox.layout.fixed.horizontal,
-  }
+  -- CENTRO (.topbar__center, flex:1): a FITA DE PROGRAMMAS (opts.center_widget, a tasklist), que
+  -- já governa a sua própria sobreposição de -12px e as suas cores; centrada por
+  -- wibox.container.place — o flex reparte-lhe o resto do vão. Faltando o widget, o centro fica
+  -- vácuo (sem erro).
   local center_section = wibox.widget {
-    ribbon,
+    opts.center_widget,
     halign = "center",
     valign = "center",
     widget = wibox.container.place,
@@ -355,8 +326,8 @@ return function(s, opts)
   s.dashboard_toggle = toggle                        -- NOVO: export p/ a MonitorBar (consulta preguiçosa)
 
   ----------------------------------------------------------------------------------------
-  -- CLIQUES — os cinco lozangos já trazem o seu clique/hover do stat_lozenge (atados UMA só vez
-  -- na construcção — R7); NÃO os atar de novo. A datepill, porém, tem o seu clique atado aqui.
+  -- CLIQUES — a fita central (tasklist) traz o seu próprio clique/hover por cliente; aqui só se
+  -- ata o clique da datepill, que abre/fecha o dashboard TIME.
   ----------------------------------------------------------------------------------------
   -- Funcção de Braga Us que torna tangível um widget: dado (w) o widget e (on_click) a acção,
   -- imprime-lhe o realce de hover (cursor de mão) e liga o botão esquerdo do rato ao dito clique.
@@ -385,156 +356,9 @@ return function(s, opts)
   }
   s._top_bar = bar
 
-  ----------------------------------------------------------------------------------------
-  -- Estado retido entre os pulsos do relógio (as differenças, ou deltas, de CPU e NET).
-  ----------------------------------------------------------------------------------------
-  local prev_cpu_total, prev_cpu_idle = nil, nil
-  local prev_net_rx, prev_net_tx, prev_net_time = nil, nil, nil
-
-  --------------------------------------------------------------------------------
-  -- CPU — funcção de sondagem urdida por Braga Us. Lê a primeira linha de /proc/stat e
-  -- guarda o total/idle pregressos entre pulsos, donde extrai a percentagem de occupação por
-  -- differença. Contra-domínio: nenhum (imprime o valor no lozango pill_cpu por efeito).
-  --------------------------------------------------------------------------------
-  local function update_cpu()
-    awful.spawn.easy_async_with_shell(
-      "cat /proc/stat 2>/dev/null | head -n 1",
-      function(stdout)
-        stdout = stdout or ""
-        -- cpu  user nice system idle iowait irq softirq steal ... (columnas de /proc/stat)
-        local nums = {}
-        for tok in stdout:gmatch("%d+") do
-          nums[#nums + 1] = tonumber(tok)
-        end
-        if #nums < 4 then return end
-
-        local idle = (nums[4] or 0) + (nums[5] or 0) -- o ócio, sc. idle + iowait
-        local total = 0
-        for i = 1, #nums do
-          total = total + (nums[i] or 0)
-        end
-
-        local pct = 0
-        if prev_cpu_total and prev_cpu_idle then
-          local dt = total - prev_cpu_total
-          local di = idle - prev_cpu_idle
-          if dt > 0 then
-            pct = (dt - di) / dt * 100
-          end
-        end
-        prev_cpu_total, prev_cpu_idle = total, idle
-
-        if pct < 0 then pct = 0 elseif pct > 100 then pct = 100 end
-        local rounded = math.floor(pct + 0.5)
-        pill_cpu:set_value(string.format("%d%%", rounded), rounded)
-      end
-    )
-  end
-
-  --------------------------------------------------------------------------------
-  -- MEM — funcção de sondagem de Braga Us. Lê /proc/meminfo e demonstra que a fracção usada
-  -- vale (MemTotal - MemAvailable) / MemTotal. Contra-domínio: nenhum (imprime no pill_mem).
-  --------------------------------------------------------------------------------
-  local function update_mem()
-    awful.spawn.easy_async_with_shell(
-      "cat /proc/meminfo 2>/dev/null",
-      function(stdout)
-        stdout = stdout or ""
-        local total = tonumber(stdout:match("MemTotal:%s*(%d+)"))
-        local avail = tonumber(stdout:match("MemAvailable:%s*(%d+)"))
-        if not total or not avail or total <= 0 then return end
-
-        local used = total - avail
-        if used < 0 then used = 0 end
-        local pct = used / total * 100
-        if pct < 0 then pct = 0 elseif pct > 100 then pct = 100 end
-        local rounded = math.floor(pct + 0.5)
-        pill_mem:set_value(string.format("%d%%", rounded), rounded)
-      end
-    )
-  end
-
-  --------------------------------------------------------------------------------
-  -- GPU — funcção de sondagem de Braga Us. Interroga nvidia-smi por utilization.gpu (%).
-  -- Por prudência, recahe em "--" se o binário não existir ou se a saída não fôr numérica.
-  --------------------------------------------------------------------------------
-  local function update_gpu()
-    awful.spawn.easy_async_with_shell(
-      "nvidia-smi --query-gpu=utilization.gpu --format=csv,noheader,nounits 2>/dev/null",
-      function(stdout)
-        stdout = stdout or ""
-        local util = tonumber(stdout:match("%d+"))
-        if not util then
-          pill_gpu:set_value("--", nil)
-          return
-        end
-        if util < 0 then util = 0 elseif util > 100 then util = 100 end
-        pill_gpu:set_value(string.format("%d%%", util), util)
-      end
-    )
-  end
-
-  --------------------------------------------------------------------------------
-  -- NET — funcção de sondagem de Braga Us. De /proc/net/dev somma rx/tx de todas as interfaces
-  -- excepto lo, e computa a taxa por differença (delta) entre pulsos. Imprime no pill_net.
-  --------------------------------------------------------------------------------
-  local function update_net()
-    awful.spawn.easy_async_with_shell(
-      "cat /proc/net/dev 2>/dev/null",
-      function(stdout)
-        stdout = stdout or ""
-        local rx_sum, tx_sum = 0, 0
-        for line in stdout:gmatch("[^\r\n]+") do
-          -- fórma da linha: iface: rx_bytes ... tx_bytes ...
-          local iface, rest = line:match("^%s*([%w%-_]+):%s*(.+)$")
-          if iface and iface ~= "lo" and rest then
-            local fields = {}
-            for tok in rest:gmatch("%S+") do
-              fields[#fields + 1] = tonumber(tok)
-            end
-            -- campos ordenados: 1=rx_bytes ... 9=tx_bytes
-            local rx = fields[1]
-            local tx = fields[9]
-            if rx then rx_sum = rx_sum + rx end
-            if tx then tx_sum = tx_sum + tx end
-          end
-        end
-
-        local now = os.time()
-        local up_rate, down_rate = 0, 0
-        if prev_net_rx and prev_net_tx and prev_net_time then
-          local dt = now - prev_net_time
-          if dt <= 0 then dt = 1 end
-          local d_rx = rx_sum - prev_net_rx
-          local d_tx = tx_sum - prev_net_tx
-          if d_rx < 0 then d_rx = 0 end
-          if d_tx < 0 then d_tx = 0 end
-          down_rate = d_rx / dt
-          up_rate   = d_tx / dt
-        end
-        prev_net_rx, prev_net_tx, prev_net_time = rx_sum, tx_sum, now
-
-        pill_net:set_value(string.format("↑%s ↓%s", format.rate(up_rate, "kbps"), format.rate(down_rate, "kbps")))
-      end
-    )
-  end
-
-  --------------------------------------------------------------------------------
-  -- VOL — funcção de sondagem de Braga Us. De pactl get-sink-volume @DEFAULT_SINK@ colhe o
-  -- primeiro "NN%" que se apresente. Contra-domínio: nenhum (imprime no lozango pill_vol).
-  --------------------------------------------------------------------------------
-  local function update_vol()
-    awful.spawn.easy_async_with_shell(
-      "pactl get-sink-volume @DEFAULT_SINK@ 2>/dev/null",
-      function(stdout)
-        stdout = stdout or ""
-        local vol = tonumber(stdout:match("(%d+)%%"))
-        if not vol then return end
-        if vol < 0 then vol = 0 end
-        pill_vol:set_value(string.format("%d%%", vol), vol)
-      end
-    )
-  end
+  -- [As sondagens de CPU/MEM/GPU/NET/VOL — outrora impressas nos cinco lozangos da fita central
+  --  — foram removidas junto com a fita de estatística. A telemetria (e o toque que abre os
+  --  dashboards / o controlador de volume) vive agora na MonitorBar do rodapé.]
 
   --------------------------------------------------------------------------------
   -- RELÓGIO — funcção de Braga Us que verte os textos de hora e data por os.date nas próprias
@@ -551,11 +375,6 @@ return function(s, opts)
     call_now  = true,
     autostart = true,
     callback  = function()
-      update_cpu()
-      update_mem()
-      update_gpu()
-      update_net()
-      update_vol()
       update_clock()
     end,
   }
