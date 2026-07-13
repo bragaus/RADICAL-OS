@@ -25,7 +25,7 @@ Theme.bg_normal   = p.base
 Theme.bg_focus    = p.panel_hi
 Theme.bg_urgent   = p.glow_hot
 Theme.bg_minimize = p.v950
-Theme.bg_systray  = p.panel
+Theme.bg_systray  = p.v800   -- violeta SÓLIDO (= meio do chevron), pintado pelo awesome (sem depender do picom compor atrás) → sem quadrado preto
 
 Theme.fg_normal   = p.text_primary
 Theme.fg_focus    = p.text_bright

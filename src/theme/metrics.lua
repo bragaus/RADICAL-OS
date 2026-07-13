@@ -34,6 +34,9 @@ return {
   bar_popup_h = 56,                     -- barra do painel do control_center
   lozenge_h = 20, lozenge_h_actual = 44,
   mon_h = 80,                           -- promovido para FÓRA de monitor_bar.lua:32 (os popups ancoram acima)
+  topbar_h    = 48,                     -- altura da barra de CIMA (−15% de 56, a pedido); independente do rodapé
+  topbar_icon = 31,                     -- ícone dos widgets da barra de cima (tag/app/power/kb) — afinável
+  topbar_tray = 36,                     -- base_size dos ícones da systray — afinável
   row_h = 18, row_header_h = 16, row_gap = 2, visible_rows = 6,
 
   -- Listas e rolagem (scroll) -------------------------------------------
@@ -69,8 +72,8 @@ return {
 
   -- Concha dos controles de aba (kit .tagctl / .tagctl__*) --------------
   tagctl_h = 24, tagctl_pad_l = 31, tagctl_pad_r = 13, tagctl_gap = 5,
-  tagctl_edge = 1, tagctl_tuck = 22, tagctl_btn_w = 22, tagctl_btn_h = 14,
-  tagctl_btn_chamfer = 3, haz_w = 7, haz_h = 14, haz_band = 2,
+  tagctl_edge = 1, tagctl_tuck = 22, tagctl_btn_w = 36, tagctl_btn_h = 40,
+  tagctl_btn_chamfer = 4, tagctl_btn_icon = 22, haz_w = 11, haz_h = 40, haz_band = 2,
 
   -- Fita de lozangos (kit .seg / .lozstrip = 24px; NÃO o token stale lozenge_h=20) --
   seg_h = 24, seg_pad_l = 22, seg_pad_l_first = 26, seg_pad_r = 18, seg_gap = 5,

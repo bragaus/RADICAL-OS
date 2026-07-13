@@ -44,11 +44,11 @@ local shapes = require("src.tools.shapes")
 require("src.tools.icon_handler") -- pelo effeito collateral: define o global Get_icon
 
 -- Constantes da concha (mesmas fichas do stat_lozenge, fixadas UMA só vez).
-local SEG_H       = dpi(mt.seg_h)          -- 24, altura da aba
+local SEG_H       = dpi(mt.topbar_h)          -- 24, altura da aba
 local EDGE_REST   = p.glow_soft            -- orla de repouso e de hover
 local EDGE_ON     = p.glow_ice             -- orla acesa (fóco)
 local VALUE_REST  = "#f5efff"              -- côr do nome (≈ p.v50)
-local ICON_SZ     = dpi(16)                -- corpo do ícone do app
+local ICON_SZ     = dpi(mt.topbar_icon)                -- corpo do ícone do app
 local NAME_MAX    = 16                     -- limite de caracteres do nome
 
 -- Gradiente vertical (180º) na caixa de 24px — auxiliar de Braga Us.
@@ -83,9 +83,10 @@ local function app_lozenge(args)
     resize        = true,
     forced_width  = ICON_SZ,
     forced_height = ICON_SZ,
+    valign        = "center",   -- centra o ícone na célula (default do imagebox é "top") — alinha com o nome
     widget        = wibox.widget.imagebox,
   }
-  local name_box = txt { role = "value", text = "?", valign = "center" }
+  local name_box = txt { role = "fill_name", text = "?", valign = "center" }
 
   -- Conteúdo: ícone de 16px + o nome; intervallo de 5px; guarnição interna esquerda 26 (first)
   -- ou 22, direita 18 — o flanco esquerdo >=22 empurra o conteúdo para além do socket de 12px.

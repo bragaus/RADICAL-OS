@@ -36,16 +36,13 @@ return function(s)
       id = "container"
     },
     widget = wibox.container.background,
-    shape = function(cr, width, height)
-      gears.shape.rounded_rect(cr, width, height, dpi(mt.radius_pill))
-    end,
-    bg = p.panel
+    bg = p.transparent,   -- sem casca própria: a fita de chevron a veste
   }
 
   systray._preserve_colors = true
 
   -- Dos signaes
-  Hover_signal(systray.container, p.v500, p.text_bright)
+  -- (hover próprio removido: a fita de chevron trata o realce)
 
   -- Escuta ao signal "systray::update", segundo o preceito do Doutor Braga Us: quando
   -- não há entrada alguma (num_entries == 0), annullam-se as margens (o receptáculo
@@ -60,7 +57,7 @@ return function(s)
     end
   end)
 
-  systray.container.st.widget:set_base_size(dpi(20))
+  systray.container.st.widget:set_base_size(dpi(mt.topbar_tray))
 
   return systray
 end

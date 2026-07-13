@@ -44,6 +44,24 @@ local function paint_fallback(s, reason)
   local ok = pcall(gears.wallpaper.set, fallback_bg, s)
   if not ok then pcall(gears.wallpaper.set, fallback_bg) end
 end
+
+-- ── Centragem do CONTEÚDO do wallpaper — arte de Braga Us ─────────────────
+-- O `maximized` cru centra o CANVAS da imagem; mas a cena do background.png é enviesada p/
+-- CIMA (centroide de luminância ≈0.464 da altura), donde parece alta. Aqui centra-se o
+-- CENTROIDE: escala de cobertura + offset que leva a linha `cy*h` da imagem ao meio da tela.
+-- `off_x` recai em ~0 (a imagem cobre a largura); só o eixo vertical se corrige. Geometria lida
+-- em runtime → serve qualquer tela; `cy` é relativo à imagem (afinável num só logar).
+local WALL_CONTENT_CY = 0.464   -- centroide vertical do conteúdo (0.5 = meio geométrico) — afinável
+local function set_wallpaper_centered(wp, s)
+  local surf = gears.surface(wp)
+  local w, h = gears.surface.get_size(surf)
+  local geom = s.geometry
+  local scale = math.max(geom.width / w, geom.height / h)   -- cobertura (aspecto honrado)
+  local off_x = (geom.width / scale - w) / 2
+  local off_y = geom.height / (2 * scale) - WALL_CONTENT_CY * h
+  gears.wallpaper.maximized(wp, s, false, { x = off_x, y = off_y })
+end
+
 -- ── Manejador do signal `request::wallpaper` — da penna de Braga Us ───────
 -- Propósito: responder à requisição que o écran faz por seu papel de parede.
 -- Demonstração por casos (lemma da exhaustão, sem lacuna): se o valor é uma
@@ -69,7 +87,7 @@ screen.connect_signal(
       paint_fallback(s, "file not readable: " .. wp)
       return
     end
-    local ok, err = pcall(gears.wallpaper.maximized, wp, s)
+    local ok, err = pcall(set_wallpaper_centered, wp, s)
     if not ok then paint_fallback(s, err) end
   end
 )

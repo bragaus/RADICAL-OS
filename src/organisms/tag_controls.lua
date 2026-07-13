@@ -50,7 +50,7 @@ local function make_button(icon_name, action)
   local b = wibox.widget {
     {
       { image = img, resize = true,
-        forced_width = dpi(mt.icon_sm), forced_height = dpi(mt.icon_sm),
+        forced_width = dpi(mt.tagctl_btn_icon), forced_height = dpi(mt.tagctl_btn_icon),
         widget = wibox.widget.imagebox },
       halign = "center", valign = "center", widget = wibox.container.place,
     },
@@ -155,7 +155,7 @@ return function(s)
       left = dpi(mt.tagctl_pad_l), right = dpi(mt.tagctl_pad_r), -- 31 / 13 (a esquerda recebe a ponta da aba)
       widget = wibox.container.margin,
     },
-    bg    = { type = "linear", from = { 0, 0 }, to = { 0, dpi(mt.tagctl_h) }, stops = { { 0, p.panel_hi }, { 1, p.panel } } },
+    bg    = { type = "linear", from = { 0, 0 }, to = { 0, dpi(mt.topbar_h) }, stops = { { 0, p.panel_hi }, { 1, p.panel } } },
     shape = SHELL,
     bgimage = function(_, cr, w, h)
       -- ::mesh — malha hexagonal ténue (alpha .12 * opacity .5 = .06).
@@ -174,7 +174,7 @@ return function(s)
     { inner, margins = dpi(mt.tagctl_edge), widget = wibox.container.margin },
     bg            = p.line_base,
     shape         = SHELL,
-    forced_height = dpi(mt.tagctl_h),
+    forced_height = dpi(mt.topbar_h),
     widget        = wibox.container.background,
   }
   controls._preserve_colors = true

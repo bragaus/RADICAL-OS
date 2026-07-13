@@ -52,12 +52,39 @@ function shapes.powerline(opts)
   opts = opts or {}
   local tip = opts.tip or dpi(mt.powerline_tip)
   local socket = opts.socket or false
+  local point_left = opts.point_left or false   -- ESPELHA a fórma (ponta à ESQUERDA); p/ a fita da direita
   local flat_left = opts.flat_left
   if flat_left == nil then flat_left = true end
 
   return function(cr, w, h)
     local mid = h / 2
-    if socket then
+    if point_left then
+      -- Reflexo x->w-x das três variantes: a ponta aguda vai à ESQUERDA, o encaixe/aresta à DIREITA.
+      if socket then
+        cr:move_to(w, 0)
+        cr:line_to(tip, 0)
+        cr:line_to(0, mid)
+        cr:line_to(tip, h)
+        cr:line_to(w, h)
+        cr:line_to(w - tip, mid)
+        cr:close_path()
+      elseif flat_left then
+        cr:move_to(w, 0)
+        cr:line_to(tip, 0)
+        cr:line_to(0, mid)
+        cr:line_to(tip, h)
+        cr:line_to(w, h)
+        cr:close_path()
+      else
+        cr:move_to(w - tip, 0)
+        cr:line_to(tip, 0)
+        cr:line_to(0, mid)
+        cr:line_to(tip, h)
+        cr:line_to(w - tip, h)
+        cr:line_to(w, mid)
+        cr:close_path()
+      end
+    elseif socket then
       cr:move_to(0, 0)
       cr:line_to(w - tip, 0)
       cr:line_to(w, mid)

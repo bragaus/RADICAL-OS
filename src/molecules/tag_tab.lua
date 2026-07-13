@@ -46,10 +46,10 @@ local function tag_tab(args)
   local tip = dpi(mt.powerline_tip) -- 12
 
   -- Referências directas (postulado R1).
-  local icon_img = wibox.widget { resize = true, forced_width = dpi(mt.tag_icon), forced_height = dpi(mt.tag_icon), widget = wibox.widget.imagebox }
+  local icon_img = wibox.widget { resize = true, forced_width = dpi(mt.topbar_icon), forced_height = dpi(mt.topbar_icon), valign = "center", halign = "center", widget = wibox.widget.imagebox }
   local icon_place = wibox.widget { icon_img, valign = "center", halign = "center", widget = wibox.container.place }
-  local index_box = txt { role = "label", align = "center", valign = "center" }
-  local name_box  = txt { role = "label", align = "center", valign = "center", upper = true }
+  local index_box = txt { role = "fill_tag", align = "center", valign = "center" }
+  local name_box  = txt { role = "fill_tag", align = "center", valign = "center", upper = true }
 
   local state = STATES.empty
   local icon_name = args.icon or "term"
@@ -109,7 +109,7 @@ local function tag_tab(args)
     bg            = p.transparent,
     bgimage       = paint_fill,    -- a orla e o enchimento pintam-se em camadas (vide supra)
     shape         = shape_fn,      -- recorte externo: o conteúdo não transborda a fórma
-    forced_height = dpi(mt.tag_h), -- 24, altura fixa da aba (kit .tag/.tags height:24px)
+    forced_height = dpi(mt.topbar_h), -- barra de cima: a aba (e a sua ponta-chevron) enche a altura do wibox
     widget        = wibox.container.background,
   }
 

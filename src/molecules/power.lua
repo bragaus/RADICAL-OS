@@ -29,19 +29,13 @@ require("src.core.signals")
 return function()
   local power_widget = wibox.widget {
     {
-      icon("power", { color = p.text_primary, size = dpi(mt.icon_md) }), -- ícone 14, p.text_primary
+      icon("power", { color = p.launcher_ring_on, size = dpi(mt.topbar_icon) }), -- laranja da borda das janelas
       halign = "center",
       valign = "center",
       widget = wibox.container.place,
     },
-    bg                 = p.transparent,
-    -- Raio-ficha (radius_chip = 3), o mesmo entalhe suave do kit.
-    shape              = function(cr, w, h) gears.shape.rounded_rect(cr, w, h, dpi(mt.radius_chip)) end,
-    shape_border_width = dpi(1),
-    shape_border_color = p.line_base,
-    forced_width       = dpi(24),
-    forced_height      = dpi(24),
-    widget             = wibox.container.background,
+    bg     = p.transparent,   -- sem casca própria: a fita de chevron a veste
+    widget = wibox.container.background,
   }
 
   -- A bandeira que trava a passagem recolorante da barra (postulado R6).
@@ -49,14 +43,7 @@ return function()
 
   -- Dos signaes (o global legado): fundo p.v700 e proscénio p.glow_core sob o ponteiro,
   -- espelho de `.powerbtn:hover` do kit.
-  Hover_signal(power_widget, p.v700, p.glow_core)
-
-  power_widget:connect_signal(
-    "button::release",
-    function()
-      awesome.emit_signal("module::powermenu:show")
-    end
-  )
+  -- (hover + clique migraram p/ o chevron_seg que o veste na barra — ver control_center right_section)
 
   return power_widget
 end

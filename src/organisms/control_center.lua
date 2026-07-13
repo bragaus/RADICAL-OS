@@ -41,6 +41,7 @@ local dpi    = require("beautiful.xresources").apply_dpi
 local p      = require("src.theme.palette")
 local mt     = require("src.theme.metrics")                -- fichas métricas cruas (o dpi() applica-se no logar de uso)
 local ft     = require("src.theme.typography")             -- os papéis typográphicos de Pango
+local chevron_seg = require("src.molecules.chevron_seg")   -- casca powerline reutilizável (fita da direita)
 require("src.core.signals") -- assegura o Hover_signal global, sem o qual Braga Us nada demonstra
 
 -- Funcção-mestra, urdida e demonstrada pelo Doutor Braga Us: edifica a Barra de Comando inteira
@@ -68,44 +69,19 @@ return function(s, opts)
   ----------------------------------------------------------------------------------------
   local clock_hm = wibox.widget {
     text   = "--:--",
-    font   = ft.clock_hm,     -- .loztail__hm 13/800
+    font   = ft.fill_date,    -- mesma fonte/tamanho da data (a pedido)
     valign = "center",
     widget = wibox.widget.textbox,
   }
   local clock_date = wibox.widget {
     text   = "---",
-    font   = ft.label,        -- .datepill ≈ 11/700 (o Bold 10 do theme é o mais próximo consagrado)
+    font   = ft.fill_date,    -- barra cheia: data grande
     valign = "center",
     widget = wibox.widget.textbox,
   }
 
-  -- A pílula da DATA (.datepill): gradiente vertical v700->v900, orla de 1px em glow_soft,
-  -- raio de 9px e texto glow_ice. O estado `--on` (dashboard TIME aberto) verte-a para v500->
-  -- v700 com orla glow_ice. Os gradientes fixam-se UMA só vez (economia de Braga Us).
-  local DATE_H = dpi(20)
-  local date_grad_rest = gears.color { type = "linear", from = { 0, 0 }, to = { 0, DATE_H }, stops = { { 0, p.v700 }, { 1, p.v900 } } }
-  local date_grad_on   = gears.color { type = "linear", from = { 0, 0 }, to = { 0, DATE_H }, stops = { { 0, p.v500 }, { 1, p.v700 } } }
-  local datepill = wibox.widget {
-    {
-      { clock_date, fg = p.glow_ice, widget = wibox.container.background },
-      left   = dpi(10),
-      right  = dpi(10),
-      top    = dpi(2),
-      bottom = dpi(2),
-      widget = wibox.container.margin,
-    },
-    bg                 = date_grad_rest,
-    shape              = function(cr, w, h) gears.shape.rounded_rect(cr, w, h, dpi(9)) end,
-    shape_border_width = dpi(1),
-    shape_border_color = p.glow_soft,
-    fg                 = p.glow_ice,
-    widget             = wibox.container.background,
-  }
-  -- Methodo `:set_active` da pílula da DATA (kit `.datepill--on`): permuta o gradiente e a orla.
-  function datepill:set_active(on)
-    self.bg                 = on and date_grad_on or date_grad_rest
-    self.shape_border_color = on and p.glow_ice or p.glow_soft
-  end
+  -- A DATA já não é uma pílula própria: vira um chevron_seg (mesmo powerline do DS), erguido na
+  -- secção direita. Aqui só sobrevive o `clock_date` (o textbox), que o seg envolve como conteúdo.
 
   ----------------------------------------------------------------------------------------
   -- REFLEXO DE ESTADO — o kit acende o segmento do grupo cujo dashboard esteja aberto. O
@@ -113,9 +89,10 @@ return function(s, opts)
   -- Referencia os lozangos e a datepill, donde carece de estar definido APÓS elles.
   ----------------------------------------------------------------------------------------
   local active_group
+  local date_seg            -- fwd-decl: o seg da DATA (chevron) nasce adiante, na secção direita
   local function refresh_active()
     local g = active_group
-    datepill:set_active(g == "time")   -- a fita de programmas não reflecte grupo; só a datepill (TIME)
+    if date_seg then date_seg:set_active(g == "time") end   -- só o seg da DATA (TIME) reflecte grupo
   end
 
   ----------------------------------------------------------------------------------------
@@ -162,28 +139,62 @@ return function(s, opts)
     widget = wibox.container.place,
   }
 
-  -- DIREITA (.rightc, gap 10): HH:MM nu + datepill(->TIME) + systray + kblayout + poder.
-  local right_section = wibox.widget {
-    { clock_hm, fg = p.text_bright, widget = wibox.container.background },
-    datepill,
-    opts.right_extra and opts.right_extra[1] or nil,   -- s.systray
-    opts.right_extra and opts.right_extra[2] or nil,   -- s.kblayout
-    opts.right_widget,                                 -- power (.powerbtn)
-    spacing = dpi(10),
-    layout  = wibox.layout.fixed.horizontal,
+  -- DIREITA (.rightc): FITA DE CHEVRONS espelhada (aponta à esquerda) — mesmo powerline roxo do DS.
+  -- Ordem esq→dir [relógio, data, systray, kb, poder]; a sobreposição -tip encaixa a ponta esquerda
+  -- de cada seg no socket do vizinho; o poder (extremo direito) é o terminus convexo. Cliques ficam
+  -- nos segs (data→TIME e acende via refresh_active; kb→toggle; poder→powermenu).
+  local rtip = dpi(mt.powerline_tip)
+  date_seg = chevron_seg {
+    content = { clock_date, fg = p.launcher_ring_on, widget = wibox.container.background },
+    on_click = function() toggle("time") end,
   }
+  local right_section = wibox.layout.fixed.horizontal()
+  right_section.spacing = -rtip
+  -- SYSTRAY é o 1º widget da secção (a pedido): entra à frente do relógio.
+  if opts.right_extra and opts.right_extra[1] then
+    local tray_seg = chevron_seg { content = opts.right_extra[1], hover = false }     -- systray (1º)
+    -- some quando não há app de bandeja (0 entradas) — sem deixar buraco na fita; reaparece ao registar
+    local function upd_tray() tray_seg.visible = (awesome.systray() or 0) > 0 end
+    upd_tray()                                             -- estado inicial (0 no boot → oculto)
+    awesome.connect_signal("systray::update", upd_tray)
+    right_section:add(tray_seg)
+  end
+  right_section:add(chevron_seg {
+    content = { clock_hm, fg = p.launcher_ring_on, widget = wibox.container.background }, hover = false,
+  })
+  right_section:add(date_seg)
+  if opts.right_extra and opts.right_extra[2] then
+    right_section:add(chevron_seg {                                                   -- kblayout
+      content = opts.right_extra[2], on_click = function() awesome.emit_signal("kblayout::toggle") end,
+    })
+  end
+  if opts.right_widget then
+    right_section:add(chevron_seg {                                                   -- poder (terminus)
+      content = opts.right_widget, terminus = true,
+      on_click = function() awesome.emit_signal("module::powermenu:show") end,
+    })
+  end
 
   -- RAIZ: left | center(flex) | right. Com `expand="inside"`, o widget do meio ocupa o vão
   -- restante (.topbar__center flex:1), donde o ribbon se centra sozinho — sem hack de largura.
+  -- Cada seção vem centrada na vertical (place valign) — senão as curtas (tags/relógio) encostam no
+  -- topo da fita na align.horizontal, enquanto o centro já se centra. Na barra alta de 80px, isto
+  -- alinha esquerda|centro|direita no mesmo eixo vertical.
   local bar_layout = wibox.widget {
-    { left_section,  right = dpi(10), widget = wibox.container.margin },   -- gap 10 após a esquerda
+    { { left_section,  valign = "center", widget = wibox.container.place }, right = dpi(10), widget = wibox.container.margin },
     center_section,
-    { right_section, left  = dpi(10), widget = wibox.container.margin },   -- gap 10 antes da direita
+    { { right_section, valign = "center", widget = wibox.container.place }, left  = dpi(10), widget = wibox.container.margin },
     expand = "inside",
     layout = wibox.layout.align.horizontal,
   }
   local bar_inner = wibox.widget {
-    bar_layout,
+    {
+      nil,
+      bar_layout,
+      nil,
+      expand = "none",   -- centra a fita na vertical (altura natural, y=(H-h)/2) na barra alta de 80px
+      layout = wibox.layout.align.vertical,
+    },
     left   = dpi(mt.pad_panel),   -- .topbar padding 0 8
     right  = dpi(mt.pad_panel),
     widget = wibox.container.margin,
@@ -273,7 +284,7 @@ return function(s, opts)
     awful.placement.bottom(c, { margins = { bottom = dpi(mt.mon_h) + dpi(10) } })
   end)
   local dash_time    = make_dashboard(opts.time_cols, function(c)
-    awful.placement.top_right(c, { margins = { top = dpi(mt.bar_h) + dpi(8), right = dpi(8) } })
+    awful.placement.top_right(c, { margins = { top = dpi(mt.topbar_h) + dpi(8), right = dpi(8) } })
   end)
 
   local dashboards = {
@@ -338,7 +349,7 @@ return function(s, opts)
     ))
   end
 
-  make_clickable(datepill, function() toggle("time") end)
+  -- (a data agora é um chevron_seg com on_click próprio — ver right_section)
 
   ----------------------------------------------------------------------------------------
   -- A BARRA — UMA awful.wibar full-width, rasa (26px), assente flush ao alto. Reserva a área
@@ -349,7 +360,7 @@ return function(s, opts)
   local bar = awful.wibar {
     screen   = s,
     position = "top",
-    height   = dpi(mt.bar_h),          -- 26; struts reservados automaticamente
+    height   = dpi(mt.topbar_h),       -- barra de cima −30% (topbar_h=56, independente do rodapé); struts automáticos
     bg       = p.a(p.base, p.alpha.bar), -- .topbar bg = base @ 80%
     ontop    = false,
     widget   = bar_widget,

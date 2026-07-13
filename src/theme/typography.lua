@@ -40,6 +40,13 @@ return {
   -- ── Papéis NOVOS da fidelidade (verbatim colors_and_type.css / kit.css) ──
   ir_value    = mono..", ExtraBold 11", -- .ir__v 11/800 (o token value=12 é do lozango .seg__v)
   clock_hm    = mono..", ExtraBold 13", -- .loztail__hm 13/800 (relógio HH:MM da barra)
+
+  -- ── Papéis da BARRA CHEIA (topo 80px, glifos grandes; valores afináveis num só logar) ──
+  fill_hm   = mono..", ExtraBold 24", -- relógio HH:MM (−30%)
+  fill_name = mono..", ExtraBold 15", -- nome do app na tasklist
+  fill_tag  = mono..", ExtraBold 14", -- índice + nome da tag
+  fill_date = mono..", ExtraBold 15",   -- data + relógio (mais bold, a pedido)
+  fill_kb   = mono..", ExtraBold 17",   -- código do teclado (kblayout)
   ctx_item    = mono..", 11",           -- .ctx__item 11px, peso normal
   ctx_sig     = mono..", 10",           -- .ctx__sig 10px (linhas do submenu SEND SIGNAL)
   win_title   = mono..", Bold 10",      -- .win__title 10/700 (titular de janela)

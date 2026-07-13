@@ -21,7 +21,9 @@
 -- ══════════════════════════════════════════════════════════════════════════
 
 local awful = require("awful")
+local dpi   = require("beautiful").xresources.apply_dpi
 local p     = require("src.theme.palette")
+local mt    = require("src.theme.metrics")
 local pill  = require("src.molecules.pill")
 
 -- Dos arranjos configurados. `user_vars` é global sanccionado, presente pela ordem
@@ -97,15 +99,13 @@ return function(s)
   ensure_wired()
 
   local kb = pill {
-    icon       = "keyboard",
-    icon_color = p.v400,
-    text       = current_layout or "",
-    bg         = p.panel,
-    fg         = p.text_muted,
-    hover      = { bg = p.panel, fg = p.v500 }, -- outrora: Hover_signal(_, p.panel, p.v500)
-    -- Ao clique: gira de pronto ao próximo arranjo configurado (a pedido, um simples
-    -- troggle br<->us via `cycle`), em vez de erguer o menu. — Braga Us.
-    on_click   = function() awesome.emit_signal("kblayout::toggle") end,
+    icon        = "keyboard",
+    icon_color  = p.launcher_ring_on,      -- laranja da borda das janelas (a pedido)
+    icon_size   = dpi(mt.topbar_icon),
+    text        = current_layout or "",
+    text_role   = "fill_kb",
+    chrome      = false,                   -- sem casca própria: a fita de chevron a veste (clique no seg)
+    fg          = p.launcher_ring_on,
   }
 
   pills[#pills + 1] = kb

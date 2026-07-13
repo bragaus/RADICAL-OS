@@ -52,6 +52,7 @@ local function pill(args)
   local spacing  = args.spacing or dpi(6)                      -- intervallo íco↔texto; sem token métrico
   local hover    = args.hover                                  -- { bg=, fg= } ou nil
   local on_click = args.on_click
+  local chrome   = args.chrome ~= false                      -- false = sem casca (bg/shape); só íco+texto
 
   -- Referências directas (jamais reconsultadas por get_children_by_id — postulado R1).
   local icon_place, value_box, label_wrap
@@ -76,11 +77,12 @@ local function pill(args)
       left = pad_x, right = pad_x, top = pad_y, bottom = pad_y,
       widget = wibox.container.margin,
     },
-    bg                 = bg,
+    bg                 = chrome and bg or p.transparent,
     fg                 = fg,
-    shape              = function(cr, ww, hh) gears.shape.rounded_rect(cr, ww, hh, radius) end,
-    shape_border_width = args.border_width or 0,
+    shape              = chrome and (function(cr, ww, hh) gears.shape.rounded_rect(cr, ww, hh, radius) end) or nil,
+    shape_border_width = chrome and (args.border_width or 0) or 0,
     shape_border_color = args.border_color or p.line_base,
+    forced_height      = args.forced_height,   -- nil = abraça o conteúdo; casca cheia passa dpi(mt.*)
     widget             = wibox.container.background,
   }
 
