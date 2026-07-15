@@ -42,7 +42,7 @@ local function chevron_seg(args)
   -- paletas (kit .tag): repouso vs aceso (== tag seleccionada).
   local EDGE_REST, EDGE_ON = p.glow_soft, p.glow_ice
   local FILL_REST = vgrad(height, { { 0, p.v700 }, { 0.6, p.v800 }, { 1, p.v900 } })
-  -- Aceso rebaixado UM degrau (rampa cyânea mais clara): o conteúdo v50/glow_ice conserva a tinta.
+  -- Aceso rebaixado UM degrau: o conteúdo v50/glow_ice ganha contraste sobre o violeta.
   local FILL_ON   = vgrad(height, { { 0, p.v500 }, { 0.6, p.v700 }, { 1, p.v800 } })
 
   -- fórma: intermediários = socket (encaixe); terminus = vértice convexo. Espelhada se point_left.

@@ -59,8 +59,8 @@ local MON_H    = dpi(mt.mon_h)         -- altura canónica, do symbolo --mon-h (
 local SAMPLES  = mt.mon_samples        -- profundidade do histórico de cada série
 local INTERVAL = 1                     -- segundos que medeiam entre duas amostras (gráfico vivo)
 
--- O ESPECTRO DO POENTE (SUNCORE): a cada módulo, o SEU matiz da estampa —
--- CPU o cyan do núcleo do eidolon (glow_core), GPU o magenta das montanhas
+-- O ESPECTRO DO POENTE (SUNCORE, edição violeta): a cada módulo, o SEU matiz —
+-- CPU o violeta soberano (glow_core), GPU o magenta das montanhas
 -- (data4), MEM o amarello-sol (data2), NET o laranja do céu (data3). GPU/CPU/MEM
 -- traçam UMA só série — a métrica REAL primária (uso%) — sem as accessórias
 -- (temp/swap) que d'antes toldavam o grapho. EXCEPÇÃO deliberada: o NET traça
@@ -70,7 +70,7 @@ local INTERVAL = 1                     -- segundos que medeiam entre duas amostr
 -- produz o degradê pedido: opaco junto á linha, diáphano no fundo. — Braga Us.
 local MOD_ACCENT = {
   gpu    = p.data4,     -- magenta das montanhas
-  cpu    = p.glow_core, -- cyan do núcleo
+  cpu    = p.glow_core, -- violeta soberano (o accento da casa)
   mem    = p.data2,     -- amarello-sol
   net    = p.data3,     -- laranja do céu (download)
   net_up = p.graph_up,  -- lima-neon (upload), par do laranja sob o "screen"

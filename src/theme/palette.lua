@@ -1,52 +1,51 @@
 -- ══════════════════════════════════════════════════════════════════════════
 --   TRACTADO DAS CÔRES — src/theme/palette.lua
 -- ══════════════════════════════════════════════════════════════════════════
--- Seja dado o systema chromático denominado "SUNCORE HUD", derivado por
--- contemplação diligente da estampa do eidolon — a figura que fluctua ante o
--- sol vermelho de raios amarellos, cingida de halo pontilhado, com o núcleo
--- cyâneo a arder-lhe no peito — e transposto, com todo o rigor da sciência,
--- ao domínio do cyan eléctrico sobre o índigo nocturno. As côres ordenam-se
--- por luminosidade e opacidade, segundo a hierarchia que demonstrou o insigne
--- geómetra BRAGA US; o acento primário — invariante cardeal de toda esta obra —
--- é o token v500. Os matizes do poente (amarello, laranja, vermelho, magenta)
+-- Seja dado o systema chromático denominado "SUNCORE HUD, edição violeta",
+-- derivado por contemplação diligente da estampa do eidolon — a figura que
+-- fluctua ante o sol vermelho de raios amarellos, cingida de halo pontilhado —
+-- e assentado, por decreto do operador, sobre o VIOLETA SOBERANO das montanhas
+-- da mesma estampa. As côres ordenam-se por luminosidade e opacidade, segundo
+-- a hierarchia que demonstrou o insigne geómetra BRAGA US; o acento primário —
+-- invariante cardeal de toda esta obra — é o token v500. Os matizes do poente
+-- (amarello, laranja, vermelho, magenta, e ora tambem o cyan do núcleo)
 -- admittem-se SÓMENTE como acentos contidos: séries de dados, estados, família
 -- do lançador e faixas do horizonte. Tal é o Postulado do Poente Contido.
 -- Postulado da fórma: cada valor é uma cadeia de caracteres "#RRGGBB" ou,
 -- admittindo-se o oitavo byte de opacidade, "#RRGGBBAA". Assim o quis o auctor.
 return {
-  -- Os fundos (os negros-índigos): substrato nocturno sobre o qual se ergue a HUD.
-  void = "#000000", abyss = "#05041a", base = "#0a0824",
-  inset = "#080619", panel = "#121036", panel_hi = "#1a1747", raised = "#241f5c",
+  -- Os fundos (os negros-violáceos): substrato nocturno sobre o qual se ergue a HUD.
+  void = "#000000", abyss = "#070310", base = "#0c0617",
+  inset = "#0a0514", panel = "#130a24", panel_hi = "#1b1030", raised = "#241640",
 
-  -- A rampa cyânea: escala monotónica de luminosidade, do claro ao profundo.
-  v50  = "#ecfffb", v100 = "#cffdf4", v200 = "#9ff7e9", v300 = "#66efdb",
-  v400 = "#2ee6cb", v500 = "#00d9c0", v600 = "#00b3a0", v700 = "#008f83",
-  v800 = "#0a6e68", v900 = "#0c5252", v950 = "#073338", v975 = "#062a31",
+  -- A rampa violeta: escala monotónica de luminosidade, do claro ao profundo.
+  v50  = "#f4effe", v100 = "#e7dafd", v200 = "#cbb2fb", v300 = "#b491f9",
+  v400 = "#9d6ff6", v500 = "#8b5cf6", v600 = "#7c3aed", v700 = "#6d28d9",
+  v800 = "#5b21b6", v900 = "#4c1d95", v950 = "#2e1065", v975 = "#2b0c45",
 
   -- Néon e fulgor: as côres do halo luminoso, ditas na língua estrangeira "glow".
-  -- O glow_core é o próprio lume dos olhos do eidolon; o glow_hot, magenta das
-  -- montanhas, reserva-se aos picos e às urgências.
-  glow_ice = "#d8fff8", glow_soft = "#7df5e2", glow_core = "#2ef2da", glow_hot = "#ff2fa0",
+  -- O glow_hot, magenta das montanhas ao poente, reserva-se aos picos e ás urgências.
+  glow_ice = "#d6c2ff", glow_soft = "#b794ff", glow_core = "#a855f7", glow_hot = "#ff2fa0",
 
   -- O texto: hierarchia de legibilidade, que vai do brilhante ao desvanecido.
-  text_bright = "#e6fffa", text_primary = "#b8f0e4", text_heading = "#7df5e2",
-  text_body = "#85c2ba", text_muted = "#5b8a84", text_faint = "#365a56",
-  text_disabled = "#23403c",
+  text_bright = "#e9dcff", text_primary = "#cbb6ff", text_heading = "#b794ff",
+  text_body = "#9a82c4", text_muted = "#6f5a96", text_faint = "#463566",
+  text_disabled = "#2f2348",
 
   -- Linhas, bordas e biséis: a geometria das arestas e do relevo apparente.
-  -- O bevel_lo é a sombra verde-nocturna da própria silhueta da estampa.
-  line_faint = "#241f5c", line_dim = "#155054", line_base = "#0a6e68",
-  line_bright = "#00b3a0", bevel_hi = "#2ee6cb", bevel_lo = "#081420", grid = "#155054",
+  line_faint = "#241640", line_dim = "#3a1f63", line_base = "#5b21b6",
+  line_bright = "#7c3aed", bevel_hi = "#9d6ff6", bevel_lo = "#160c28", grid = "#3a1f63",
 
   -- Séries de dados: aos gráphicos e diagrammas concede-se o espectro inteiro
-  -- do poente — cyan, amarello-sol, laranja, magenta, o violeta (memória do
-  -- systema antigo) e o vermelho do quadro solar. Poente contido, note-se bem.
-  data1 = "#2ef2da", data2 = "#ffd319", data3 = "#ff7a1a",
-  data4 = "#ff2fa0", data5 = "#8a5cf6", data6 = "#ff3d3d",
+  -- do poente — o violeta do núcleo (data1, soberano), amarello-sol, laranja,
+  -- magenta, o CYAN dos olhos do eidolon (data5, memória do systema cyâneo) e
+  -- o vermelho do quadro solar. Poente contido, note-se bem.
+  data1 = "#a855f7", data2 = "#ffd319", data3 = "#ff7a1a",
+  data4 = "#ff2fa0", data5 = "#2ef2da", data6 = "#ff3d3d",
 
   -- Os estados (subtis): os signaes de bom curso, de advertência e de crise —
   -- o verde da vegetação, o amarello do sol, o vermelho do seu quadro.
-  ok = "#2ee6a8", warn = "#ffd319", crit = "#ff3948", info = "#00d9c0",
+  ok = "#2ee6a8", warn = "#ffd319", crit = "#ff3948", info = "#8b5cf6",
 
   -- ── ACCRÉSCIMOS (tokens da Phase-0; as 46 côres supra permanecem intactas) ──
   -- Sentinella de plena transparência (extremos de gradiente, caudas de véu,

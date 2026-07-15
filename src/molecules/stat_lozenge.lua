@@ -61,8 +61,8 @@ local VALUE_REST  = p.v50                  -- .seg__v color (o alvo mais cândid
 local function vgrad(stops)
   return gears.color { type = "linear", from = { 0, 0 }, to = { 0, SEG_H }, stops = stops }
 end
--- Enchimentos rebaixados UM degrau da rampa (a rampa cyânea é mais clara que a
--- roxa d'antes): assim a tinta v50 conserva contraste ~4.8 sobre o stop médio.
+-- Enchimentos rebaixados UM degrau da rampa: a tinta v50 ganha contraste
+-- (5.0 no topo v600 contra 4.0 no antigo topo v500) sem perder o fulgor.
 local FILL_REST  = vgrad { { 0, p.v600 }, { 0.58, p.v800 }, { 1, p.v900 } }  -- .seg__fill
 local FILL_HOVER = vgrad { { 0, p.v500 }, { 0.58, p.v700 }, { 1, p.v800 } }  -- .seg:hover .seg__fill
 local FILL_ON    = vgrad { { 0, p.v500 }, { 1, p.v800 } }                    -- .seg--on .seg__fill

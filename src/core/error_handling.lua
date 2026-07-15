@@ -160,7 +160,7 @@ function M.notify(title, body)
       ontop = true,
       placement = awful.placement.centered,
       shape = function(cr, w, h) gears.shape.rounded_rect(cr, w, h, 10) end,
-      bg = "#0a0824",
+      bg = "#0c0617",
       border_width = 3,
       border_color = "#ff3948",
       widget = {
@@ -191,11 +191,11 @@ function M.notify(title, body)
               make_button("Abrir Terminal (" .. get_terminal() .. ")", "#0c6b52", function()
                 spawn_terminal()
               end),
-              make_button("Recarregar Awesome", "#121036", function()
+              make_button("Recarregar Awesome", "#130a24", function()
                 close_popup()
                 awesome.restart()
               end),
-              make_button("Dispensar", "#241f5c", function()
+              make_button("Dispensar", "#241640", function()
                 close_popup()
               end),
               spacing = 12,

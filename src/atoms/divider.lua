@@ -20,11 +20,12 @@
 --   d:set_accent(p.glow_core)
 --
 -- VARIANTE "sunset" (o HORIZONTE da estampa): régua multi-matiz contida —
--- cyan (glow_core) -> magenta (data4) -> laranja (data3) -> diáphano — a única
--- licença multi-hue fora das séries de dados, consoante o Postulado do Poente
--- Contido. Invoca-se divider{ variant = "sunset", width = ... }; nesta variante
--- o :set_accent ABSTÉM-SE deliberadamente (no-op), para que recolorações de
--- fóco não destruam o horizonte.
+-- violeta (glow_core) -> magenta (data4) -> laranja (data3) -> diáphano — as
+-- montanhas a caminho do céu; a única licença multi-hue fora das séries de
+-- dados, consoante o Postulado do Poente Contido. Invoca-se
+-- divider{ variant = "sunset", width = ... }; nesta variante o :set_accent
+-- ABSTÉM-SE deliberadamente (no-op), para que recolorações de fóco não
+-- destruam o horizonte.
 
 local wibox = require("wibox")
 local gears = require("gears")
