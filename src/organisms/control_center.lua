@@ -360,7 +360,7 @@ return function(s, opts)
   local bar = awful.wibar {
     screen   = s,
     position = "top",
-    height   = dpi(mt.topbar_h),       -- barra de cima −30% (topbar_h=56, independente do rodapé); struts automáticos
+    height   = dpi(mt.topbar_h),       -- barra de cima (topbar_h=38, −20% a pedido; independente do rodapé); struts automáticos
     bg       = p.a(p.base, p.alpha.bar), -- .topbar bg = base @ 80%
     ontop    = false,
     widget   = bar_widget,

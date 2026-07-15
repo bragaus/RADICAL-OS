@@ -34,7 +34,7 @@ return {
   bar_popup_h = 56,                     -- barra do painel do control_center
   lozenge_h = 20, lozenge_h_actual = 44,
   mon_h = 80,                           -- promovido para FÓRA de monitor_bar.lua:32 (os popups ancoram acima)
-  topbar_h    = 48,                     -- altura da barra de CIMA (−15% de 56, a pedido); independente do rodapé
+  topbar_h    = 38,                     -- altura da barra de CIMA (−20% de 48, a pedido); independente do rodapé
   topbar_icon = 31,                     -- ícone dos widgets da barra de cima (tag/app/power/kb) — afinável
   topbar_tray = 36,                     -- base_size dos ícones da systray — afinável
   row_h = 18, row_header_h = 16, row_gap = 2, visible_rows = 6,
