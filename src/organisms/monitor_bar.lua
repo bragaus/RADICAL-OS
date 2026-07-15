@@ -59,15 +59,22 @@ local MON_H    = dpi(mt.mon_h)         -- altura canónica, do symbolo --mon-h (
 local SAMPLES  = mt.mon_samples        -- profundidade do histórico de cada série
 local INTERVAL = 1                     -- segundos que medeiam entre duas amostras (gráfico vivo)
 
--- ACCENTO LARANJA do grapho (a pedido): a linha e o enchimento em degradê tomam a MESMA cor
--- do contorno das janellas (launcher_ring_hi). GPU/CPU/MEM traçam UMA só série — a métrica
--- REAL primária (uso%) — sem as séries accessórias (temp/swap) que d'antes toldavam o grapho.
--- EXCEPÇÃO deliberada: o NET traça DUAS séries sobrepostas — download (laranja GRAPH_ACCENT)
--- e upload (amarelo-neon GRAPH_ACCENT_UP) — na MESMA escala partilhada, com mescla aditiva
--- "screen" (o cruzamento acende em néon). O gradient_fill do line_graph produz o degradê
--- pedido: opaco junto à linha, esmaecendo a diáphano no fundo. — Braga Us.
-local GRAPH_ACCENT    = p.launcher_ring_hi -- download (laranja)
-local GRAPH_ACCENT_UP = p.graph_up         -- upload (amarelo-neon), par do laranja no NET
+-- O ESPECTRO DO POENTE (SUNCORE): a cada módulo, o SEU matiz da estampa —
+-- CPU o cyan do núcleo do eidolon (glow_core), GPU o magenta das montanhas
+-- (data4), MEM o amarello-sol (data2), NET o laranja do céu (data3). GPU/CPU/MEM
+-- traçam UMA só série — a métrica REAL primária (uso%) — sem as accessórias
+-- (temp/swap) que d'antes toldavam o grapho. EXCEPÇÃO deliberada: o NET traça
+-- DUAS séries sobrepostas — download (laranja MOD_ACCENT.net) e upload
+-- (lima-neon MOD_ACCENT.net_up) — na MESMA escala partilhada, com mescla
+-- aditiva "screen" (o cruzamento acende em néon). O gradient_fill do line_graph
+-- produz o degradê pedido: opaco junto á linha, diáphano no fundo. — Braga Us.
+local MOD_ACCENT = {
+  gpu    = p.data4,     -- magenta das montanhas
+  cpu    = p.glow_core, -- cyan do núcleo
+  mem    = p.data2,     -- amarello-sol
+  net    = p.data3,     -- laranja do céu (download)
+  net_up = p.graph_up,  -- lima-neon (upload), par do laranja sob o "screen"
+}
 
 -- IDENTIFICADOR HEXADECIMAL do nó, cunhado uma só vez no carregamento (os.time
 -- é de custo ínfimo e não bloqueia o systema).
@@ -565,29 +572,29 @@ end
 return function(s)
   local iface = (user_vars and user_vars.network and user_vars.network.ethernet) or "eno1"
 
-  -- os quatro módulos de telemetria — manifesto verbatim do kit (monitorbar.jsx).
-  -- UMA série por módulo (a métrica REAL primária), toda em GRAPH_ACCENT (laranja das janellas).
+  -- os quatro módulos de telemetria — manifesto verbatim do kit (monitorbar.jsx),
+  -- cada qual no SEU matiz do espectro do poente (MOD_ACCENT, vide supra).
   -- Os rótulos partem de um valor prudente e são CORRIGIDOS ao hardware real logo abaixo.
   local mod_gpu = make_module(s, {
     label = "GPU", lbl = 24, sub = "GPU", icon = "gpu",
-    colors = { GRAPH_ACCENT }, group = "system", fixed100 = true, first = true,
+    colors = { MOD_ACCENT.gpu }, group = "system", fixed100 = true, first = true,
     cells = { "USE", "TEMP", "CLK", "VRAM" },
   })
   local mod_cpu = make_module(s, {
     label = "CPU", lbl = 24, sub = "CPU", icon = "cpu",
-    colors = { GRAPH_ACCENT }, group = "system", fixed100 = true,
+    colors = { MOD_ACCENT.cpu }, group = "system", fixed100 = true,
     cells = { "LOAD", "TEMP", "CLK", "CORES" },
   })
   local mod_mem = make_module(s, {
     label = "MEMORY", lbl = 15, sub = "RAM", icon = "mem",
-    colors = { GRAPH_ACCENT }, group = "system", fixed100 = true,
+    colors = { MOD_ACCENT.mem }, group = "system", fixed100 = true,
     cells = { "USED", "CACHE", "SWAP", "BUFF" },
   })
   local mod_net = make_module(s, {
     label = "NET", lbl = 22, sub = "NET // " .. iface, icon = "net",
-    -- DUAS séries sobrepostas: {download (frente, laranja), upload (trás, amarelo-neon)}.
+    -- DUAS séries sobrepostas: {download (frente, laranja), upload (trás, lima-neon)}.
     -- blend "screen" acende o cruzamento; escala partilhada (fixed100=false) mede ambas igual.
-    colors = { GRAPH_ACCENT, GRAPH_ACCENT_UP }, blend = "screen",
+    colors = { MOD_ACCENT.net, MOD_ACCENT.net_up }, blend = "screen",
     group = "network", fixed100 = false,
     cells = { "DOWN", "UP", "PING", "CONN" },
   })
