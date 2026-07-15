@@ -1,9 +1,9 @@
 -- ══════════════════════════════════════════════════════════════════════════
--- TRATADO DE GEOMETRIA DAS FÓRMAS E DAS TEXTURAS DO VIOLET-HUD
+-- TRATADO DE GEOMETRIA DAS FÓRMAS E DAS TEXTURAS DO SUNCORE-HUD
 -- ─────────────────────────────────────────────────────────────────────────
 -- Manuscripto: src/tools/shapes.lua
 --
--- Reúne as FUNCÇÕES de fórma (geometria) e os PINTORES de textura do Violet-HUD.
+-- Reúne as FUNCÇÕES de fórma (geometria) e os PINTORES de textura do Suncore-HUD.
 -- A geometria deriva dos polygonos de recorte (clip-path) do kit, a saber:
 --   ferramentas_para_implementacao/ui_kits/radical-hud/kit.css
 -- (as etiquetas da barra superior .tag__edge, o controle .tagctl, o chip do
@@ -23,9 +23,10 @@
 -- `shapes.powerline{}` seja desde logo ajuizado.
 -- ══════════════════════════════════════════════════════════════════════════
 
-local dpi = require("beautiful").xresources.apply_dpi
-local p   = require("src.theme.palette")
-local mt  = require("src.theme.metrics")
+local dpi   = require("beautiful").xresources.apply_dpi
+local p     = require("src.theme.palette")
+local mt    = require("src.theme.metrics")
+local cairo = require("lgi").cairo
 
 local shapes = {}
 
@@ -354,6 +355,96 @@ function shapes.scanlines(cr, w, h, opts)
     cr:line_to(w, y)
     y = y + spacing
   end
+  cr:stroke()
+  cr:restore()
+end
+
+-- ─────────────────────────────────────────────────────────────────────────
+-- LEMMA VIII — shapes.sun_rays(cr, w, h[, opts])
+-- Funcção urdida pelo Doutor Braga Us: o RESPLENDOR SOLAR da estampa do
+-- eidolon — uma corôa de cunhas triangulares que irradiam do centro (cx, cy),
+-- do raio interior ao exterior, á maneira dos raios amarellos do quadro
+-- vermelho. Presta-se ao véu do powermenu e ao fundo do lançador.
+--   DOMÍNIO       : cr, w, h e `opts` = { color=p.data3, alpha=0.16,
+--                   cx=w/2, cy=h/2, rays=24, inner_r=dpi(28),
+--                   outer_r=nil (por defeito, cobre até o canto mais longínquo),
+--                   ray_deg=4.5 (abertura angular de cada cunha, em graus),
+--                   rotate=0 (rotação inicial, radianos) }.
+--   CONTRA-DOMÍNIO: o vácuo; o effeito é o resplendor pintado, recortado a w x h.
+--   INVARIANTE    : cada cunha é subcaminho FECHADO sóbre si mesmo ANTES do
+--                   move_to seguinte (guarda contra a cilada do move_to a meio
+--                   caminho, que principia subcaminho novo e mutila o fill);
+--                   um único fill consome todas. Salva-se e restaura-se o
+--                   estado do cairo. Q.E.D.
+function shapes.sun_rays(cr, w, h, opts)
+  opts = opts or {}
+  local r, g, b = p.rgb(opts.color or p.data3)
+  local alpha   = opts.alpha or 0.16
+  local cx      = opts.cx or w / 2
+  local cy      = opts.cy or h / 2
+  local rays    = opts.rays or 24
+  local inner   = opts.inner_r or dpi(28)
+  local outer   = opts.outer_r
+  if not outer then
+    -- o canto mais longínquo da caixa, para que o resplendor a cubra inteira
+    local dx = math.max(cx, w - cx)
+    local dy = math.max(cy, h - cy)
+    outer = math.sqrt(dx * dx + dy * dy)
+  end
+  local half = math.rad(opts.ray_deg or 4.5) / 2
+  local rot  = opts.rotate or 0
+  cr:save()
+  cr:rectangle(0, 0, w, h); cr:clip()
+  cr:set_source_rgba(r, g, b, alpha)
+  for i = 0, rays - 1 do
+    local a0 = rot + i * (2 * math.pi / rays)
+    cr:move_to(cx + inner * math.cos(a0 - half), cy + inner * math.sin(a0 - half))
+    cr:line_to(cx + outer * math.cos(a0 - half), cy + outer * math.sin(a0 - half))
+    cr:line_to(cx + outer * math.cos(a0 + half), cy + outer * math.sin(a0 + half))
+    cr:line_to(cx + inner * math.cos(a0 + half), cy + inner * math.sin(a0 + half))
+    cr:close_path()
+  end
+  cr:fill()
+  cr:restore()
+end
+
+-- ─────────────────────────────────────────────────────────────────────────
+-- LEMMA IX — shapes.halo(cr, w, h[, opts])
+-- Funcção urdida pelo Doutor Braga Us: o HALO da estampa — annel tracejado
+-- (ou, querendo-se, PONTILHADO) que cinge a cabeça do eidolon. Serve de guia
+-- á órbita do lançador e de adôrno ao vazio central do donut.
+--   DOMÍNIO       : cr, w, h e `opts` = { color=p.data2, alpha=0.5,
+--                   cx=w/2, cy=h/2, r=min(w,h)/2 - line_width,
+--                   line_width=dpi(2), dash={dpi(2), dpi(5)},
+--                   dot=false (verdadeiro -> pontos redondos: dash {0, passo}
+--                   com remate LINE_CAP.ROUND, o pontilhado verdadeiro),
+--                   start_angle=0 (offset do tracejado, radianos) }.
+--   CONTRA-DOMÍNIO: o vácuo; o effeito é o annel pintado.
+--   INVARIANTE    : o par save/restore restitue TAMBÉM o padrão de traço e o
+--                   remate (dash e line_cap pertencem ao estado gráphico do
+--                   cairo), de sorte que nenhum pintor subsequente herde o
+--                   pontilhado por descuido. Q.E.D.
+function shapes.halo(cr, w, h, opts)
+  opts = opts or {}
+  local r, g, b = p.rgb(opts.color or p.data2)
+  local alpha   = opts.alpha or 0.5
+  local lw      = opts.line_width or dpi(2)
+  local cx      = opts.cx or w / 2
+  local cy      = opts.cy or h / 2
+  local radius  = opts.r or (math.min(w, h) / 2 - lw)
+  if radius <= 0 then return end
+  cr:save()
+  cr:rectangle(0, 0, w, h); cr:clip()
+  cr:set_source_rgba(r, g, b, alpha)
+  cr:set_line_width(lw)
+  if opts.dot then
+    local step = (opts.dash and opts.dash[2]) or dpi(5)
+    cr:set_line_cap(cairo.LineCap.ROUND)
+    cr:set_dash({ 0, lw + step }, 0)
+  else
+    cr:set_dash(opts.dash or { dpi(2), dpi(5) }, 0)
+  end
+  cr:arc(cx, cy, radius, opts.start_angle or 0, (opts.start_angle or 0) + 2 * math.pi)
   cr:stroke()
   cr:restore()
 end
