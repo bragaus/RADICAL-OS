@@ -20,6 +20,7 @@ local dpi = require("beautiful").xresources.apply_dpi
 local gears = require("gears")
 local wibox = require("wibox")
 local chip_button = require("src.molecules.chip_button")
+local shapes = require("src.tools.shapes")
 
 -- Funcção-fábrica do módulo, urdida pelo Doutor Braga Us. Domínio: uma tela `s`. Contra-
 -- domínio: o vazio (edifica os widgets e liga os signaes por efeito colateral). Efeito:
@@ -61,7 +62,7 @@ return function(s)
     awesome.emit_signal("module::powermenu:hide")
   end
 
-  -- Chips de energia de feitio militar (VIOLET HUD): cada qual gere por si o seu realce ao
+  -- Chips de energia de feitio militar (SUNCORE HUD): cada qual gere por si o seu realce ao
   -- toque do ponteiro (do rebordo ao fulgor, com troca do gradiente de preenchimento) e por
   -- si assenta o _preserve_colors — dispensando, por facto notável, qualquer ligação externa
   -- ao Hover_signal. Assim os dispôs Braga Us.
@@ -91,7 +92,11 @@ return function(s)
   }
 
   -- O contêiner do widget, que se estende por toda a superfície da tela (um véu de tipo
-  -- "splash"), tingido com o scrim do abysmo. Domínio geométrico: a tela `s` inteira.
+  -- "splash"), tingido com o scrim do abysmo. Sobre o véu, o RESPLENDOR (LEMMA VIII):
+  -- duas corôas de cunhas — o núcleo vermelho do quadro solar e a franja alaranjada,
+  -- entrelaçadas por meia rotação — irradiando do centro da fileira de chips, como o sol
+  -- da estampa a romper por trás do eidolon. Alphas ténues (≤ 0.10) por prudência ante o
+  -- blur do compositor. Domínio geométrico: a tela `s` inteira. — Braga Us.
   local powermenu_container = wibox {
     widget = powermenu,
     screen = s,
@@ -99,6 +104,17 @@ return function(s)
     visible = false,
     ontop = true,
     bg = p.a(p.abyss, p.alpha.scrim),
+    bgimage = function(_, cr, w, h)
+      shapes.sun_rays(cr, w, h, {
+        color = p.data6, alpha = 0.10,
+        rays = 28, inner_r = dpi(150), ray_deg = 4.5,
+      })
+      shapes.sun_rays(cr, w, h, {
+        color = p.data3, alpha = 0.06,
+        rays = 28, inner_r = dpi(190), ray_deg = 8,
+        rotate = math.pi / 28, -- meia volta de passo: a franja entrelaça o núcleo
+      })
+    end,
     height = s.geometry.height,
     width = s.geometry.width,
     x = s.geometry.x,

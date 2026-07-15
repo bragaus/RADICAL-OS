@@ -39,6 +39,7 @@ local p      = require("src.theme.palette")
 local mt     = require("src.theme.metrics")
 local swatch = require("src.atoms.swatch")
 local txt    = require("src.atoms.txt")
+local shapes = require("src.tools.shapes")
 
 -- côr do annel de fundo, decomposta uma só vez (token estático)
 local BG_R, BG_G, BG_B = p.rgb(p.inset)
@@ -85,6 +86,13 @@ local function donut(args)
         cr:stroke()
       end
     end
+    -- adôrno-HALO (LEMMA IX): annel pontilhado ténue no vazio central do annel —
+    -- o halo da estampa do eidolon, em amarello-sol quasi apagado. — Braga Us.
+    shapes.halo(cr, w, h, {
+      color = p.data2, alpha = 0.30,
+      cx = cx, cy = cy, r = rad - thickness / 2 - dpi(5),
+      line_width = dpi(1), dot = true, dash = { 0, dpi(4) },
+    })
   end
 
   -- Método ring:set_segments — de Braga Us. DOMÍNIO: `segs`, o vector de segmentos

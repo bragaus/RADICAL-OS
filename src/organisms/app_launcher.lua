@@ -303,6 +303,14 @@ return function(s)
     compute_cogs()
 
     if expanded then
+      -- (0) RESPLENDOR (LEMMA VIII): cunhas ténues a irromper do hub, POR TRÁS do fulgor —
+      -- o sol da estampa rompendo atrás da engrenagem. Alpha discreto (0.08). — Braga Us.
+      shapes.sun_rays(cr, width, height, {
+        color = p.launcher_glow, alpha = 0.08,
+        cx = CX, cy = CY, rays = 20,
+        inner_r = GIF_R + dpi(6), outer_r = ORBIT_R + FOCUS_R + GLOW_EXT, ray_deg = 6,
+      })
+
       -- (1) fulgor radial NEON alaranjado atrás dos dentes (kit .orbit__glow), centrado no
       -- hub: núcleo quente, alpha VISÍVEL ao cruzar a guia (at_line) e na borda EXTERNA dos
       -- dentes (at_icons), e AINDA FRANCAMENTE VIVO bem além dos ícones (at_far, +60px além
@@ -327,14 +335,14 @@ return function(s)
       cr:arc(CX, CY, glow_r, 0, 2 * math.pi)
       cr:fill()
 
-      -- (2) guia TRACEJADA (kit .orbit__guide): anel pontilhado no raio da órbita — traço
-      -- TRIPLICADO (3px; era 1px do kit) a pedido do operador.
-      cr:set_dash({ dpi(4), dpi(4) }, 0)
-      cr:set_source(gears.color(p.a(p.launcher_glow, 0.40)))
-      cr:set_line_width(dpi(3))
-      cr:arc(CX, CY, ORBIT_R, 0, 2 * math.pi)
-      cr:stroke()
-      cr:set_dash({}, 0)   -- restitue o traço contínuo
+      -- (2) guia-HALO (LEMMA IX; kit .orbit__guide): annel PONTILHADO no raio da órbita —
+      -- o halo da estampa a cingir a engrenagem. Pontos redondos, traço 3px (o inline
+      -- tracejado de outrora foi recolhido ao pintor shapes.halo).
+      shapes.halo(cr, width, height, {
+        color = p.launcher_glow, alpha = 0.40,
+        cx = CX, cy = CY, r = ORBIT_R,
+        line_width = dpi(3), dot = true, dash = { 0, dpi(9) },
+      })
 
       -- (3) os dentes: primeiro os sem foco, depois o focado (para que sobrepuje)
       for _, cog in ipairs(cogs) do
