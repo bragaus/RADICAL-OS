@@ -55,6 +55,13 @@ local a = p.a
 --   CONTRA-DOMÍNIO: retorna o widget `outer` já decorado, dotado do método
 --     :panel_set_focus. INVARIANTE: a decoração habita o bgimage, e o fundo dos
 --     filhos permanece diáphano, conforme o facto notável supra-enunciado.
+-- EXPERIMENTO DO HORIZONTE (decreto do operador): a banda do cabeçalho de TODO
+-- painel veste, por defeito, o mesmo HORIZONTE das faixas do context_menu —
+-- magenta (data4) -> laranja (data3) -> diáphano — com o título em tinta escura
+-- (v975, inversão sobre paradas claras). Para reverter ao chrome clássico,
+-- mude esta constante p/ "accent"; caso a caso, passe opts.header_variant.
+local HEADER_VARIANT = "sunset"
+
 local function build(opts)
   opts = opts or {}
   local accent       = opts.accent or p.v500
@@ -65,18 +72,20 @@ local function build(opts)
   local grad_w       = opts.w or dpi(mt.panel_w_md)
   local border_color = opts.focus and p.line_bright or p.line_base
   local focused      = opts.focus and true or false
+  local sunset_hd    = (opts.header_variant or HEADER_VARIANT) == "sunset"
 
   -- Título em CAIXA-ALTA, papel ft.title (ExtraBold 11, == .hp__title do kit); a
-  -- côr do fg confere-se pelo container. O atom atoms/txt aplica o :upper() e é o
-  -- único soberano do markup (aqui apenas texto puro, sem ornamento algum).
+  -- côr do fg confere-se pelo container (tinta escura v975 sobre o horizonte;
+  -- text_heading sobre a banda clássica). O atom atoms/txt aplica o :upper() e é
+  -- o único soberano do markup (aqui apenas texto puro, sem ornamento algum).
   local title_box = txt { role = "title", text = opts.title, upper = true, valign = "center" }
 
   local header = wibox.widget {
     {
       {
-        { title_box, fg = p.text_heading, widget = wibox.container.background },
+        { title_box, fg = sunset_hd and p.v975 or p.text_heading, widget = wibox.container.background },
         nil,
-        opts.right_icon and { opts.right_icon, fg = p.text_muted, widget = wibox.container.background } or nil,
+        opts.right_icon and { opts.right_icon, fg = sunset_hd and p.v975 or p.text_muted, widget = wibox.container.background } or nil,
         expand = "inside",
         layout = wibox.layout.align.horizontal,
       },
@@ -111,12 +120,20 @@ local function build(opts)
   --   tons (efeito inset) e os quatro ticks de canto. Nada retorna (contra-
   --   domínio vazio); opera sómente por seus effeitos sobre o contexto cairo.
   local function decoration(_, cr, w, h)
-    -- banda do cabeçalho (em foco => v700, senão panel_hi), recortada nos
-    -- cantos superiores segundo o rectângulo de bordas arredondadas.
+    -- banda do cabeçalho, recortada nos cantos superiores segundo o rectângulo
+    -- de bordas arredondadas. Na variante HORIZONTE: gradiente magenta->laranja->ø
+    -- (o mesmo das faixas do context_menu); na clássica: v700 em foco / panel_hi.
     cr:save()
     gears.shape.rounded_rect(cr, w, h, radius)
     cr:clip()
-    cr:set_source(gears.color(focused and p.v700 or p.panel_hi))
+    if sunset_hd then
+      cr:set_source(gears.color {
+        type = "linear", from = { 0, 0 }, to = { w, 0 },
+        stops = { { 0, p.data4 }, { 0.55, p.data3 }, { 1, p.a(p.data3, 0) } },
+      })
+    else
+      cr:set_source(gears.color(focused and p.v700 or p.panel_hi))
+    end
     cr:rectangle(0, 0, w, header_h)
     cr:fill()
     cr:restore()

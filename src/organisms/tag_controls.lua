@@ -42,9 +42,10 @@ local BTN_ACTIVE = btn_grad(p.v700, p.v950) -- .tagctl__b:active
 
 -- Funcção fabril urdida pelo Doutor Braga Us. Domínio: o nome de um ícone SVG e a
 -- acção (uma funcção) a executar ao clique. Contra-domínio: um botão chanfrado clicável
--- (22x14), de gradiente v600→v900 em repouso (hover v400→v700, press v700→v950), com
--- alvo de topo glow_ice@.35 e sombra de base bevel_lo@.6, e íco de 12px em NÉON laranja
--- (kit .tagctl__b img). Rege por si a figura do cursor e o invariante _preserve_colors.
+-- QUADRADO (28x28, por decreto do operador — quadrado, não rectangular), de gradiente
+-- v600→v900 em repouso (hover v400→v700, press v700→v950), com alvo de topo glow_ice@.35
+-- e sombra de base bevel_lo@.6, e íco de 16px em NÉON laranja (kit .tagctl__b img).
+-- Rege por si a figura do cursor e o invariante _preserve_colors.
 local function make_button(icon_name, action)
   local img = icon.surface(icon_name, p.launcher_glow) -- NÉON alaranjado (#ff7a18)
   local b = wibox.widget {
@@ -151,7 +152,7 @@ return function(s)
   -- a malha hexagonal (::mesh) e o filete de brilho no topo (::after) pintados por bgimage.
   local inner = wibox.widget {
     {
-      { content_row, valign = "center", halign = "left", widget = wibox.container.place }, -- centra a fileira de 14px
+      { content_row, valign = "center", halign = "center", widget = wibox.container.place }, -- fileira CENTRADA na concha (decreto do operador)
       left = dpi(mt.tagctl_pad_l), right = dpi(mt.tagctl_pad_r), -- 31 / 13 (a esquerda recebe a ponta da aba)
       widget = wibox.container.margin,
     },

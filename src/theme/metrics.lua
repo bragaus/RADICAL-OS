@@ -72,8 +72,8 @@ return {
 
   -- Concha dos controles de aba (kit .tagctl / .tagctl__*) --------------
   tagctl_h = 24, tagctl_pad_l = 31, tagctl_pad_r = 13, tagctl_gap = 5,
-  tagctl_edge = 1, tagctl_tuck = 22, tagctl_btn_w = 36, tagctl_btn_h = 40,
-  tagctl_btn_chamfer = 4, tagctl_btn_icon = 22, haz_w = 11, haz_h = 40, haz_band = 2,
+  tagctl_edge = 1, tagctl_tuck = 22, tagctl_btn_w = 28, tagctl_btn_h = 28,
+  tagctl_btn_chamfer = 4, tagctl_btn_icon = 16, haz_w = 11, haz_h = 28, haz_band = 2,
 
   -- Fita de lozangos (kit .seg / .lozstrip = 24px; NÃO o token stale lozenge_h=20) --
   seg_h = 24, seg_pad_l = 22, seg_pad_l_first = 26, seg_pad_r = 18, seg_gap = 5,
