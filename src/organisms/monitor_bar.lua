@@ -713,7 +713,7 @@ return function(s)
     visible   = true,
     screen    = s,
     type      = "dock",       -- DOCA: reserva a sua faixa na área de trabalho (struts, abaixo)
-    bg        = "#00000000", -- a doca pinta o seu próprio gradiente; o popup é diáphano
+    bg        = p.transparent, -- a doca pinta o seu próprio gradiente; o popup é diáphano
     placement = function(c) awful.placement.bottom_left(c, { margins = 0 }) end,
   }
   s._monitor_bar = bar

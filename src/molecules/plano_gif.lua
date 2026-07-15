@@ -17,6 +17,7 @@ local dpi = beautiful.xresources.apply_dpi
 local gears = require("gears")
 local gfs = require("gears.filesystem")
 local wibox = require("wibox")
+local p = require("src.theme.palette") -- taboa pura, sem dependências: segura mesmo no pré-carregamento
 
 local M = {}
 
@@ -29,7 +30,7 @@ local frames_root = cache_home .. "/awesome/plano_gif_frames_v4"
 local caches = {}
 
 local DEFAULT_RADIUS = dpi(14)
-local DEFAULT_FALLBACK_BG = "#00000000"
+local DEFAULT_FALLBACK_BG = p.transparent
 
 -- Funcção `normalize_size`, de Braga Us. Domínio: `target_size`, a grandeza pretendida
 -- (ou nula); contra-domínio: um inteiro não inferior a dezaseis pixeis. Garante que a

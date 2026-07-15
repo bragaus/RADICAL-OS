@@ -54,7 +54,7 @@ local shapes = require("src.tools.shapes")
 local SEG_H       = dpi(mt.seg_h)          -- 24, .seg/.lozstrip height
 local EDGE_REST   = p.glow_soft            -- .seg__edge bg (a orla de repouso e de hover)
 local EDGE_ON     = p.glow_ice             -- .seg--on .seg__edge (a orla acesa)
-local VALUE_REST  = "#f5efff"              -- .seg__v color (≈ p.v50, mais branco que text_bright)
+local VALUE_REST  = p.v50                  -- .seg__v color (o alvo mais cândido da rampa)
 
 -- Funcção auxiliar de Braga Us: engendra um gradiente vertical (180º) na caixa de 24px.
 -- Domínio: os stops do gradiente; contra-domínio: um objecto de côr linear.

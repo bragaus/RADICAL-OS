@@ -47,7 +47,7 @@ require("src.tools.icon_handler") -- pelo effeito collateral: define o global Ge
 local SEG_H       = dpi(mt.topbar_h)          -- 24, altura da aba
 local EDGE_REST   = p.glow_soft            -- orla de repouso e de hover
 local EDGE_ON     = p.glow_ice             -- orla acesa (fóco)
-local VALUE_REST  = "#f5efff"              -- côr do nome (≈ p.v50)
+local VALUE_REST  = p.v50                  -- côr do nome (o alvo mais cândido da rampa)
 local ICON_SZ     = dpi(mt.topbar_icon)                -- corpo do ícone do app
 local NAME_MAX    = 16                     -- limite de caracteres do nome
 

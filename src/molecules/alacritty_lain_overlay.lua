@@ -57,7 +57,7 @@ local function new_overlay(c)
   local overlay = wibox({
     visible = false,
     ontop = false,
-    bg = "#00000000",
+    bg = p.transparent,
     screen = c.screen,
   })
 
