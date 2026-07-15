@@ -1,5 +1,5 @@
 -- ══════════════════════════════════════════════════════════════════════════════════════
---  TRACTADO DA FAIXA DE TÍTULO "title_band" — a tarja de secção em gradiente (VIOLET HUD)
+--  TRACTADO DA FAIXA DE TÍTULO "title_band" — a tarja de secção em gradiente (SUNCORE HUD)
 --
 --  kit.css `.ctx__band`: uma tira horizontal em gradiente (line_bright -> v950) que ostenta
 --  um cabeçalho v50 em versaes. O eminente geómetra BRAGA US a fez partilhada pelo
@@ -35,6 +35,9 @@ local function title_band(args)
   local grad_to    = width or dpi(mt.panel_w_sm)         -- o gradiente exige alcance fixo em px
   local from_color = args.from or p.line_bright
   local to_color   = args.to or p.v950
+  -- `stops` é sobreposição PLENA das paradas (v.g. a faixa-HORIZONTE do poente);
+  -- quem a passe deve tambem ponderar a tinta (`fg`) — sobre paradas claras
+  -- (glow_core á esquerda), a regra da inversão pede tinta escura (v975).
 
   -- Referência directa (R1): a caixa do cabeçalho, actualizada via :set_text.
   local label = txt { role = "title", text = args.text, valign = "center", upper = true }
@@ -49,11 +52,11 @@ local function title_band(args)
     },
     forced_height = height,
     forced_width  = width,
-    fg            = p.v50,   -- o cabeçalho simples herda esta tinta
+    fg            = args.fg or p.v50,   -- o cabeçalho simples herda esta tinta
     bg            = gears.color {
       type  = "linear",
       from  = { 0, 0 }, to = { grad_to, 0 },
-      stops = { { 0, from_color }, { 1, to_color } },
+      stops = args.stops or { { 0, from_color }, { 1, to_color } },
     },
     widget = wibox.container.background,
   }

@@ -1,6 +1,6 @@
 -- ═══════════════════════════════════════════════════════════════════════════
 --  TRACTADO DA RÉGUA ACCENTUADA — src/atoms/divider.lua
---  Átomo separador de 2px (VIOLET HUD) · da penna do Doutor Braga Us
+--  Átomo separador de 2px (SUNCORE HUD) · da penna do Doutor Braga Us
 -- ═══════════════════════════════════════════════════════════════════════════
 --
 -- Considere-se o problema de separar visualmente duas regiões de um panel. A
@@ -18,6 +18,13 @@
 --   local divider = require("src.atoms.divider")
 --   local d = divider{ accent = p.v500, width = dpi(mt.panel_w) }
 --   d:set_accent(p.glow_core)
+--
+-- VARIANTE "sunset" (o HORIZONTE da estampa): régua multi-matiz contida —
+-- cyan (glow_core) -> magenta (data4) -> laranja (data3) -> diáphano — a única
+-- licença multi-hue fora das séries de dados, consoante o Postulado do Poente
+-- Contido. Invoca-se divider{ variant = "sunset", width = ... }; nesta variante
+-- o :set_accent ABSTÉM-SE deliberadamente (no-op), para que recolorações de
+-- fóco não destruam o horizonte.
 
 local wibox = require("wibox")
 local gears = require("gears")
@@ -43,6 +50,23 @@ local function gradient(accent, width)
   }
 end
 
+-- Funcção `sunset_gradient` — o HORIZONTE, engenho de Braga Us.
+-- DOMÍNIO: a largura `width`. CONTRA-DOMÍNIO: cor linear de quatro paradas —
+-- o poente comprimido n'uma régua de 2px. Funcção pura, como a irmã supra. Q.E.D.
+local function sunset_gradient(width)
+  return gears.color {
+    type = "linear",
+    from = { 0, 0 },
+    to   = { width, 0 },
+    stops = {
+      { 0,    p.glow_core },
+      { 0.45, p.data4 },
+      { 0.75, p.data3 },
+      { 1,    p.transparent },
+    },
+  }
+end
+
 -- Funcção `build` — a fábrica da régua, da lavra de Braga Us.
 -- DOMÍNIO: táboa `opts` com accento, largura e altura (todos facultativos).
 -- CONTRA-DOMÍNIO: UM widget-régua, ao qual se anexa o methodo :set_accent e o
@@ -53,10 +77,11 @@ local function build(opts)
   local accent = opts.accent or p.v500
   local width  = opts.width or dpi(mt.panel_w_md)
   local height = opts.height or dpi(mt.divider_h)
+  local sunset = opts.variant == "sunset"
 
   local w = wibox.widget {
     forced_height = height,
-    bg            = gradient(accent, width),
+    bg            = sunset and sunset_gradient(width) or gradient(accent, width),
     shape         = gears.shape.rounded_bar,
     widget        = wibox.container.background,
   }
@@ -65,7 +90,10 @@ local function build(opts)
   -- Methodo `:set_accent` — recoloração in loco, preceituada por Braga Us.
   -- DOMÍNIO: uma cor `c`; se nulla, a operação abstem-se (guarda de nullidade).
   -- EFFEITO: recompõe o gradiente sobre a largura memorizada e reclama o redesenho.
+  -- Na variante "sunset" a funcção ABSTÉM-SE por inteiro (no-op documentado):
+  -- o horizonte não se recolora ao sabor do fóco — vide o preâmbulo. Q.E.D.
   function w:set_accent(c)
+    if sunset then return end
     if not c then return end
     self.bg = gradient(c, self._divider_width)
     self:emit_signal("widget::redraw_needed")

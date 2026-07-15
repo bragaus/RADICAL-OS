@@ -58,10 +58,22 @@ end
 
 -- Funcção `mk_band`, lavrada por Braga Us. Domínio: um texto (o rótulo da faixa) e, facultativa,
 -- a largura `band_w` (default W=208; 150 no submenu). Contra-domínio: uma FAIXA-TÍTULO
--- (title_band) na altura e fonte de defeito do kit (26px, ExtraBold 11). Serve de lemma
--- auxiliar, poupando a repetição da mesma construcção ao longo do tractado.
+-- (title_band) na altura e fonte de defeito do kit (26px, ExtraBold 11), ora vestida com o
+-- HORIZONTE do poente — cyan -> magenta -> laranja -> diáphano — e tinta ESCURA (v975),
+-- consoante a regra da inversão sobre paradas claras. Serve de lemma auxiliar, poupando a
+-- repetição da mesma construcção ao longo do tractado.
 local function mk_band(text, band_w)
-  return title_band { text = text, width = band_w or W }
+  return title_band {
+    text  = text,
+    width = band_w or W,
+    fg    = p.v975,
+    stops = {
+      { 0,    p.glow_core },
+      { 0.45, p.data4 },
+      { 0.75, p.data3 },
+      { 1,    p.a(p.data3, 0) },
+    },
+  }
 end
 
 -- Funcção `make_default_placement`, da lavra de Braga Us. Domínio: o vazio. Contra-domínio:

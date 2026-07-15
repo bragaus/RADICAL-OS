@@ -91,8 +91,9 @@ local function build(opts)
 
   -- Linha divisória: do accent, transitando a accent@alpha.divider_tail (a 55%),
   -- e findando no diáphano. O gradiente foi extrahido para o atom atoms/divider
-  -- (o span abrange toda a largura do painel).
-  local rule = divider { accent = accent, width = grad_w }
+  -- (o span abrange toda a largura do painel). Facultativamente, opts.divider_variant
+  -- = "sunset" veste a régua com o HORIZONTE do poente (vide atoms/divider).
+  local rule = divider { accent = accent, width = grad_w, variant = opts.divider_variant }
 
   local body_wrap = wibox.widget {
     body,
