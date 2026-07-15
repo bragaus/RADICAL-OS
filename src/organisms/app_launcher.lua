@@ -154,6 +154,14 @@ return function(s)
   local load_timer    = nil
   local ANIM_INTERVAL = 0.05
 
+  -- O carrossel anima ao PASSO DO MONITOR (user_vars.performance.refresh_rate, 165 no DP-0),
+  -- não mais a 60 fixos. O factor de aproximação deriva-se do dt (decaimento exponencial de
+  -- 19.7/s ≡ o antigo 0.28 por quadro a 60Hz), de sorte que a VELOCIDADE visual é a mesma a
+  -- qualquer taxa — só a fluidez cresce. — Braga Us.
+  local FRAME_RATE = (user_vars.performance and user_vars.performance.refresh_rate) or 60
+  local FRAME_DT   = 1 / FRAME_RATE
+  local SEL_ALPHA  = 1 - math.exp(-19.7 * FRAME_DT)
+
   -- ═══════════════ DO ÍCONE DA APPLICAÇÃO (cacheado) ═══════════════
   -- Funcção memoizada de Braga Us. Domínio: uma applicação. Contra-domínio: a superfície
   -- Cairo do seu ícone (ou o nada). Resolve-se uma única vez: se o nome principia por "/",
@@ -347,7 +355,7 @@ return function(s)
   local function animate_sel()
     if anim_timer then return end
     anim_timer = gears.timer {
-      timeout   = 1 / 60,
+      timeout   = FRAME_DT,
       autostart = true,
       callback  = function()
         local d = sel_target - sel
@@ -356,7 +364,7 @@ return function(s)
           anim_timer:stop()
           anim_timer = nil
         else
-          sel = sel + d * 0.28
+          sel = sel + d * SEL_ALPHA
         end
         canvas:emit_signal("widget::redraw_needed")
       end,
@@ -587,11 +595,18 @@ return function(s)
       labeled_app = focus.app
       tip_text:set_span(focus.app.name)   -- côr de defeito glow_ice (kit .orbit__lbl)
     end
+    -- Pina-se o balão SOBRE O SLOT DA ÂNCORA (posição fixa, fiel ao kit .orbit__lbl), e NÃO
+    -- sobre o dente interpolante: segui-lo re-collocaria este popup a CADA quadro da animação
+    -- (um configure de janella por quadro — jank no girar). O dente focado converge para a
+    -- âncora de toda sorte; os guardas abaixo tornam o caso quieto um perfeito no-op. — Braga Us.
+    local ax, ay = pos(ANCHOR)
     local tw = tip.width or dpi(80)
     local th = tip.height or dpi(22)
-    tip.x = math.floor(host.x + focus.x - tw / 2)                    -- centrado sobre o dente
-    tip.y = math.floor(host.y + focus.y - focus.r - th - dpi(6))     -- acima d'elle
-    tip.visible = true
+    local nx = math.floor(host.x + ax - tw / 2)
+    local ny = math.floor(host.y + ay - FOCUS_R - th - dpi(6))
+    if tip.x ~= nx then tip.x = nx end
+    if tip.y ~= ny then tip.y = ny end
+    if not tip.visible then tip.visible = true end
   end
 
   -- ═══════════════ DA BUSCA (barra de pesquisa + filtro + caçador de teclas) ═══════════════

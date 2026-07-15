@@ -114,6 +114,8 @@ local function sync_overlay(c)
   local overlay = overlays[c] or new_overlay(c)
   local geo = c:geometry()
 
+  local was_visible = overlay.visible
+  local was_screen  = overlay.screen
   overlay.screen = c.screen
   overlay.x = geo.x
   overlay.y = geo.y
@@ -121,7 +123,11 @@ local function sync_overlay(c)
   overlay.height = math.max(geo.height, 1)
   overlay.visible = should_show(c)
 
-  if overlay.visible then
+  -- Ergue-se o cliente SÓMENTE na transição invisível→visível (o mapear do véu o põe no
+  -- topo da pilha; o raise restitue o cliente acima d'elle). Erguê-lo a CADA synchronização
+  -- fazia uma tempestade de restacks no X durante o arrasto (um por evento de motion) —
+  -- a maior causa do mover não-fluido. — Braga Us.
+  if overlay.visible and (not was_visible or overlay.screen ~= was_screen) then
     c:raise()
   end
 end
@@ -155,14 +161,39 @@ local function sync_all()
   end
 end
 
+-- COALESCEDOR DE GEOMETRIA, urdido contra o jank do arrasto. O arrastar d'uma janella
+-- dispara property::geometry a CADA evento de motion (centenas por segundo n'um rato
+-- veloz); synchronizar o véu — e re-collocar o SEU wibox — a cada um afoga o laço de Lua
+-- e o servidor X. Em vez d'isso: os clientes que importam (Alacritty ou já com véu)
+-- marcam-se pendentes, e UM timer de quadro (1/refresh_rate) escoa todos de uma vez —
+-- o véu acompanha o arrasto á taxa do monitor, jamais acima d'ella. Os demais clientes
+-- saem de graça (duas comparações e uma consulta). — Braga Us.
+local FRAME_DT = 1 / ((user_vars and user_vars.performance and user_vars.performance.refresh_rate) or 60)
+local pending = setmetatable({}, { __mode = "k" })
+local flush_timer = nil
+local function queue_sync(c)
+  if not (c and c.valid) then return end
+  if not overlays[c] and not is_alacritty(c) then return end
+  pending[c] = true
+  if flush_timer then return end
+  flush_timer = gears.timer.start_new(FRAME_DT, function()
+    flush_timer = nil
+    for cl in pairs(pending) do
+      pending[cl] = nil
+      if cl.valid then sync_overlay(cl) end
+    end
+    return false
+  end)
+end
+
 -- Postulados de reacção, estabelecidos por Braga Us: liga-se a synchronização do
 -- véu a cada mutação relevante do cliente (gerência, classe, geometria, tela,
 -- minimização, plenitude de écran, maximização, marcação de etiquetas); o
 -- expurgo, á sua desgerência; e a synchronização universal, á troca da etiqueta
--- em foco.
+-- em foco. A geometria — a única que dispara em rajada — passa pelo coalescedor.
 client.connect_signal("manage", sync_overlay)
 client.connect_signal("property::class", sync_overlay)
-client.connect_signal("property::geometry", sync_overlay)
+client.connect_signal("property::geometry", queue_sync)
 client.connect_signal("property::screen", sync_overlay)
 client.connect_signal("property::minimized", sync_overlay)
 client.connect_signal("property::fullscreen", sync_overlay)

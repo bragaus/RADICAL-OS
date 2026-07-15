@@ -28,15 +28,18 @@ return gears.table.join(
   end),
   -- Corollário do toque com o modkey (botão 1): além de despertar o cliente,
   -- inicia-se a translação — o arrastar da janela pela mão do operador.
+  -- Fluctuantes seguem o ARRASTO COMPASSADO (smooth_drag: geometria escripta
+  -- quando muito 1x por quadro do monitor); ladrilhadas, o awful de costume.
   awful.button({ modkey }, 1, function(c)
     c:emit_signal("request::activate", "mouse_click", { raise = true })
-    awful.mouse.client.move(c)
+    require("src.tools.smooth_drag").move(c)
   end),
   -- Corollário análogo (modkey + botão 3): desperta o cliente e principia a
-  -- dilatação de suas dimensões — a operação de redimensionamento.
+  -- dilatação de suas dimensões — a operação de redimensionamento (compassada
+  -- na mesma doutrina do mover).
   awful.button({ modkey }, 3, function(c)
     c:emit_signal("request::activate", "mouse_click", { raise = true })
-    awful.mouse.client.resize(c)
+    require("src.tools.smooth_drag").resize(c)
   end),
   -- Proposição derradeira, demonstrada por Braga Us: o premir da roda (botão
   -- do meio, nº 2) evoca o menu de contexto do VIOLET HUD (vide §7.5). Nota

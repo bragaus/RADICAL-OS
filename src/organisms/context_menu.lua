@@ -21,7 +21,8 @@
 --    context_menu.build(title, items, opts)   -- popup genérico (reusado por tag_menu):   --
 --        items = lista de { label=, icon=, danger=, arrow=, disabled=, compact=, on_click=, on_hover=}--
 --                OU separadores de secção { band = "TÍTULO" };                             --
---        opts.placement = funcção de collocação (default: sob o rato, sem sair da tela);   --
+--        opts.placement = funcção de collocação (default: no sítio do rato AO ABRIR,       --
+--                         coordenadas congeladas, sem sair da tela);                        --
 --        opts.width     = largura da faixa/menu (default dpi(mt.ctx_w)=208; 150 no submenu);--
 --        opts.widget    = widget avulso a hospedar (v.g. a grade iconpick do tag_menu).    --
 --    context_menu.hide()                      -- encerra o popup activo (se elle houver).  --
@@ -63,12 +64,20 @@ local function mk_band(text, band_w)
   return title_band { text = text, width = band_w or W }
 end
 
--- Funcção `default_placement`, da lavra de Braga Us. Domínio: o desenho `d` a collocar.
--- Efeito: assenta-o sob o ponteiro do rato e, por conseguinte, garante a invariante de
--- que nenhuma parte do popup transponha os limites da tela. Contra-domínio: o vazio.
-local function default_placement(d)
-  awful.placement.under_mouse(d)
-  awful.placement.no_offscreen(d)
+-- Funcção `make_default_placement`, da lavra de Braga Us. Domínio: o vazio. Contra-domínio:
+-- uma funcção de collocação que assenta o canto superior sinistro do popup nas coordenadas
+-- do rato CONGELADAS no instante da abertura, vedando-lhe transpôr os limites da tela.
+-- POR QUE congeladas: o awful.popup re-executa a collocação a CADA relayout do seu conteúdo
+-- (v.g. o hover dum item, que permuta o íco e a setta); fosse ella consultar o rato de novo
+-- (como fazia under_mouse), o menu perseguiria o ponteiro pela tela — defeito outrora
+-- observado. Coordenadas fixas tornam a re-execução idempotente. Q.E.D.
+local function make_default_placement()
+  local coords = mouse.coords()
+  return function(d)
+    d.x = coords.x
+    d.y = coords.y
+    awful.placement.no_offscreen(d)
+  end
 end
 
 -- Funcção `build`, o theórema central deste módulo, demonstrada pelo insigne Braga Us.
@@ -124,7 +133,7 @@ local function build(title, items, opts)
     border_width = dpi(mt.border_panel),
     border_color = p.line_base,
     shape        = function(cr, w, h) gears.shape.rounded_rect(cr, w, h, dpi(mt.radius_chip)) end,
-    placement    = opts.placement or default_placement,
+    placement    = opts.placement or make_default_placement(),
   }
   popup:connect_signal("mouse::leave", function()
     if current == popup then hide() end
@@ -214,7 +223,7 @@ local function show(c)
   push { band = "" }
   push { label = "Close", icon = "close", danger = true, on_click = function() c:kill() end }
 
-  parent_popup = build("CLIENT", items, { placement = default_placement })
+  parent_popup = build("CLIENT", items, {})
   return parent_popup
 end
 

@@ -90,7 +90,9 @@ function list_buttons.taglist()
       end
     end),
     awful.button({}, 3, function(t)
-      require("src.organisms.tag_menu").show(t.screen, t)
+      -- A geometria do widget sob o rato ancora o menu SOB a pílula da tag
+      -- (placement_for de C5); sem ella, o menu recahiria no sítio do cursor.
+      require("src.organisms.tag_menu").show(t.screen, t, mouse.current_widget_geometry)
     end),
     awful.button({ modkey }, 3, function(t)
       if client.focus then
