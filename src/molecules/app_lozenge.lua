@@ -55,9 +55,10 @@ local NAME_MAX    = 16                     -- limite de caracteres do nome
 local function vgrad(stops)
   return gears.color { type = "linear", from = { 0, 0 }, to = { 0, SEG_H }, stops = stops }
 end
-local FILL_REST  = vgrad { { 0, p.v500 }, { 0.58, p.v700 }, { 1, p.v800 } }
-local FILL_HOVER = vgrad { { 0, p.v400 }, { 0.58, p.v600 }, { 1, p.v700 } }
-local FILL_ON    = vgrad { { 0, p.v400 }, { 1, p.v700 } }
+-- Enchimentos rebaixados UM degrau da rampa (vide stat_lozenge): contraste da tinta.
+local FILL_REST  = vgrad { { 0, p.v600 }, { 0.58, p.v800 }, { 1, p.v900 } }
+local FILL_HOVER = vgrad { { 0, p.v500 }, { 0.58, p.v700 }, { 1, p.v800 } }
+local FILL_ON    = vgrad { { 0, p.v500 }, { 1, p.v800 } }
 
 -- Abbreviação do nome (padrão do antigo tasklist): nulo/vácuo -> "?"; excedente -> trunca com "...".
 -- Invariante: #retorno <= max_len.

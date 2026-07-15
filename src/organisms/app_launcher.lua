@@ -218,8 +218,9 @@ return function(s)
   -- Procedimento pictórico de Braga Us. Pinta, recortada n'um disco de raio r centrado em
   -- (cx, cy), a superfície surf, escalada e centrada de modo a cobri-lo (clip circular).
   -- Faltando a superfície, inscreve-se em seu lugar a inicial maiúscula do rótulo (label),
-  -- ou uma interrogação. Opera sobre o contexto Cairo cr pelos seus effeitos.
-  local function draw_in_circle(cr, surf, cx, cy, r, label)
+  -- ou uma interrogação, na tinta `ink` (por defeito text_bright; o dente em fóco pede tinta
+  -- escura — inversão da tinta sobre o enchimento claro). Opera sobre cr pelos seus effeitos.
+  local function draw_in_circle(cr, surf, cx, cy, r, label, ink)
     local inner = r - dpi(3)
     if surf then
       local iw, ih = surf:get_width(), surf:get_height()
@@ -239,7 +240,7 @@ return function(s)
     end
     local ch = ((label or "?"):gsub("^%s+", ""):sub(1, 1)):upper()
     if ch == "" then ch = "?" end
-    cr:set_source(gears.color(p.text_bright))
+    cr:set_source(gears.color(ink or p.text_bright))
     cr:select_font_face("sans-serif", cairo.FontSlant.NORMAL, cairo.FontWeight.BOLD)
     cr:set_font_size(r)
     local ext = cr:text_extents(ch)
@@ -271,7 +272,8 @@ return function(s)
       cr:set_source(radial_fill(cog.x, cog.y, cog.r, p.v700, p.v950))
     end
     cr:fill()
-    draw_in_circle(cr, app_icon_surface(cog.app), cog.x, cog.y, cog.r, cog.app.name)
+    draw_in_circle(cr, app_icon_surface(cog.app), cog.x, cog.y, cog.r, cog.app.name,
+      cog.focused and p.v975 or nil) -- inversão da tinta no dente em fóco (enchimento v400→v700)
     cr:arc(cog.x, cog.y, cog.r, 0, 2 * math.pi)
     if cog.focused then
       cr:set_source(gears.color(p.glow_core)); cr:set_line_width(dpi(2))

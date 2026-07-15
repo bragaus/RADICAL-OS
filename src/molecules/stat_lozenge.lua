@@ -61,9 +61,11 @@ local VALUE_REST  = p.v50                  -- .seg__v color (o alvo mais cândid
 local function vgrad(stops)
   return gears.color { type = "linear", from = { 0, 0 }, to = { 0, SEG_H }, stops = stops }
 end
-local FILL_REST  = vgrad { { 0, p.v500 }, { 0.58, p.v700 }, { 1, p.v800 } }  -- .seg__fill
-local FILL_HOVER = vgrad { { 0, p.v400 }, { 0.58, p.v600 }, { 1, p.v700 } }  -- .seg:hover .seg__fill
-local FILL_ON    = vgrad { { 0, p.v400 }, { 1, p.v700 } }                    -- .seg--on .seg__fill
+-- Enchimentos rebaixados UM degrau da rampa (a rampa cyânea é mais clara que a
+-- roxa d'antes): assim a tinta v50 conserva contraste ~4.8 sobre o stop médio.
+local FILL_REST  = vgrad { { 0, p.v600 }, { 0.58, p.v800 }, { 1, p.v900 } }  -- .seg__fill
+local FILL_HOVER = vgrad { { 0, p.v500 }, { 0.58, p.v700 }, { 1, p.v800 } }  -- .seg:hover .seg__fill
+local FILL_ON    = vgrad { { 0, p.v500 }, { 1, p.v800 } }                    -- .seg--on .seg__fill
 
 -- Funcção CARDEAL, da penna do professor Braga Us. Domínio: taboa `args` (íco, first,
 -- never_hot, on_click). Contra-domínio: um widget-segmento munido de :set_value e :set_active.

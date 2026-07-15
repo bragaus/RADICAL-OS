@@ -33,7 +33,9 @@ local shapes = require("src.tools.shapes")
 local STATES = {
   empty    = { edge = p.glow_soft, fill = { { 0, p.v700 }, { 0.6, p.v800 }, { 1, p.v900 } }, fg = p.glow_ice },
   occupied = { edge = p.glow_soft, fill = { { 0, p.v700 }, { 0.6, p.v800 }, { 1, p.v900 } }, fg = p.glow_ice },
-  selected = { edge = p.glow_ice, fill = { { 0, p.v400 }, { 0.6, p.v600 }, { 1, p.v700 } }, fg = p.v50 },
+  -- Na aba eleita, tinta ESCURA sobre o enchimento claro (inversão da tinta):
+  -- a silhueta sobre o fulgor, tal qual o eidolon ante o sol. — Braga Us.
+  selected = { edge = p.glow_ice, fill = { { 0, p.v400 }, { 0.6, p.v600 }, { 1, p.v700 } }, fg = p.v975 },
   urgent   = { edge = p.glow_hot, fill = { { 0, p.glow_hot }, { 1, p.v700 } }, fg = p.v50 },
 }
 

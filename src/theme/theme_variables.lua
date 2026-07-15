@@ -1,12 +1,15 @@
 -- ══════════════════════════════════════════════════════════════════════════
---   O CÓDICE PRINCIPAL DO THEMA — VIOLET HUD, edição roxa
+--   O CÓDICE PRINCIPAL DO THEMA — SUNCORE HUD, edição cyânea
 -- ══════════════════════════════════════════════════════════════════════════
 -- Seja dado este o códice cardeal da aparência. Os tokens chromáticos residem
 -- no TRACTADO DAS CÔRES (src/theme/palette.lua); a este manuscripto compete
 -- transportá-los, com toda a fidelidade, ao motor `beautiful` e à taboa `Theme`.
--- A hierarchia rege-se por luminosidade e opacidade (roxo monochromático); o
--- acento primário — invariante soberano desta obra — é o token v500, tal como
--- o estabeleceu, por definitivo, o eminente geómetra BRAGA US.
+-- A hierarchia rege-se por luminosidade e opacidade (cyan sobre índigo, com o
+-- poente contido nos acentos); o acento primário — invariante soberano desta
+-- obra — é o token v500, tal como o estabeleceu, por definitivo, o eminente
+-- geómetra BRAGA US. Regra da inversão da tinta: sobre enchimento cujo stop
+-- superior seja v500 ou mais claro, escreve-se com tinta ESCURA (v975/void);
+-- sobre v600 e mais fundo, com tinta clara (v50/glow_ice), como d'antes.
 -- ══════════════════════════════════════════════════════════════════════════
 
 -- Das bibliothecas do Awesome: os instrumentos importados para esta lavra.
@@ -20,16 +23,16 @@ local icondir = awful.util.getdir("config") .. "src/assets/icons/titlebar/"
 
 Theme.font = user_vars.font.bold
 
--- Superfícies de base (os negros-violáceos): os fundos e os primeiros planos.
+-- Superfícies de base (os negros-índigos): os fundos e os primeiros planos.
 Theme.bg_normal   = p.base
 Theme.bg_focus    = p.panel_hi
 Theme.bg_urgent   = p.glow_hot
 Theme.bg_minimize = p.v950
-Theme.bg_systray  = p.v800   -- violeta SÓLIDO (= meio do chevron), pintado pelo awesome (sem depender do picom compor atrás) → sem quadrado preto
+Theme.bg_systray  = p.v800   -- teal SÓLIDO (= meio do chevron), pintado pelo awesome (sem depender do picom compor atrás) → sem quadrado preto
 
 Theme.fg_normal   = p.text_primary
 Theme.fg_focus    = p.text_bright
-Theme.fg_urgent   = p.v50
+Theme.fg_urgent   = p.void   -- tinta negra sobre o magenta glow_hot (CR 6.2; v50 dava 3.29)
 Theme.fg_minimize = p.text_muted
 
 Theme.useless_gap   = dpi(8)  -- kit .grid-bg gap:8 — o intervallo entre as janellas ladrilhadas
@@ -44,7 +47,7 @@ Theme.border_marked = p.launcher_ring_on
 Theme.menu_height       = dpi(26)
 Theme.menu_width        = dpi(220)
 Theme.menu_bg_normal    = p.a(p.panel, 0.95)
-Theme.menu_bg_focus     = p.v700
+Theme.menu_bg_focus     = p.v800  -- um degrau mais fundo que d'antes: v700 novo é claro demais p/ tinta v50 (CR 3.85 → 5.9)
 Theme.menu_fg_normal    = p.text_primary
 Theme.menu_fg_focus     = p.v50
 Theme.menu_border_color  = p.line_base
@@ -59,7 +62,9 @@ Theme.menu_shape = function(cr, width, heigth)
 end
 
 -- Da lista de tags (taglist): as côres com que se distingue o foco.
-Theme.taglist_fg_focus = p.v50
+-- Inversão da tinta: sobre o accento v500 (ora claro), escreve-se em escuro —
+-- a silhueta sobre o fulgor, como na estampa do eidolon (CR 1.73 → 8.4).
+Theme.taglist_fg_focus = p.v975
 Theme.taglist_bg_focus = p.v500
 
 -- Do balão de auxílio (tooltip): sua moldura, seu fundo e sua fórma.
