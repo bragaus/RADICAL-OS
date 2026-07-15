@@ -36,25 +36,30 @@ local SHELL = shapes.chamfer(dpi(mt.chamfer), { tl = false, tr = true, br = true
 local function btn_grad(a, b)
   return { type = "linear", from = { 0, 0 }, to = { 0, dpi(mt.tagctl_btn_h) }, stops = { { 0, a }, { 1, b } } }
 end
-local BTN_REST   = btn_grad(p.v600, p.v900) -- .tagctl__b
-local BTN_HOVER  = btn_grad(p.v400, p.v700) -- .tagctl__b:hover
-local BTN_ACTIVE = btn_grad(p.v700, p.v950) -- .tagctl__b:active
+-- Vestidos com o HORIZONTE (decreto do operador): repouso = poente apagado
+-- (deep, tinta clara); hover = horizonte VIVO (tinta escura — inversão);
+-- pressão = magenta pleno -> vermelho (o clarão do quadro solar).
+local BTN_REST   = btn_grad(p.data4_deep, p.data3_deep)
+local BTN_HOVER  = btn_grad(p.data4, p.data3)
+local BTN_ACTIVE = btn_grad(p.glow_hot, p.data6)
 
 -- Funcção fabril urdida pelo Doutor Braga Us. Domínio: o nome de um ícone SVG e a
 -- acção (uma funcção) a executar ao clique. Contra-domínio: um botão chanfrado clicável
--- QUADRADO (28x28, por decreto do operador — quadrado, não rectangular), de gradiente
--- v600→v900 em repouso (hover v400→v700, press v700→v950), com alvo de topo glow_ice@.35
--- e sombra de base bevel_lo@.6, e íco de 16px em NÉON laranja (kit .tagctl__b img).
--- Rege por si a figura do cursor e o invariante _preserve_colors.
+-- QUADRADO (28x28, por decreto do operador — quadrado, não rectangular), vestido com o
+-- HORIZONTE: repouso poente-apagado com íco claro (glow_ice); hover horizonte vivo com
+-- íco ESCURO (v975 — inversão da tinta sobre paradas claras); pressão magenta→vermelho.
+-- Alvo de topo glow_ice@.35 e sombra de base bevel_lo@.6 (kit .tagctl__b). Rege por si
+-- a figura do cursor e o invariante _preserve_colors.
 local function make_button(icon_name, action)
-  local img = icon.surface(icon_name, p.launcher_glow) -- NÉON alaranjado (#ff7a18)
+  local img_rest  = icon.surface(icon_name, p.glow_ice) -- íco claro sobre o poente apagado
+  local img_hover = icon.surface(icon_name, p.v975)     -- tinta escura sobre o horizonte vivo
+  local ib = wibox.widget {
+    image = img_rest, resize = true,
+    forced_width = dpi(mt.tagctl_btn_icon), forced_height = dpi(mt.tagctl_btn_icon),
+    widget = wibox.widget.imagebox,
+  }
   local b = wibox.widget {
-    {
-      { image = img, resize = true,
-        forced_width = dpi(mt.tagctl_btn_icon), forced_height = dpi(mt.tagctl_btn_icon),
-        widget = wibox.widget.imagebox },
-      halign = "center", valign = "center", widget = wibox.container.place,
-    },
+    { ib, halign = "center", valign = "center", widget = wibox.container.place },
     bg            = BTN_REST,
     shape         = BTN_CHAMFER,
     forced_width  = dpi(mt.tagctl_btn_w),
@@ -72,10 +77,12 @@ local function make_button(icon_name, action)
 
   b:connect_signal("mouse::enter", function()
     b.bg = BTN_HOVER
+    ib.image = img_hover
     local wb = mouse.current_wibox; if wb then wb.cursor = "hand1" end
   end)
   b:connect_signal("mouse::leave", function()
     b.bg = BTN_REST
+    ib.image = img_rest
     local wb = mouse.current_wibox; if wb then wb.cursor = "left_ptr" end
   end)
   b:connect_signal("button::press", function() b.bg = BTN_ACTIVE end)
@@ -136,7 +143,8 @@ return function(s)
       cr:move_to(dpi(2), 0); cr:line_to(w, 0); cr:line_to(w - dpi(2), h); cr:line_to(0, h); cr:close_path()
     end,
     bgimage = function(_, cr, w, h)
-      shapes.hazard(cr, w, h, { color = p.glow_core, color2 = p.bevel_lo, band = dpi(mt.haz_band), gap = dpi(mt.haz_band) })
+      -- listras no LARANJA do poente (decreto do horizonte), sobre a treva bevel_lo.
+      shapes.hazard(cr, w, h, { color = p.data3, color2 = p.bevel_lo, band = dpi(mt.haz_band), gap = dpi(mt.haz_band) })
     end,
     widget = wibox.container.background,
   }
@@ -161,9 +169,9 @@ return function(s)
     bgimage = function(_, cr, w, h)
       -- ::mesh — malha hexagonal ténue (alpha .12 * opacity .5 = .06).
       shapes.hex_mesh(cr, w, h, { color = p.glow_core, alpha = 0.06, spacing = dpi(6) })
-      -- ::after — filete de brilho no topo, 1.5px, gradiente horizontal glow_ice→core→soft→ø.
+      -- ::after — filete de brilho no topo, 1.5px: um mini-HORIZONTE magenta→laranja→ø.
       cr:set_source(gears.color { type = "linear", from = { 0, 0 }, to = { w, 0 },
-        stops = { { 0, p.glow_ice }, { 0.35, p.glow_core }, { 0.70, p.glow_soft }, { 1, p.a(p.glow_soft, 0) } } })
+        stops = { { 0, p.data4 }, { 0.55, p.data3 }, { 1, p.a(p.data3, 0) } } })
       cr:rectangle(0, 0, w, dpi(1.5)); cr:fill()
     end,
     widget = wibox.container.background,

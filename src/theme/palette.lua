@@ -60,6 +60,13 @@ return {
   launcher_ring_on = "#ff9e2c",
   launcher_glow    = "#ff7a1a", -- base sobre a qual operam as receitas p.a(p.launcher_glow, x)
 
+  -- Os tons APAGADOS do horizonte (o poente ao cahir da noite): as mesmas
+  -- côres data4/data3, rebaixadas a ~55/100 do seu valor, para vestir os
+  -- estados de repouso dos widgets da barra (abas não-eleitas, botões em
+  -- descanso) — o horizonte vivo fica reservado á eleição e ao hover.
+  data4_deep = "#8c1a58",
+  data3_deep = "#8c430e",
+
   -- Traço de UPLOAD (lima-neon) do MonGraph NET — o par do laranja data3
   -- (que serve de download). Escolhido com decidido viés verde p/ separar-se
   -- tanto do laranja quanto do amarello-sol data2, mesmo sob a mescla additiva
