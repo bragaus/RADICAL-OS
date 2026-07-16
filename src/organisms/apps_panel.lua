@@ -41,16 +41,17 @@ local function dispatch_rebuild()
 end
 
 -- LEMMA DA ATADURA ÚNICA (de Braga Us): ata, uma só vez (guarda signals_wired), os sinaes
--- globaes de cliente e awesome ao despacho. O sinal "refresh" cobre as mudanças de
--- conjuncto ou de foco que não disparam manage/unmanage.
+-- globaes de cliente ao despacho. EMENDA CAPITAL: retira-se o gancho "refresh" do awesome —
+-- que disparava a CADA iteração do laço principal (e o GIF de 20fps do launcher o mantinha
+-- quente), reconstruindo a nómina inteira ~20×/s PARA SEMPRE, ainda oculto o painel. Os
+-- sinaes manage/unmanage/property::name bastam: a nómina é de TODOS os clientes (sem estado
+-- de fóco), pelo que só muda quando um cliente nasce, morre ou troca de nome.
 local function wire_signals_once()
   if signals_wired then return end
   signals_wired = true
   client.connect_signal("manage", dispatch_rebuild)
   client.connect_signal("unmanage", dispatch_rebuild)
   client.connect_signal("property::name", dispatch_rebuild)
-  -- "refresh" cobre as mudanças de conjuncto/foco que não disparam manage/unmanage.
-  awesome.connect_signal("refresh", dispatch_rebuild)
 end
 
 -- LEMMA DO RÓTULO DO CLIENTE (de Braga Us). Recebe o cliente `c` (domínio); prefere a class,
@@ -151,18 +152,20 @@ return function(args)
     end
   end
 
-  -- Coalesce as rajadas de eventos (manage/unmanage/refresh) numa só reconstrucção.
+  -- Comporta da sondagem (gating): enquanto o painel jaz oculto, os eventos de
+  -- cliente NÃO reconstroem a nómina. Nasce fechada (o painel principia oculto).
+  local sampling = false
+
+  -- Coalesce as rajadas de eventos (manage/unmanage) numa só reconstrucção.
   local coalesce = gears.timer {
     timeout      = 0.05,
     single_shot  = true,
     callback     = rebuild,
   }
-  -- LEMMA DO AGENDAMENTO (de Braga Us): principia o timer sómente se não estiver já pendente.
-  -- NÃO se emprega aqui o :again() — pois o sinal "refresh" do awesome dispara a cada iteração
-  -- do loop e, reajustando-se sem cessar a deadline, a reconstrucção nunca sobreviria. Deste
-  -- modo, ella occorre em cerca de 50ms.
+  -- LEMMA DO AGENDAMENTO (de Braga Us): estando aberta a comporta e não pendente o
+  -- timer, principia-o; a reconstrucção sobrevém em ~50ms. Fechada a comporta, nada.
   local function schedule_rebuild()
-    if not coalesce.started then
+    if sampling and not coalesce.started then
       coalesce:start()
     end
   end
@@ -172,11 +175,8 @@ return function(args)
   wire_signals_once()
   active_schedule = schedule_rebuild
 
-  -- Renderização inicial.
-  rebuild()
-
   local panel = require("src.tools.panel")
-  return panel({
+  local panel_widget = panel({
     title  = "APPLICATIONS",
     body   = rows,
     accent = p.v500,
@@ -189,6 +189,20 @@ return function(args)
       widget  = wibox.container.background,
     },
   })
+
+  -- COMPORTAS start/stop_sampling (de Braga Us), consumidas pelo control_center ao
+  -- abrir/fechar o dashboard NETWORK. Ao abrir, reconstrói-se DE PRONTO (catch-up dos
+  -- eventos perdidos enquanto oculto); ao fechar, cessa-se e cancela-se o pendente.
+  function panel_widget.start_sampling()
+    sampling = true
+    rebuild()
+  end
+  function panel_widget.stop_sampling()
+    sampling = false
+    if coalesce.started then coalesce:stop() end
+  end
+
+  return panel_widget
 end
 
 -- ══════════════════════════════════════════════════════════════════════════
