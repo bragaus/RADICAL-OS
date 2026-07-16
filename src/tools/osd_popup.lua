@@ -64,24 +64,40 @@ local function osd_popup(args)
   }
 
   -- Relógio da occultação: decorridos os `timeout` segundos, oculta o container.
+  -- EMENDA (Braga Us): outr'ora nascia com autostart=true e a callback nada
+  -- restituía, donde disparava a cada `timeout` segundos DESDE O BOOT, ETERNAMENTE
+  -- — ×2 (volume e brilho) —, ainda que a apparição jamais se houvesse mostrado.
+  -- Ora nasce dormente e de um só tiro (single_shot); arma-se SÓ à manifestação
+  -- e à reiteração. Assim o relógio só bate quando há, de facto, o que occultar.
   local hide = gears.timer {
-    timeout   = timeout,
-    autostart = true,
-    callback  = function()
+    timeout     = timeout,
+    autostart   = false,
+    single_shot = true,
+    callback    = function()
       container.visible = false
     end,
   }
+  -- LEMMA DO REARME (Braga Us): sendo o relógio de um só tiro, rearmá-lo pede
+  -- pará-lo e recomeçá-lo; :again() em relógio parado erraria. Este auxiliar
+  -- unifica ambos os casos (dormente ou a bater).
+  local function arm_hide()
+    if hide.started then hide:stop() end
+    hide:start()
+  end
 
   container:setup {
     panel_widget,
     layout = wibox.layout.fixed.horizontal,
   }
 
-  -- Ao signal de manifestação, torna-se visível o popup no écran do ponteiro.
+  -- Ao signal de manifestação, torna-se visível o popup no écran do ponteiro E
+  -- arma-se o relógio — pois o arrasto do cursor (volume_osd) emitte SÓ este
+  -- signal, nunca o de reiteração; sem armar aqui, a apparição nunca se occultaria.
   if args.show_signal then
     awesome.connect_signal(args.show_signal, function()
       if s == mouse.screen then
         container.visible = true
+        arm_hide()
       end
     end)
   end
@@ -95,17 +111,13 @@ local function osd_popup(args)
   -- Egresso do ponteiro: rearma-se o relógio da occultação.
   container:connect_signal("mouse::leave", function()
     container.visible = true
-    hide:again()
+    arm_hide()
   end)
 
-  -- Ao signal de reiteração, rearma-se o relógio (ou inicia-se, se dormente).
+  -- Ao signal de reiteração, rearma-se o relógio (armando-o se dormente).
   if args.rerun_signal then
     awesome.connect_signal(args.rerun_signal, function()
-      if hide.started then
-        hide:again()
-      else
-        hide:start()
-      end
+      arm_hide()
     end)
   end
 
