@@ -417,8 +417,10 @@ local function make_strip()
   }
 
   -- pulsação do REC (kit .monrec: 1.4s, dois estados): alterna a plenitude do ponto.
+  -- Devolve-se o relógio ao chamador, para que o teardown de re-inicialização o
+  -- possa deter (do contrário, uma segunda montagem legaria um pulso órfão).
   local on = true
-  gears.timer {
+  local rec_timer = gears.timer {
     timeout = 1.4, autostart = true, call_now = true,
     callback = function()
       on = not on
@@ -426,7 +428,7 @@ local function make_strip()
     end,
   }
 
-  return strip
+  return strip, rec_timer
 end
 
 -- ── LEMMA make_rail ───────────────────────────────────────────────────────
@@ -641,7 +643,7 @@ return function(s)
     end
   )
 
-  local strip = make_strip()
+  local strip, rec_timer = make_strip()
   local rail  = make_rail(s)
 
   -- FILA DE MÓDULOS: tesselação por sobreposição negativa (-16). O 1º módulo
@@ -711,7 +713,13 @@ return function(s)
   bar_widget.forced_height = MON_H
   bar_widget.forced_width  = s.geometry.width
 
-  -- GUARDA contra duplicata em novo carregamento: occulta-se a barra pretérita.
+  -- GUARDA contra duplicata em novo carregamento. EMENDA (Braga Us): occultar a
+  -- barra pretérita NÃO bastava — os seus relógios (a sonda de 1 s e o pulso REC
+  -- de 1,4 s) e o seu manejo de property::geometry sobreviviam, a sondar e a
+  -- responder por uma doca invisível PARA SEMPRE. Ora, havendo teardown pregresso,
+  -- invoca-se-o: detém relógios, desata o manejo e retira os struts. Defensivo —
+  -- hoje o hotplug reinicia o awesome —, mas fecha a família do vazamento.
+  if s._mon_teardown then s._mon_teardown() end
   if s._monitor_bar then s._monitor_bar.visible = false end
 
   local bar = awful.popup {
@@ -731,11 +739,14 @@ return function(s)
   bar:struts({ bottom = MON_H })
 
   -- REAJUSTA a largura, a posição e a reserva sempre que a geometria da tela se altere.
-  s:connect_signal("property::geometry", function()
+  -- O manejo guarda-se em nome, para que o teardown o possa desatar (disconnect_signal
+  -- exige a MESMA referência de funcção).
+  local function on_geometry()
     bar_widget.forced_width = s.geometry.width
     awful.placement.bottom_left(bar, { margins = 0 })
     bar:struts({ bottom = MON_H })
-  end)
+  end
+  s:connect_signal("property::geometry", on_geometry)
 
   -- ── ESTADO PERSISTENTE entre ticks ─────────────────────────────────────────
   -- Grandezas conservadas de um tick ao seguinte (os deltas de CPU e de NET), e
@@ -950,7 +961,7 @@ return function(s)
     rail.set_load((last_cpu + last_mem + last_gpu) / 3)
   end
 
-  gears.timer {
+  local sample_timer = gears.timer {
     timeout   = INTERVAL,
     call_now  = true,
     autostart = true,
@@ -968,6 +979,18 @@ return function(s)
       update_aggregate()
     end,
   }
+
+  -- LEMMA DO TEARDOWN (Braga Us): consigna-se em s._mon_teardown o desmanche
+  -- completo desta montagem — deter a sonda de 1 s e o pulso REC, desatar o manejo
+  -- de geometria, occultar a doca e franquear a workarea (struts a zero). O guard
+  -- de re-inicialização invoca-o ANTES de erguer a próxima barra. Q.E.D.
+  s._mon_teardown = function()
+    sample_timer:stop()
+    if rec_timer then rec_timer:stop() end
+    s:disconnect_signal("property::geometry", on_geometry)
+    bar.visible = false
+    bar:struts({ bottom = 0 })
+  end
 
   return bar
 end
