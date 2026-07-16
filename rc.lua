@@ -22,6 +22,17 @@ for _, loc in ipairs({ "pt_BR.UTF-8", "pt_BR.utf8", "C.UTF-8", "C.utf8", "C" }) 
   if os.setlocale(loc, "time") then break end
 end
 
+-- 0.5. Afinação do colector de lixo (Braga Us). O "pause" rege quanto o montão pode
+--      medrar entre colectas: 200 (padrão do Lua 5.3) deixa-o duplicar o conjunto
+--      vivo antes de collher; 125 cinge-o a ~1,25× — montão residente mais enxuto,
+--      a custo de CPU desprezível (o trabalho do colector escala com a taxa de
+--      allocação, que as emendas de perda e de cache d'este mesmo trabalho já
+--      abateram). O "stepmul" 300 apressa o encerro de cada cyclo. JAMAIS se agenda
+--      um collectgarbage("collect") periódico (o anti-padrão do extincto cpu_info):
+--      o incremental basta e não trava o laço.
+collectgarbage("setpause", 125)
+collectgarbage("setstepmul", 300)
+
 -- 1. user_vars first (defines global `user_vars` used by error_handling for terminal/modkey).
 require("src.theme.user_variables")
 
