@@ -381,14 +381,22 @@ return function(s, opts)
     clock_date:set_text(os.date("%b %d"))
   end
 
-  gears.timer {
-    timeout   = opts.timeout or 2,
-    call_now  = true,
-    autostart = true,
-    callback  = function()
-      update_clock()
-    end,
-  }
+  -- LEMMA DO RELÓGIO ALINHADO AO MINUTO (Braga Us): o mostrador é de resolução
+  -- minuto (HH:MM), mas o relógio pulsava a cada 2 s — ~30 despertares por minuto,
+  -- dos quaes um só muda o texto. Ora re-agenda-se a si próprio para o PRÓXIMO
+  -- minuto exacto (60 − os.time()%60, com folga de 50 ms): um despertar por minuto.
+  -- A guarda de geração (s._cc_clock_gen) faz a cadeia cessar se uma re-montagem a
+  -- superar — pois uma cadeia auto-reagendada não se detém por :stop().
+  update_clock()
+  s._cc_clock_gen = (s._cc_clock_gen or 0) + 1
+  local gen = s._cc_clock_gen
+  local function tick_clock()
+    if s._cc_clock_gen ~= gen then return false end -- montagem superada: extingue-se
+    update_clock()
+    gears.timer.start_new(60 - (os.time() % 60) + 0.05, tick_clock)
+    return false
+  end
+  gears.timer.start_new(60 - (os.time() % 60) + 0.05, tick_clock)
 
   return bar
 end
