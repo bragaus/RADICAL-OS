@@ -105,18 +105,27 @@ return function(args)
         if not host or host == "" then
           return -- ignoram-se as linhas vazias / sem par
         end
+        -- LEMMA DA ADMISSÃO (Braga Us): o par vem de `ss -n` (numérico), mas o
+        -- host entra como argv PRÓPRIO do nmap; um valor iniciado por '-' far-
+        -- se-ia passar por bandeira. Admitte-se, pois, só o alphabeto de um
+        -- endereço (dígitos, '.', ':', '%' de scope, colchetes de IPv6, '-'),
+        -- vedado o traço inicial; a porta há de ser dígitos puros. Fóra d'isso,
+        -- nada se lança. Q.E.D.
+        local port = row._port
+        if host:sub(1, 1) == "-" or not host:match("^[%w%.%:%%%[%]%-]+$") then return end
+        if port and port ~= "" and not port:match("^%d+$") then return end
         local term = (user_vars and user_vars.terminal) or "alacritty"
 
         -- O nome da sessão tmux é o endereço do serviço (host[:porta]). Ora o tmux PROÍBE
         -- '.' e ':' em nome de sessão -> saneiam-se ambos (e o '%' de scope IPv6) para '-'.
-        local addr = host .. (row._port and row._port ~= "" and (":" .. row._port) or "")
+        local addr = host .. (port and port ~= "" and (":" .. port) or "")
         local session = addr:gsub("[%.:%%/]", "-")
 
         -- nmap de serviço/script. -Pn -sV -sC não requere raiz (connect scan). `exec zsh`
         -- conserva o terminal ABERTO após o scan (dentro do tmux, $TMUX já vae posto, pelo que
         -- o menu inicial do .zshrc NÃO dispara — guarda em ~/.zshrc:341).
-        local scan = (row._port and row._port ~= "")
-          and ("nmap -Pn -sV -sC -p " .. row._port .. " " .. host)
+        local scan = (port and port ~= "")
+          and ("nmap -Pn -sV -sC -p " .. port .. " " .. host)
           or  ("nmap -Pn -sV -sC " .. host)
         local inner = scan .. "; exec zsh"
 

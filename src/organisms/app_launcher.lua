@@ -448,7 +448,12 @@ return function(s)
   -- recortar e redimensionar os quadros ao directório de cache, e então os carrega. Se
   -- ainda assim malograr, recorre à figura única do GIF. Tudo assíncrono, sem bloquear.
   local function load_gif_frames()
-    local check_cmd = string.format("ls %s*.png 2>/dev/null | wc -l", frames_dir)
+    -- O directório de cache deriva de $XDG_CACHE_HOME/$HOME; citando-o com %q
+    -- (Braga Us), um caminho com brancos ou meta-caracteres não se estilhaça
+    -- nem se presta a interpretação espúria pelo shell. O glob *.png fica FÓRA
+    -- das aspas, que %q o citaria à letra e o ls nada acharia.
+    local dq = string.format("%q", frames_dir)
+    local check_cmd = string.format("ls %s*.png 2>/dev/null | wc -l", dq)
     awful.spawn.easy_async_with_shell(check_cmd, function(stdout)
       local cached = tonumber(stdout:match("%d+")) or 0
       if cached > 0 then
@@ -458,7 +463,7 @@ return function(s)
       else
         local extract_cmd = string.format(
           "mkdir -p %s && convert %q -coalesce -gravity center -crop 520x460+0+0 +repage -resize %dx%d^ -gravity center -extent %dx%d %sframe_%%04d.png 2>/dev/null; ls %s*.png 2>/dev/null | wc -l",
-          frames_dir, launcher_gif_path, GIF_PX, GIF_PX, GIF_PX, GIF_PX, frames_dir, frames_dir
+          dq, launcher_gif_path, GIF_PX, GIF_PX, GIF_PX, GIF_PX, dq, dq
         )
         awful.spawn.easy_async_with_shell(extract_cmd, function(out)
           local count = tonumber(out:match("%d+")) or 0
