@@ -783,21 +783,12 @@ return function(s)
       mod_cpu.set_cell(1, r .. "%") -- célula LOAD
   end
 
-  -- ── COROLLÁRIO update_cpu_extra ─────────────────────────────────────────────
+  -- ── COROLLÁRIO parse_cpu_extra ──────────────────────────────────────────────
   -- Funcção urdida pelo Doutor Braga Us que colhe os predicados accessórios do
   -- CPU (temperatura, frequência, núcleos, carga de 1 minuto) num único invólucro
   -- de shell. Povoa as células TEMP/CLK/CORES e alimenta as séries B (temp) e C
   -- (carga normalizada aos núcleos).
-  local function update_cpu_extra()
-    local script = [[
-      T=--; for h in /sys/class/hwmon/hwmon*; do n=$(cat "$h/name" 2>/dev/null); case "$n" in
-        k10temp|zenpower|coretemp) T=$(cat "$h/temp1_input" 2>/dev/null); break;; esac; done
-      echo "TEMP:$T"
-      echo "MHZ:$(awk '/cpu MHz/{s+=$4;n++} END{if(n>0)printf "%.0f", s/n}' /proc/cpuinfo 2>/dev/null)"
-      echo "CORES:$(nproc 2>/dev/null)"
-      echo "LOAD:$(cut -d' ' -f1 /proc/loadavg 2>/dev/null)"
-    ]]
-    awful.spawn.easy_async_with_shell(script, function(out)
+  local function parse_cpu_extra(out)
       out = out or ""
       local temp_m = tonumber(out:match("TEMP:(%d+)"))
       local mhz    = tonumber(out:match("MHZ:(%d+)"))
@@ -808,7 +799,6 @@ return function(s)
       mod_cpu.set_cell(4, cores and tostring(cores) or "--")
       -- (temp/carga já não alimentam o grapho: a série única traça SÓ o uso% real do CPU;
       --  temperatura e clock vivem nas células do rodapé.) — Braga Us.
-    end)
   end
 
   -- ── COROLLÁRIO parse_mem ────────────────────────────────────────────────────
@@ -841,13 +831,10 @@ return function(s)
       mod_mem.push(1, pct) -- série única: uso% real da memória (swap fica na célula)
   end
 
-  -- ── COROLLÁRIO update_gpu ───────────────────────────────────────────────────
+  -- ── COROLLÁRIO parse_gpu ────────────────────────────────────────────────────
   -- Funcção urdida pelo Doutor Braga Us que interroga a placa gráphica por meio
   -- de nvidia-smi (uma só chamada CSV). Faltando o apparato, tudo recahe em "--".
-  local function update_gpu()
-    awful.spawn.easy_async_with_shell(
-      "nvidia-smi --query-gpu=utilization.gpu,temperature.gpu,clocks.current.graphics,memory.used,memory.total,fan.speed --format=csv,noheader,nounits 2>/dev/null",
-      function(out)
+  local function parse_gpu(out)
         out = out or ""
         -- partição por vírgula (preserva a posição; o campo "[N/A]" torna-se nil sem deslocar os índices)
         local f, i = {}, 0
@@ -876,8 +863,6 @@ return function(s)
           (mused and mtot and mtot > 0) and string.format("%.1fG", mused / 1024) or "--", -- VRAM
         }
         mod_gpu.push(1, r) -- série única: utilização% real da GPU (temp fica na célula)
-      end
-    )
   end
 
   -- ── COROLLÁRIO parse_net ────────────────────────────────────────────────────
@@ -940,15 +925,13 @@ return function(s)
     end)
   end
 
-  -- ── COROLLÁRIO update_vol ───────────────────────────────────────────────────
+  -- ── COROLLÁRIO parse_vol ────────────────────────────────────────────────────
   -- Funcção urdida pelo Doutor Braga Us que interroga o volume sonoro por pactl,
   -- e ajusta a barra do MonRail (valor e leitura textual).
-  local function update_vol()
-    awful.spawn.easy_async_with_shell("pactl get-sink-volume @DEFAULT_SINK@ 2>/dev/null", function(out)
+  local function parse_vol(out)
       out = out or ""
       local v = tonumber(out:match("(%d+)%%"))
       if v then rail.set_vol(v) end
-    end)
   end
 
   -- ── COROLLÁRIO update_aggregate ─────────────────────────────────────────────
@@ -977,6 +960,33 @@ return function(s)
     end)
   end
 
+  -- ── LEMMA DA SONDA FUNDIDA DE 2s (Braga Us) ─────────────────────────────────
+  -- Os invólucros mais custosos (a cada 2s) fundem-se n'um só: GPU (nvidia-smi),
+  -- os accessórios do CPU (hwmon+cpuinfo+nproc+loadavg) e o volume (pactl). O
+  -- corpo de cada script embute-se entre marcadores @@; os membros separam-se por
+  -- nova-linha (equivale a ';', nunca '&&'). O PING FICA DE FÓRA, em fork próprio
+  -- (bloqueia até -W1 s; fundido, retardaria toda a leva). Marcadores nunca surgem
+  -- na saída do nvidia-smi/hwmon/pactl. Q.E.D.
+  local SAMPLE_2S = [[
+echo '@@GPU'; nvidia-smi --query-gpu=utilization.gpu,temperature.gpu,clocks.current.graphics,memory.used,memory.total,fan.speed --format=csv,noheader,nounits 2>/dev/null
+echo '@@CPUX'
+T=--; for h in /sys/class/hwmon/hwmon*; do n=$(cat "$h/name" 2>/dev/null); case "$n" in
+  k10temp|zenpower|coretemp) T=$(cat "$h/temp1_input" 2>/dev/null); break;; esac; done
+echo "TEMP:$T"
+echo "MHZ:$(awk '/cpu MHz/{s+=$4;n++} END{if(n>0)printf "%.0f", s/n}' /proc/cpuinfo 2>/dev/null)"
+echo "CORES:$(nproc 2>/dev/null)"
+echo "LOAD:$(cut -d' ' -f1 /proc/loadavg 2>/dev/null)"
+echo '@@VOL'; pactl get-sink-volume @DEFAULT_SINK@ 2>/dev/null
+]]
+  local function sample_2s()
+    awful.spawn.easy_async_with_shell(SAMPLE_2S, function(out)
+      out = out or ""
+      parse_gpu(out:match("@@GPU%s*(.-)@@CPUX") or "")
+      parse_cpu_extra(out:match("@@CPUX%s*(.-)@@VOL") or "")
+      parse_vol(out:match("@@VOL%s*(.*)$") or "")
+    end)
+  end
+
   local sample_timer = gears.timer {
     timeout   = INTERVAL,
     call_now  = true,
@@ -984,11 +994,9 @@ return function(s)
     callback  = function()
       tick = tick + 1
       sample_1s() -- CPU + MEM + NET n'um só fork
-      if tick % 2 == 1 then -- os invólucros de shell mais custosos, a cada dois segundos
-        update_gpu()
-        update_cpu_extra()
-        update_net_extra()
-        update_vol()
+      if tick % 2 == 1 then -- os invólucros mais custosos, a cada dois segundos
+        sample_2s()        -- GPU + CPU_EXTRA + VOL n'um só fork
+        update_net_extra() -- ping+ss: fork próprio (o ping bloqueia até -W1 s)
       end
       update_aggregate()
     end,
