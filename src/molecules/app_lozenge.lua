@@ -152,6 +152,22 @@ local function app_lozenge(args)
     name_box:set_span(shorten(c.class or c.name, NAME_MAX), VALUE_REST)
   end
 
+  -- Methodo `:set_first` — muda a POSIÇÃO na fita sem reconstruir o segmento, para que a
+  -- tasklist o reaproveite em qualquer logar. first=true -> vértice convexo (terminus) e
+  -- guarnição esquerda maior; demais -> entalhe socket. Reaponta a fórma das duas camadas e
+  -- o recúo, e pede novo desenho. Sem isto, uma aba reciclada na posição 1 ostentaria o
+  -- entalhe em vez do vértice. Acautelamento de Braga Us.
+  function outer:set_first(is_first)
+    is_first = is_first and true or false
+    local a = is_first and shapes.powerline { flat_left = false }
+                        or  shapes.powerline { socket = true }
+    inner.shape   = a
+    outer.shape   = a
+    content.left  = is_first and dpi(mt.seg_pad_l_first) or dpi(mt.seg_pad_l)
+    self:emit_signal("widget::redraw_needed")
+    self:emit_signal("widget::layout_changed")
+  end
+
   -- ---- toque + hover próprios (atados UMA só vez) --------------
   outer:connect_signal("mouse::enter", function()
     outer._hovered = true; outer:apply_state()
