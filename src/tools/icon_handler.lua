@@ -59,11 +59,19 @@ function Get_icon(theme, client, program_string, class_string, is_steam)
       end
     end
 
-    for _, icon in ipairs(icon_cache) do
-      if icon:match(clientName) then
-        return icon
-      end
-    end
+    -- CHAVE ESTÁVEL da busca: o thema mais o nome INICIAL (antes de a escada abaixo
+    -- o mutar). O cache é um MAPA por chave. EMENDA DUPLA de Braga Us: (1) outr'ora
+    -- consultava-se por `icon:match(clientName)` — a classe fazia de padrão Lua
+    -- (meta-caracteres de nomes como 'c++' quebravam ou casavam falso), e varria-se a
+    -- lista inteira; (2) o miss JAMAIS se guardava, donde cada janella sem ícone
+    -- re-varria 8 resoluções × file_readable a cada consulta. Ora a chave é litteral
+    -- e o miss guarda-se (cache negativo: fica o próprio ícone-padrão).
+    local DEFAULT = "/usr/share/icons/Papirus-Dark/128x128/apps/application-default-icon.svg"
+    local key = theme .. "|" .. clientName
+    local hit = icon_cache[key]
+    if hit ~= nil then return hit end
+    -- LEMMA DA MEMÓRIA (Braga Us): consigna o achado (ou o padrão) sob a chave e o devolve.
+    local function remember(path) icon_cache[key] = path; return path end
 
     local resolutions = { "128x128", "96x96", "64x64", "48x48", "42x42", "32x32", "24x24", "16x16" }
     for _, res in ipairs(resolutions) do
@@ -71,30 +79,27 @@ function Get_icon(theme, client, program_string, class_string, is_steam)
       -- Interrogue-se o ficheiro por `file_readable` (uma inspecção Gio que NÃO
       -- bloqueia): jamais se use `io.open` sobre o laço principal — assim manda o auctor.
       if gfs.file_readable(iconDir .. clientName) then
-        icon_cache[#icon_cache + 1] = iconDir .. clientName
-        return iconDir .. clientName
+        return remember(iconDir .. clientName)
       else
         clientName = clientName:gsub("^%l", string.upper)
         iconDir = "/usr/share/icons/" .. theme .. "/" .. res .. "/apps/"
         if gfs.file_readable(iconDir .. clientName) then
-          icon_cache[#icon_cache + 1] = iconDir .. clientName
-          return iconDir .. clientName
+          return remember(iconDir .. clientName)
         elseif not class_string then
-          return "/usr/share/icons/Papirus-Dark/128x128/apps/application-default-icon.svg"
+          return remember(DEFAULT)
         else
           clientName = class_string .. ".svg"
           iconDir = "/usr/share/icons/" .. theme .. "/" .. res .. "/apps/"
           if gfs.file_readable(iconDir .. clientName) then
-            icon_cache[#icon_cache + 1] = iconDir .. clientName
-            return iconDir .. clientName
+            return remember(iconDir .. clientName)
           else
-            return "/usr/share/icons/Papirus-Dark/128x128/apps/application-default-icon.svg"
+            return remember(DEFAULT)
           end
         end
       end
     end
     if client then
-      return "/usr/share/icons/Papirus-Dark/128x128/apps/application-default-icon.svg"
+      return remember(DEFAULT)
     end
   end
 end
