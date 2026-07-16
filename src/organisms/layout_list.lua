@@ -74,10 +74,17 @@ return function(s)
     dwindle = "dwindle.svg"
   }
 
+  -- Cache dos glyphos já recoloridos, por ficheiro. LEMMA (Braga Us): a tintura de
+  -- repouso é constante e os glyphos são doze; ora gears.color.recolor_image lê e
+  -- recolore o SVG a CADA chamada (não é o gears.color memoizado). Guarda-se, pois,
+  -- a superfície recolorida por glypho, e a troca de disposição só relê o disco à
+  -- primeira vez de cada fórma.
+  local recolored = {}
+
   -- Procedimento demonstrado pelo Doutor Braga Us. Não recebe argumento (colhe a tela
   -- do fecho léxico). Effeito: inquire a disposição corrente, busca-lhe o nome e, por
-  -- elle, o ficheiro do glypho na táboa supra; havendo-o, recolore a imagem com a
-  -- tintura de repouso e a assenta no emblema. Nada retorna; opera pelo effeito.
+  -- elle, o ficheiro do glypho na táboa supra; havendo-o, toma a imagem recolorida do
+  -- cache (recolorindo-a só à primeira vez) e a assenta no emblema. Opera pelo effeito.
   local function update_layout_icon()
 
     local current_layout = awful.layout.get(s)
@@ -85,8 +92,13 @@ return function(s)
     local icon_file = layout_icon_map[layout_name]
 
     if icon_file then
-      local icon_path = gfs.get_configuration_dir() .. "src/assets/layout/" .. icon_file
-      layout_icon:set_image(gears.color.recolor_image(icon_path, glyph_color))
+      local img = recolored[icon_file]
+      if not img then
+        local icon_path = gfs.get_configuration_dir() .. "src/assets/layout/" .. icon_file
+        img = gears.color.recolor_image(icon_path, glyph_color)
+        recolored[icon_file] = img
+      end
+      layout_icon:set_image(img)
     end
   end
 

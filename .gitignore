@@ -3,6 +3,10 @@
 *.swo
 *.swp
 
+# Python bytecode (src/scripts/app_usage.py)
+__pycache__/
+*.pyc
+
 # plano_gif frame cache (CLAUDE.md — extracted under /tmp, never in-tree)
 /tmp/awesome_plano_gif_frames/
 especificacoes_tecnicas/

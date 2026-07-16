@@ -45,7 +45,7 @@ local txt   = require("src.atoms.txt")
 local function pill(args)
   args = args or {}
   local bg       = args.bg or p.v500
-  local fg       = args.fg or p.v50
+  local fg       = args.fg or p.v50    -- tinta clara sobre o v500 violeta (escuro)
   local radius   = args.radius or dpi(mt.radius_pill)
   local pad_x    = args.pad_x or dpi(mt.pad_header_x)          -- 8px, guarnição do segmento (kit)
   local pad_y    = args.pad_y or dpi(mt.pad_row_y)             -- 3px, conforme power.lua

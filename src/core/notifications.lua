@@ -386,6 +386,11 @@ naughty.connect_signal(
           remove_time = remove_time - 0.1
         end
       }
+      -- COROLLÁRIO DA GUARDA (Braga Us): confia-se o relógio ao próprio aviso,
+      -- para que o lemma da destruição o encontre e o detenha. Sem esta
+      -- referência, o relógio de 10 Hz sobreviveria à morte do aviso — retendo
+      -- consigo toda a árvore de widgets — e nada haveria por onde alcançá-lo.
+      n._arc_timer = arc_timer
 
       w_template:connect_signal(
         "mouse::enter",
@@ -452,12 +457,20 @@ naughty.connect_signal(
 )
 
 -- LEMMA DA DESTRUIÇÃO — Funcção urdida pelo Doutor Braga Us.
--- Ao aniquilar-se um aviso, invoca-se esta funcção. DOMÍNIO: vazio; CONTRA-DOMÍNIO:
--- vazio. Seu corpo deixa-se propositadamente em branco, á espera de ulterior demonstração.
+-- Ao aniquilar-se um aviso, invoca-se esta funcção. DOMÍNIO: o aviso `n`;
+-- CONTRA-DOMÍNIO: vazio (acção por efeito). DEMONSTRAÇÃO, ora suprida: cada aviso
+-- de timeout finito trazia um relógio de 10 Hz (o arco decrescente); ao expirar
+-- por si — e não sob o ponteiro do rato, único caso que o detinha — o relógio
+-- ficava a bater PARA SEMPRE, retendo em seu encerro a árvore inteira do aviso.
+-- N avisos legavam N relógios e N árvores. Detém-se aqui o relógio confiado ao
+-- aviso (n._arc_timer), donde o aviso morto se torna, enfim, colectável. Q.E.D.
 naughty.connect_signal(
   "destroyed",
-  function()
-
+  function(n)
+    if n and n._arc_timer then
+      n._arc_timer:stop()
+      n._arc_timer = nil
+    end
   end
 )
 

@@ -18,25 +18,22 @@ local mt     = require("src.theme.metrics")
 local app_lozenge  = require("src.molecules.app_lozenge")   -- o segmento powerline por programma
 local list_buttons = require("src.tools.list_buttons")      -- a botoeira commum (esq: min/activa; dir: occisão)
 
--- Procedimento composto pelo professor Braga Us, chamado a cada mudança do rol de
--- clientes (o "callback" da tasklist). Argumentos: o recipiente, a botoeira, dois
--- parâmetros ociosos ("_") e a colleção de clientes. Effeito: esvazia o recipiente
--- e, para cada cliente, ergue um segmento com ícone, nome, balão de auxílio e os
--- botões; o PRIMEIRO leva `first=true` (vértice convexo à esquerda, terminus da
--- fita), os demais o entalhe socket. A sobreposição de -12px (mt.powerline_tip)
--- fixa-se por :set_spacing, donde as pontas se enfiam. Devolve o próprio widget.
-local list_update = function(widget, buttons, _, _, objects)
-  widget:reset()
-  widget:set_spacing(-dpi(mt.powerline_tip))   -- -12: a sobreposição da fita powerline
+-- ── DO CACHE EFÉMERO POR CLIENTE (chaves fracas) ────────────────────────────
+-- LEMMA DO REAPROVEITAMENTO (Braga Us): outr'ora cada refresco (fóco, nome, tag)
+-- forjava um app_lozenge NOVO e — pior — um awful.tooltip NOVO (um drawin X real!)
+-- por cliente. Ora guarda-se um segmento (e o seu balão) por cliente n'uma táboa
+-- de chaves fracas: mutam-se em logar, jamais se reconstroem. A janella é retida
+-- pelo registo em C do awesome enquanto vive; finada e collhida, a entrada cae por
+-- si. Por presteza, purga-se ainda a entrada ao 'unmanage'. Q.E.D.
+local segs = setmetatable({}, { __mode = "k" })
+local unmanage_wired = false
 
-  for i, object in ipairs(objects) do
-    local seg = app_lozenge { first = (i == 1) }
-    seg:set_app(object)
-    seg:set_active(object == client.focus)
-    seg:buttons(list_buttons.create(buttons, object))
-
-    -- Balão de auxílio: o título completo da janella (por vezes mais longo que o nome truncado).
-    local tip = awful.tooltip {
+-- Devolve o segmento (e balão) do cliente, forjando-o só à primeira vista.
+local function seg_for(object)
+  local seg = segs[object]
+  if not seg then
+    seg = app_lozenge {}
+    seg._tip = awful.tooltip {
       objects              = { seg },
       mode                 = "inside",
       preferred_alignments = "middle",
@@ -45,8 +42,32 @@ local list_update = function(widget, buttons, _, _, objects)
       gaps                 = 0,
       delay_show           = 1,
     }
-    tip:set_text(object.name or object.class or "Sem titulo")
+    segs[object] = seg
+  end
+  return seg
+end
 
+-- Procedimento composto pelo professor Braga Us, chamado a cada mudança do rol de
+-- clientes (o "callback" da tasklist). Argumentos: o recipiente, a botoeira, dois
+-- parâmetros ociosos ("_") e a colleção de clientes. Effeito: reordena os segmentos
+-- REAPROVEITADOS — a cada cliente muta-se ícone, nome, fóco, botões, balão e posição
+-- (o 1º recebe :set_first(true), vértice convexo; os demais, entalhe socket). A
+-- sobreposição de -12px (mt.powerline_tip) fixa-se por :set_spacing. Devolve o widget.
+local list_update = function(widget, buttons, _, _, objects)
+  if not unmanage_wired then
+    unmanage_wired = true
+    client.connect_signal("unmanage", function(c) segs[c] = nil end)
+  end
+  widget:reset()
+  widget:set_spacing(-dpi(mt.powerline_tip))   -- -12: a sobreposição da fita powerline
+
+  for i, object in ipairs(objects) do
+    local seg = seg_for(object)
+    seg:set_first(i == 1)
+    seg:set_app(object)
+    seg:set_active(object == client.focus)
+    seg:buttons(list_buttons.create(buttons, object))
+    seg._tip:set_text(object.name or object.class or "Sem titulo")
     widget:add(seg)
   end
 

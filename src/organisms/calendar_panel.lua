@@ -97,7 +97,8 @@ local function fn_embed(widget, flag, _date)
   end
 
   if flag == "focus" then
-    -- O dia de hoje: caixa arredondada v500, frente v50, com ênfase de peso (.calday--today).
+    -- O dia de hoje: caixa arredondada v500, frente v50 (na rampa violeta a tinta
+    -- clara vence a escura), com ênfase de peso (.calday--today).
     if widget.set_font then widget:set_font(ft.cell_bold) end
     return wibox.widget {
       {

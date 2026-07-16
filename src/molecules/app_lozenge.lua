@@ -47,7 +47,7 @@ require("src.tools.icon_handler") -- pelo effeito collateral: define o global Ge
 local SEG_H       = dpi(mt.topbar_h)          -- 24, altura da aba
 local EDGE_REST   = p.glow_soft            -- orla de repouso e de hover
 local EDGE_ON     = p.glow_ice             -- orla acesa (fóco)
-local VALUE_REST  = "#f5efff"              -- côr do nome (≈ p.v50)
+local VALUE_REST  = p.v50                  -- côr do nome (o alvo mais cândido da rampa)
 local ICON_SZ     = dpi(mt.topbar_icon)                -- corpo do ícone do app
 local NAME_MAX    = 16                     -- limite de caracteres do nome
 
@@ -55,9 +55,10 @@ local NAME_MAX    = 16                     -- limite de caracteres do nome
 local function vgrad(stops)
   return gears.color { type = "linear", from = { 0, 0 }, to = { 0, SEG_H }, stops = stops }
 end
-local FILL_REST  = vgrad { { 0, p.v500 }, { 0.58, p.v700 }, { 1, p.v800 } }
-local FILL_HOVER = vgrad { { 0, p.v400 }, { 0.58, p.v600 }, { 1, p.v700 } }
-local FILL_ON    = vgrad { { 0, p.v400 }, { 1, p.v700 } }
+-- Enchimentos rebaixados UM degrau da rampa (vide stat_lozenge): contraste da tinta.
+local FILL_REST  = vgrad { { 0, p.v600 }, { 0.58, p.v800 }, { 1, p.v900 } }
+local FILL_HOVER = vgrad { { 0, p.v500 }, { 0.58, p.v700 }, { 1, p.v800 } }
+local FILL_ON    = vgrad { { 0, p.v500 }, { 1, p.v800 } }
 
 -- Abbreviação do nome (padrão do antigo tasklist): nulo/vácuo -> "?"; excedente -> trunca com "...".
 -- Invariante: #retorno <= max_len.
@@ -149,6 +150,22 @@ local function app_lozenge(args)
     if not img and c.icon then img = c.icon end
     if img then icon_box:set_image(img) end
     name_box:set_span(shorten(c.class or c.name, NAME_MAX), VALUE_REST)
+  end
+
+  -- Methodo `:set_first` — muda a POSIÇÃO na fita sem reconstruir o segmento, para que a
+  -- tasklist o reaproveite em qualquer logar. first=true -> vértice convexo (terminus) e
+  -- guarnição esquerda maior; demais -> entalhe socket. Reaponta a fórma das duas camadas e
+  -- o recúo, e pede novo desenho. Sem isto, uma aba reciclada na posição 1 ostentaria o
+  -- entalhe em vez do vértice. Acautelamento de Braga Us.
+  function outer:set_first(is_first)
+    is_first = is_first and true or false
+    local a = is_first and shapes.powerline { flat_left = false }
+                        or  shapes.powerline { socket = true }
+    inner.shape   = a
+    outer.shape   = a
+    content.left  = is_first and dpi(mt.seg_pad_l_first) or dpi(mt.seg_pad_l)
+    self:emit_signal("widget::redraw_needed")
+    self:emit_signal("widget::layout_changed")
   end
 
   -- ---- toque + hover próprios (atados UMA só vez) --------------

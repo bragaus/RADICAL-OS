@@ -30,22 +30,57 @@ local icondir = awful.util.getdir("config") .. "src/assets/icons/audio/"
 -- dispositivos por pactl e liga toda a teia de signaes de volume.
 return function(s)
 
+  -- ── DOS MAPAS DE DESTAQUE (node -> set_active) — REMÉDIO DO VAZAMENTO ────────
+  -- TEOREMA DO VAZAMENTO (Braga Us): outr'ora cada create_device atava a si um
+  -- awesome.connect_signal; ora, como a lista se reconstrói a CADA evento do
+  -- servidor de som e create_device corre por dispositivo, as conexões
+  -- accumulavam-se SEM COTA, cada qual retendo o seu widget órfão. DEMONSTRAÇÃO
+  -- DO REMÉDIO: atam-se AQUI, uma só vez, DUAS conexões (saída e entrada); cada
+  -- dispositivo apenas se inscreve n'um mapa node->set_active. A cada
+  -- reconstrucção o mapa é substituído POR INTEIRO (troca atómica do upvalue),
+  -- donde os setters pretéritos — e seus widgets — se tornam colectáveis. Q.E.D.
+  local vol_setters, mic_setters = {}, {}
+  local Q_DEFAULT_SINK   = "pactl get-default-sink"
+  local Q_DEFAULT_SOURCE = "pactl get-default-source"
+  local Q_FALLBACK_SINK   = [[LC_ALL=C pactl info | perl -n -e'/Default Sink: (.+)\s/ && print $1']]
+  local Q_FALLBACK_SOURCE = [[LC_ALL=C pactl info | perl -n -e'/Default Source: (.+)\s/ && print $1']]
+
+  awesome.connect_signal("update::background:vol", function(new_node)
+    for node, setter in pairs(vol_setters) do setter(node == new_node) end
+  end)
+  awesome.connect_signal("update::background:mic", function(new_node)
+    for node, setter in pairs(mic_setters) do setter(node == new_node) end
+  end)
+
+  -- LEMMA DO DESTAQUE INICIAL (Braga Us): consulta UMA SÓ VEZ por reconstrucção
+  -- o nó por defeito (com pactl info por reserva) e emitte o signal de destaque —
+  -- que a conexão única fan-out a todos os setters. Antes, cada dispositivo
+  -- disparava a sua própria consulta: N processos por reconstrucção; ora, um.
+  local function highlight_default(bg_signal, q_default, q_fallback)
+    awful.spawn.easy_async_with_shell(q_default, function(stdout)
+      local d = (stdout or ""):gsub("%s+$", "")
+      if d ~= "" then
+        awesome.emit_signal(bg_signal, d)
+      else
+        awful.spawn.easy_async_with_shell(q_fallback, function(stdout2)
+          local d2 = (stdout2 or ""):gsub("%s+$", "")
+          if d2 ~= "" then awesome.emit_signal(bg_signal, d2) end
+        end)
+      end
+    end)
+  end
+
   -- Funcção `create_device`, concebida pelo Doutor Braga Us. Domínio: (name = rótulo;
-  -- node = o nó pactl; sink = booleano, verdade se dispositivo de saída). Contra-domínio:
-  -- um widget de linha, seleccionável ao clique e sensível ao realce. É caminho ÚNICO e
-  -- parametrizado: saída e entrada diferem só no acento, no ícone, no comando de eleição,
-  -- no signal de destaque e nas consultas ao nó por defeito. Elegância cara ao auctor.
-  local function create_device(name, node, sink)
+  -- node = o nó pactl; sink = booleano, verdade se dispositivo de saída; setters = o
+  -- mapa em que se inscreve o seu set_active). Contra-domínio: um widget de linha,
+  -- seleccionável ao clique e sensível ao realce. Caminho ÚNICO e parametrizado.
+  local function create_device(name, node, sink, setters)
     -- sink == true -> dispositivo de saída (violeta primário); false -> entrada/microfone (violeta mais claro)
     local accent      = sink and p.v500 or p.v400
     local device_icon = sink and "headphones.svg" or "microphone.svg"
     local set_cmd     = sink and "./.config/awesome/src/scripts/vol.sh set_sink "
                               or  "./.config/awesome/src/scripts/mic.sh set_source "
     local bg_signal   = sink and "update::background:vol" or "update::background:mic"
-    local q_default   = sink and "pactl get-default-sink" or "pactl get-default-source"
-    local q_fallback  = sink
-      and [[LC_ALL=C pactl info | perl -n -e'/Default Sink: (.+)\s/ && print $1']]
-      or  [[LC_ALL=C pactl info | perl -n -e'/Default Source: (.+)\s/ && print $1']]
 
     -- Contêiner de fundo, retido como referência directa (governa o realce ao toque e o
     -- retinge do estado activo). Assim o dispôs Braga Us.
@@ -107,25 +142,10 @@ return function(s)
       end
     end
 
-    awesome.connect_signal(bg_signal, function(new_node)
-      set_active(node == new_node)
-    end)
-
-    -- Destaque inicial a partir do nó por defeito corrente (com pactl info por reserva, caso
-    -- a primeira consulta nada devolva). Disposição defensiva de Braga Us.
-    awful.spawn.easy_async_with_shell(q_default, function(stdout)
-      local active = stdout:gsub("\n", "")
-      if active ~= "" then
-        set_active(node == active)
-      else
-        awful.spawn.easy_async_with_shell(q_fallback, function(stdout2)
-          local active2 = stdout2:gsub("\n", "")
-          if active2 ~= "" then
-            set_active(node == active2)
-          end
-        end)
-      end
-    end)
+    -- Inscreve-se o set_active no mapa da reconstrucção corrente (a conexão única,
+    -- de escopo de fábrica, é quem despacha o destaque). O destaque inicial vem
+    -- depois, por highlight_default, uma só consulta para toda a lista.
+    setters[node] = set_active
 
     return device
   end
@@ -446,6 +466,7 @@ return function(s)
       function(stdout)
         local i, j = 1, 1
         local device_list = { layout = wibox.layout.fixed.vertical }
+        local new_setters = {} -- mapa fresco desta reconstrucção (substituirá o anterior por inteiro)
 
         local node_names, alsa_names = {}, {}
         for node_name in stdout:gmatch("[^\n]+") do
@@ -463,9 +484,11 @@ return function(s)
         end
 
         for k = 1, #alsa_names, 1 do
-          device_list[#device_list + 1] = create_device(alsa_names[k], node_names[k], true)
+          device_list[#device_list + 1] = create_device(alsa_names[k], node_names[k], true, new_setters)
         end
+        vol_setters = new_setters -- troca atómica: os setters (e widgets) pretéritos ficam colectáveis
         dropdown_list_volume.volume_device_background.volume_device_list.children = device_list
+        highlight_default("update::background:vol", Q_DEFAULT_SINK, Q_FALLBACK_SINK)
       end
     )
   end
@@ -483,6 +506,7 @@ return function(s)
       function(stdout)
         local i, j = 1, 1
         local device_list = { layout = wibox.layout.fixed.vertical }
+        local new_setters = {} -- mapa fresco desta reconstrucção (substituirá o anterior por inteiro)
 
         local node_names, alsa_names = {}, {}
         for node_name in stdout:gmatch("[^\n]+") do
@@ -500,9 +524,11 @@ return function(s)
         end
 
         for k = 1, #alsa_names, 1 do
-          device_list[#device_list + 1] = create_device(alsa_names[k], node_names[k], false)
+          device_list[#device_list + 1] = create_device(alsa_names[k], node_names[k], false, new_setters)
         end
+        mic_setters = new_setters -- troca atómica: os setters (e widgets) pretéritos ficam colectáveis
         dropdown_list_microphone.volume_device_background.volume_device_list.children = device_list
+        highlight_default("update::background:mic", Q_DEFAULT_SOURCE, Q_FALLBACK_SOURCE)
       end
     )
   end

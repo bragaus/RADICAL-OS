@@ -28,13 +28,18 @@ local icon   = require("src.atoms.icon")
 local txt    = require("src.atoms.txt")
 local shapes = require("src.tools.shapes")
 
--- Taboa das paletas por estado (kit colors_and_type.css / kit.css .tag--*), como a fixou
--- o Doutor Braga Us: a cada estado corresponde uma terna { orla, enchimento, tinta }.
+-- Taboa das paletas por estado, ora vestida com o HORIZONTE do poente (decreto
+-- do operador: "os widgets com aquela côr do menu"): a cada estado corresponde
+-- a quaterna { orla, enchimento, tinta, dir }. O enchimento corre HORIZONTAL
+-- (dir = "h", como a faixa do menu): magenta -> laranja. Em repouso, os tons
+-- APAGADOS (data4_deep/data3_deep — o poente ao cahir da noite, tinta clara);
+-- na ELEIÇÃO, o horizonte VIVO com tinta escura v975 (inversão sobre paradas
+-- claras); na urgência, magenta -> vermelho do quadro solar, tinta void.
 local STATES = {
-  empty    = { edge = p.glow_soft, fill = { { 0, p.v700 }, { 0.6, p.v800 }, { 1, p.v900 } }, fg = p.glow_ice },
-  occupied = { edge = p.glow_soft, fill = { { 0, p.v700 }, { 0.6, p.v800 }, { 1, p.v900 } }, fg = p.glow_ice },
-  selected = { edge = p.glow_ice, fill = { { 0, p.v400 }, { 0.6, p.v600 }, { 1, p.v700 } }, fg = p.v50 },
-  urgent   = { edge = p.glow_hot, fill = { { 0, p.glow_hot }, { 1, p.v700 } }, fg = p.v50 },
+  empty    = { edge = p.glow_soft, fill = { { 0, p.data4_deep }, { 1, p.data3_deep } }, fg = p.glow_ice, dir = "h" },
+  occupied = { edge = p.glow_soft, fill = { { 0, p.data4_deep }, { 1, p.data3_deep } }, fg = p.glow_ice, dir = "h" },
+  selected = { edge = p.glow_ice, fill = { { 0, p.data4 }, { 1, p.data3 } }, fg = p.v975, dir = "h" },
+  urgent   = { edge = p.glow_hot, fill = { { 0, p.glow_hot }, { 1, p.data6 } }, fg = p.void, dir = "h" },
 }
 
 -- Funcção CARDEAL, urdida pelo Doutor Braga Us. Domínio: taboa `args` (íco inicial etc.).
@@ -84,12 +89,15 @@ local function tag_tab(args)
     cr:paint()
     cr:restore()
 
-    -- camada 2 — .tag__fill inset:1.4px (fórma recuada numa caixa (w-2d)x(h-2d))
+    -- camada 2 — .tag__fill inset:1.4px (fórma recuada numa caixa (w-2d)x(h-2d));
+    -- o gradiente corre na direcção do estado: "h" = horizonte (magenta->laranja),
+    -- do contrário vertical, como d'antes.
     cr:save()
     cr:translate(d, d)
     shape_fn(cr, w - 2 * d, h - 2 * d)
     cr:clip()
-    cr:set_source(gears.color { type = "linear", from = { 0, 0 }, to = { 0, h - 2 * d }, stops = state.fill })
+    local grad_to = (state.dir == "h") and { w - 2 * d, 0 } or { 0, h - 2 * d }
+    cr:set_source(gears.color { type = "linear", from = { 0, 0 }, to = grad_to, stops = state.fill })
     cr:paint()
     -- camada 3 — o alvo de topo (inset 0 1px 0 glow_ice@.35)
     local hr, hg, hb = p.rgb(p.glow_ice)
@@ -133,7 +141,7 @@ local function tag_tab(args)
     state = STATES[key]
     -- o hover impõe a orla brilhante sem alterar o enchimento (kit .tag:hover).
     if st.hover then
-      state = { edge = p.glow_ice, fill = state.fill, fg = state.fg }
+      state = { edge = p.glow_ice, fill = state.fill, fg = state.fg, dir = state.dir }
     end
     icon_img.image = icon.surface(icon_name, state.fg)
     apply()

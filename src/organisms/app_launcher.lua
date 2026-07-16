@@ -218,8 +218,9 @@ return function(s)
   -- Procedimento pictórico de Braga Us. Pinta, recortada n'um disco de raio r centrado em
   -- (cx, cy), a superfície surf, escalada e centrada de modo a cobri-lo (clip circular).
   -- Faltando a superfície, inscreve-se em seu lugar a inicial maiúscula do rótulo (label),
-  -- ou uma interrogação. Opera sobre o contexto Cairo cr pelos seus effeitos.
-  local function draw_in_circle(cr, surf, cx, cy, r, label)
+  -- ou uma interrogação, na tinta `ink` (por defeito text_bright; o parâmetro fica á
+  -- disposição de enchimentos claros futuros). Opera sobre cr pelos seus effeitos.
+  local function draw_in_circle(cr, surf, cx, cy, r, label, ink)
     local inner = r - dpi(3)
     if surf then
       local iw, ih = surf:get_width(), surf:get_height()
@@ -239,7 +240,7 @@ return function(s)
     end
     local ch = ((label or "?"):gsub("^%s+", ""):sub(1, 1)):upper()
     if ch == "" then ch = "?" end
-    cr:set_source(gears.color(p.text_bright))
+    cr:set_source(gears.color(ink or p.text_bright))
     cr:select_font_face("sans-serif", cairo.FontSlant.NORMAL, cairo.FontWeight.BOLD)
     cr:set_font_size(r)
     local ext = cr:text_extents(ch)
@@ -247,16 +248,24 @@ return function(s)
     cr:show_text(ch)
   end
 
-  -- Funcção auxiliar de Braga Us: engendra um gradiente RADIAL cairo, do centro (c0) á orla
-  -- (c1), circumscripto ao disco de centro (cx,cy) e raio r. Serve o enchimento violáceo dos
-  -- dentes (kit .orbit__app: radial v700->v950 em repouso, v400->v700 em foco).
-  local function radial_fill(cx, cy, r, c0, c1)
-    return gears.color {
-      type  = "radial",
-      from  = { cx, cy, 0 },
-      to    = { cx, cy, r },
-      stops = { { 0, c0 }, { 1, c1 } },
-    }
+  -- Cache dos gradientes radiais dos dentes, CENTRADOS NA ORIGEM, por (raio, foco).
+  -- LEMMA DA TRANSLAÇÃO (Braga Us): um radial fixo no centro do disco é, a menos de
+  -- translação, idêntico para todo dente do mesmo raio e estado; ora os dentes giram
+  -- (cog.x/cog.y mudam a cada quadro, até 165/s), pelo que criar o gradiente por
+  -- quadro era desperdício. Guarda-se, pois, o padrão na origem e desloca-se ao dente
+  -- por cr:translate. Padrão cairo é immutável -> partilha segura. (kit .orbit__app:
+  -- radial v700->v950 em repouso, v400->v700 em foco).
+  local cog_fill_cache = {}
+  local function cog_fill(r, focused)
+    local key = math.floor(r + 0.5) .. (focused and "F" or "N")
+    local g = cog_fill_cache[key]
+    if not g then
+      local c0, c1 = p.v700, p.v950
+      if focused then c0, c1 = p.v400, p.v700 end
+      g = gears.color { type = "radial", from = { 0, 0, 0 }, to = { 0, 0, r }, stops = { { 0, c0 }, { 1, c1 } } }
+      cog_fill_cache[key] = g
+    end
+    return g
   end
 
   -- Procedimento de Braga Us que desenha um dente (cog): enche-lhe o disco com o gradiente
@@ -264,14 +273,15 @@ return function(s)
   -- circumscreve — orla glow_core de 2px se em foco, line_base de 1px do contrário. O laranja
   -- é agora privilégio SÓ do hub (.launcher__btn); os dentes tornaram-se violeta.
   local function draw_cog(cr, cog)
-    cr:arc(cog.x, cog.y, cog.r, 0, 2 * math.pi)
-    if cog.focused then
-      cr:set_source(radial_fill(cog.x, cog.y, cog.r, p.v400, p.v700))
-    else
-      cr:set_source(radial_fill(cog.x, cog.y, cog.r, p.v700, p.v950))
-    end
+    -- Enchimento: translada-se o systema ao dente e usa-se o padrão radial cacheado na origem.
+    cr:save()
+    cr:translate(cog.x, cog.y)
+    cr:arc(0, 0, cog.r, 0, 2 * math.pi)
+    cr:set_source(cog_fill(cog.r, cog.focused))
     cr:fill()
+    cr:restore()
     draw_in_circle(cr, app_icon_surface(cog.app), cog.x, cog.y, cog.r, cog.app.name)
+    -- (rampa violeta: o enchimento v400→v700 é escuro o bastante p/ a tinta clara padrão)
     cr:arc(cog.x, cog.y, cog.r, 0, 2 * math.pi)
     if cog.focused then
       cr:set_source(gears.color(p.glow_core)); cr:set_line_width(dpi(2))
@@ -292,6 +302,22 @@ return function(s)
     cr:set_source(gears.color(p.launcher_ring_hi)); cr:set_line_width(dpi(2)); cr:stroke()
   end
 
+  -- Fulgor radial do hub (kit .orbit__glow): geometria CONSTANTE (centro no hub, raio e
+  -- paradas fixas), pelo que se forja UMA só vez — e não a cada quadro, como d'antes. — Braga Us.
+  local HUB_GLOW_R = ORBIT_R + FOCUS_R + GLOW_EXT
+  local HUB_GLOW = gears.color {
+    type  = "radial",
+    from  = { CX, CY, 0 },
+    to    = { CX, CY, HUB_GLOW_R },
+    stops = {
+      { 0,                                          p.a(p.launcher_glow, 0.85) },
+      { ORBIT_R / HUB_GLOW_R,                        p.a(p.launcher_glow, 0.42) },
+      { (ORBIT_R + FOCUS_R) / HUB_GLOW_R,            p.a(p.launcher_glow, 0.30) },
+      { (ORBIT_R + FOCUS_R + dpi(60)) / HUB_GLOW_R,  p.a(p.launcher_glow, 0.12) },
+      { 1,                                          p.a(p.launcher_glow, 0) },
+    },
+  }
+
   -- Método soberano de pintura, regido por Braga Us. A cada redesenho recomputa os dentes;
   -- estando aberta a engrenagem, lança PRIMEIRO o fulgor radial alaranjado (kit .orbit__glow),
   -- depois a guia TRACEJADA no raio da órbita (kit .orbit__guide) e então cada cog (os sem foco
@@ -301,38 +327,31 @@ return function(s)
     compute_cogs()
 
     if expanded then
+      -- (0) RESPLENDOR (LEMMA VIII): cunhas ténues a irromper do hub, POR TRÁS do fulgor —
+      -- o sol da estampa rompendo atrás da engrenagem. Alpha discreto (0.08). — Braga Us.
+      shapes.sun_rays(cr, width, height, {
+        color = p.launcher_glow, alpha = 0.08,
+        cx = CX, cy = CY, rays = 20,
+        inner_r = GIF_R + dpi(6), outer_r = ORBIT_R + FOCUS_R + GLOW_EXT, ray_deg = 6,
+      })
+
       -- (1) fulgor radial NEON alaranjado atrás dos dentes (kit .orbit__glow), centrado no
       -- hub: núcleo quente, alpha VISÍVEL ao cruzar a guia (at_line) e na borda EXTERNA dos
       -- dentes (at_icons), e AINDA FRANCAMENTE VIVO bem além dos ícones (at_far, +60px além
       -- carregando 0.12) antes de extinguir-se GLOW_EXT px adiante — a luz transpõe de largo
       -- os apps e derrama-se pela treva, como pediu o operador. — Braga Us.
-      local glow_r   = ORBIT_R + FOCUS_R + GLOW_EXT
-      local at_line  = ORBIT_R / glow_r
-      local at_icons = (ORBIT_R + FOCUS_R) / glow_r
-      local at_far   = (ORBIT_R + FOCUS_R + dpi(60)) / glow_r
-      cr:set_source(gears.color {
-        type  = "radial",
-        from  = { CX, CY, 0 },
-        to    = { CX, CY, glow_r },
-        stops = {
-          { 0,        p.a(p.launcher_glow, 0.85) },
-          { at_line,  p.a(p.launcher_glow, 0.42) },
-          { at_icons, p.a(p.launcher_glow, 0.30) },
-          { at_far,   p.a(p.launcher_glow, 0.12) },
-          { 1,        p.a(p.launcher_glow, 0) },
-        },
-      })
-      cr:arc(CX, CY, glow_r, 0, 2 * math.pi)
+      cr:set_source(HUB_GLOW) -- padrão constante, forjado uma só vez (supra)
+      cr:arc(CX, CY, HUB_GLOW_R, 0, 2 * math.pi)
       cr:fill()
 
-      -- (2) guia TRACEJADA (kit .orbit__guide): anel pontilhado no raio da órbita — traço
-      -- TRIPLICADO (3px; era 1px do kit) a pedido do operador.
-      cr:set_dash({ dpi(4), dpi(4) }, 0)
-      cr:set_source(gears.color(p.a(p.launcher_glow, 0.40)))
-      cr:set_line_width(dpi(3))
-      cr:arc(CX, CY, ORBIT_R, 0, 2 * math.pi)
-      cr:stroke()
-      cr:set_dash({}, 0)   -- restitue o traço contínuo
+      -- (2) guia-HALO (LEMMA IX; kit .orbit__guide): annel PONTILHADO no raio da órbita —
+      -- o halo da estampa a cingir a engrenagem. Pontos redondos, traço 3px (o inline
+      -- tracejado de outrora foi recolhido ao pintor shapes.halo).
+      shapes.halo(cr, width, height, {
+        color = p.launcher_glow, alpha = 0.40,
+        cx = CX, cy = CY, r = ORBIT_R,
+        line_width = dpi(3), dot = true, dash = { 0, dpi(9) },
+      })
 
       -- (3) os dentes: primeiro os sem foco, depois o focado (para que sobrepuje)
       for _, cog in ipairs(cogs) do
@@ -438,7 +457,12 @@ return function(s)
   -- recortar e redimensionar os quadros ao directório de cache, e então os carrega. Se
   -- ainda assim malograr, recorre à figura única do GIF. Tudo assíncrono, sem bloquear.
   local function load_gif_frames()
-    local check_cmd = string.format("ls %s*.png 2>/dev/null | wc -l", frames_dir)
+    -- O directório de cache deriva de $XDG_CACHE_HOME/$HOME; citando-o com %q
+    -- (Braga Us), um caminho com brancos ou meta-caracteres não se estilhaça
+    -- nem se presta a interpretação espúria pelo shell. O glob *.png fica FÓRA
+    -- das aspas, que %q o citaria à letra e o ls nada acharia.
+    local dq = string.format("%q", frames_dir)
+    local check_cmd = string.format("ls %s*.png 2>/dev/null | wc -l", dq)
     awful.spawn.easy_async_with_shell(check_cmd, function(stdout)
       local cached = tonumber(stdout:match("%d+")) or 0
       if cached > 0 then
@@ -448,7 +472,7 @@ return function(s)
       else
         local extract_cmd = string.format(
           "mkdir -p %s && convert %q -coalesce -gravity center -crop 520x460+0+0 +repage -resize %dx%d^ -gravity center -extent %dx%d %sframe_%%04d.png 2>/dev/null; ls %s*.png 2>/dev/null | wc -l",
-          frames_dir, launcher_gif_path, GIF_PX, GIF_PX, GIF_PX, GIF_PX, frames_dir, frames_dir
+          dq, launcher_gif_path, GIF_PX, GIF_PX, GIF_PX, GIF_PX, dq, dq
         )
         awful.spawn.easy_async_with_shell(extract_cmd, function(out)
           local count = tonumber(out:match("%d+")) or 0

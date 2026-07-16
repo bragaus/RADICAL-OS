@@ -54,16 +54,18 @@ local shapes = require("src.tools.shapes")
 local SEG_H       = dpi(mt.seg_h)          -- 24, .seg/.lozstrip height
 local EDGE_REST   = p.glow_soft            -- .seg__edge bg (a orla de repouso e de hover)
 local EDGE_ON     = p.glow_ice             -- .seg--on .seg__edge (a orla acesa)
-local VALUE_REST  = "#f5efff"              -- .seg__v color (≈ p.v50, mais branco que text_bright)
+local VALUE_REST  = p.v50                  -- .seg__v color (o alvo mais cândido da rampa)
 
 -- Funcção auxiliar de Braga Us: engendra um gradiente vertical (180º) na caixa de 24px.
 -- Domínio: os stops do gradiente; contra-domínio: um objecto de côr linear.
 local function vgrad(stops)
   return gears.color { type = "linear", from = { 0, 0 }, to = { 0, SEG_H }, stops = stops }
 end
-local FILL_REST  = vgrad { { 0, p.v500 }, { 0.58, p.v700 }, { 1, p.v800 } }  -- .seg__fill
-local FILL_HOVER = vgrad { { 0, p.v400 }, { 0.58, p.v600 }, { 1, p.v700 } }  -- .seg:hover .seg__fill
-local FILL_ON    = vgrad { { 0, p.v400 }, { 1, p.v700 } }                    -- .seg--on .seg__fill
+-- Enchimentos rebaixados UM degrau da rampa: a tinta v50 ganha contraste
+-- (5.0 no topo v600 contra 4.0 no antigo topo v500) sem perder o fulgor.
+local FILL_REST  = vgrad { { 0, p.v600 }, { 0.58, p.v800 }, { 1, p.v900 } }  -- .seg__fill
+local FILL_HOVER = vgrad { { 0, p.v500 }, { 0.58, p.v700 }, { 1, p.v800 } }  -- .seg:hover .seg__fill
+local FILL_ON    = vgrad { { 0, p.v500 }, { 1, p.v800 } }                    -- .seg--on .seg__fill
 
 -- Funcção CARDEAL, da penna do professor Braga Us. Domínio: taboa `args` (íco, first,
 -- never_hot, on_click). Contra-domínio: um widget-segmento munido de :set_value e :set_active.

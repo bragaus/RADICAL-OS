@@ -59,15 +59,38 @@ local MON_H    = dpi(mt.mon_h)         -- altura canónica, do symbolo --mon-h (
 local SAMPLES  = mt.mon_samples        -- profundidade do histórico de cada série
 local INTERVAL = 1                     -- segundos que medeiam entre duas amostras (gráfico vivo)
 
--- ACCENTO LARANJA do grapho (a pedido): a linha e o enchimento em degradê tomam a MESMA cor
--- do contorno das janellas (launcher_ring_hi). GPU/CPU/MEM traçam UMA só série — a métrica
--- REAL primária (uso%) — sem as séries accessórias (temp/swap) que d'antes toldavam o grapho.
--- EXCEPÇÃO deliberada: o NET traça DUAS séries sobrepostas — download (laranja GRAPH_ACCENT)
--- e upload (amarelo-neon GRAPH_ACCENT_UP) — na MESMA escala partilhada, com mescla aditiva
--- "screen" (o cruzamento acende em néon). O gradient_fill do line_graph produz o degradê
--- pedido: opaco junto à linha, esmaecendo a diáphano no fundo. — Braga Us.
-local GRAPH_ACCENT    = p.launcher_ring_hi -- download (laranja)
-local GRAPH_ACCENT_UP = p.graph_up         -- upload (amarelo-neon), par do laranja no NET
+-- ── LEMMA DO GRADIENTE MEMOIZADO (Braga Us) ─────────────────────────────────
+-- gears.color memoiza descriptores em CADEIA de caracteres, jamais em TÁBOA; ora
+-- os gradientes das docas são táboas, recriadas a CADA desenho (as sondas repintam
+-- 1×/s). Como cada um só depende de UMA dimensão (a altura OU a largura, estáveis),
+-- guarda-se o padrão cairo por essa dimensão. Padrões cairo são immutáveis, donde
+-- partilhá-los entre desenhos é seguro. `grad_memo(builder)` devolve uma funcção que
+-- recebe a dimensão e cede o padrão, forjando-o só à primeira vez. Q.E.D.
+local function grad_memo(builder)
+  local cache = {}
+  return function(dim)
+    local g = cache[dim]
+    if not g then g = gears.color(builder(dim)); cache[dim] = g end
+    return g
+  end
+end
+
+-- O ESPECTRO DO POENTE (SUNCORE, edição violeta): a cada módulo, o SEU matiz —
+-- CPU o violeta soberano (glow_core), GPU o magenta das montanhas
+-- (data4), MEM o amarello-sol (data2), NET o laranja do céu (data3). GPU/CPU/MEM
+-- traçam UMA só série — a métrica REAL primária (uso%) — sem as accessórias
+-- (temp/swap) que d'antes toldavam o grapho. EXCEPÇÃO deliberada: o NET traça
+-- DUAS séries sobrepostas — download (laranja MOD_ACCENT.net) e upload
+-- (lima-neon MOD_ACCENT.net_up) — na MESMA escala partilhada, com mescla
+-- aditiva "screen" (o cruzamento acende em néon). O gradient_fill do line_graph
+-- produz o degradê pedido: opaco junto á linha, diáphano no fundo. — Braga Us.
+local MOD_ACCENT = {
+  gpu    = p.data4,     -- magenta das montanhas
+  cpu    = p.glow_core, -- violeta soberano (o accento da casa)
+  mem    = p.data2,     -- amarello-sol
+  net    = p.data3,     -- laranja do céu (download)
+  net_up = p.graph_up,  -- lima-neon (upload), par do laranja sob o "screen"
+}
 
 -- IDENTIFICADOR HEXADECIMAL do nó, cunhado uma só vez no carregamento (os.time
 -- é de custo ínfimo e não bloqueia o systema).
@@ -160,16 +183,17 @@ local function make_module(s, cfg)
 
   -- o véu de escurecimento (.monmod__bg::after): gradiente vertical de abyss, do
   -- topo tênue ao fundo mais denso — dá legibilidade ao texto sobreposto.
+  local darken_grad = grad_memo(function(h) return {
+    type = "linear", from = { 0, 0 }, to = { 0, h },
+    stops = { { 0, p.transparent }, { 0.55, p.a(p.abyss, 0.10) }, { 1, p.a(p.abyss, 0.38) } },
+  } end)
   local darken = wibox.widget.base.make_widget()
   function darken:fit(_, w, h) return w, h end
   function darken:draw(_, cr, w, h)
     -- Véu MUITO mais tênue que d'antes (0.22->0.72 apagava a parte baixa do grapho, donde
     -- este parecia "cortado" à esquerda). Agora quasi-diáphano no topo, ténue no fundo: o
     -- grapho laranja lê-se de borda a borda, e o texto (brilhante) continua legível. — Braga Us.
-    cr:set_source(gears.color({
-      type = "linear", from = { 0, 0 }, to = { 0, h },
-      stops = { { 0, p.transparent }, { 0.55, p.a(p.abyss, 0.10) }, { 1, p.a(p.abyss, 0.38) } },
-    }))
+    cr:set_source(darken_grad(h))
     cr:rectangle(0, 0, w, h); cr:fill()
   end
 
@@ -243,6 +267,10 @@ local function make_module(s, cfg)
     or  shapes.powerline({ tip = dpi(mt.powerline_tip_lg), socket = true })
 
   -- MIOLO (.monmod__inner): gradiente v950->abyss, encerra grapho+véu+overlay.
+  local inner_grad = grad_memo(function(h) return {
+    type = "linear", from = { 0, 0 }, to = { 0, h },
+    stops = { { 0, p.a(p.v950, 0.94) }, { 1, p.a(p.abyss, 0.97) } },
+  } end)
   local inner = wibox.widget {
     {
       graph, darken, overlay,
@@ -251,10 +279,7 @@ local function make_module(s, cfg)
     bg      = p.transparent,
     shape   = shape_fn,
     bgimage = function(_, cr, w, h)
-      cr:set_source(gears.color({
-        type = "linear", from = { 0, 0 }, to = { 0, h },
-        stops = { { 0, p.a(p.v950, 0.94) }, { 1, p.a(p.abyss, 0.97) } },
-      }))
+      cr:set_source(inner_grad(h))
       cr:rectangle(0, 0, w, h); cr:fill()
     end,
     widget = wibox.container.background,
@@ -262,15 +287,16 @@ local function make_module(s, cfg)
 
   -- ARESTA (.monmod__edge): gradiente glow_soft->v700; o miolo, inset de 1.6px,
   -- deixa transparecer 1.6px de orla — a "seta" que o kit desenha.
+  local frame_grad = grad_memo(function(h) return {
+    type = "linear", from = { 0, 0 }, to = { 0, h },
+    stops = { { 0, p.a(p.glow_soft, 0.8) }, { 1, p.a(p.v700, 0.8) } },
+  } end)
   local frame = wibox.widget {
     { inner, margins = dpi(mt.mon_edge), widget = wibox.container.margin },
     bg      = p.transparent,
     shape   = shape_fn,
     bgimage = function(_, cr, w, h)
-      cr:set_source(gears.color({
-        type = "linear", from = { 0, 0 }, to = { 0, h },
-        stops = { { 0, p.a(p.glow_soft, 0.8) }, { 1, p.a(p.v700, 0.8) } },
-      }))
+      cr:set_source(frame_grad(h))
       cr:rectangle(0, 0, w, h); cr:fill()
     end,
     widget = wibox.container.background,
@@ -378,40 +404,46 @@ local function make_strip()
     layout = wibox.layout.align.horizontal,
   }
 
+  -- Gradientes da fita, memoizados pela LARGURA (são horizontais e estáveis).
+  local strip_fill_grad = grad_memo(function(w) return {
+    type = "linear", from = { 0, 0 }, to = { w, 0 },
+    stops = { { 0, p.a(p.v950, 0.72) }, { 0.58, p.transparent } },
+  } end)
+  local strip_neon_grad = grad_memo(function(w) return {
+    type = "linear", from = { 0, 0 }, to = { w, 0 },
+    stops = {
+      { 0,    p.transparent },
+      { 0.18, p.a(p.glow_core, 0.85) },
+      { 0.5,  p.a(p.glow_ice, 0.85) },
+      { 0.82, p.a(p.glow_core, 0.85) },
+      { 1,    p.transparent },
+    },
+  } end)
+
   local strip = wibox.widget {
     { row, left = dpi(mt.mon_strip_pad_x), right = dpi(mt.mon_strip_pad_x), widget = wibox.container.margin },
     bg            = p.transparent,
     forced_height = dpi(mt.mon_strip_h),
     bgimage = function(_, cr, w, h)
       -- enchimento: gradiente horizontal v950@0.72 (0%) -> diáphano (58%)
-      cr:set_source(gears.color({
-        type = "linear", from = { 0, 0 }, to = { w, 0 },
-        stops = { { 0, p.a(p.v950, 0.72) }, { 0.58, p.transparent } },
-      }))
+      cr:set_source(strip_fill_grad(w))
       cr:rectangle(0, 0, w, h); cr:fill()
       -- orla inferior de 1px (border-bottom line_faint)
       local lr, lg, lb = p.rgb(p.line_faint)
       cr:set_source_rgba(lr, lg, lb, 1)
       cr:rectangle(0, h - dpi(1), w, dpi(1)); cr:fill()
       -- aresta néon superior de 1.5px (transparente -> glow_core -> glow_ice -> glow_core -> transparente)
-      cr:set_source(gears.color({
-        type = "linear", from = { 0, 0 }, to = { w, 0 },
-        stops = {
-          { 0,    p.transparent },
-          { 0.18, p.a(p.glow_core, 0.85) },
-          { 0.5,  p.a(p.glow_ice, 0.85) },
-          { 0.82, p.a(p.glow_core, 0.85) },
-          { 1,    p.transparent },
-        },
-      }))
+      cr:set_source(strip_neon_grad(w))
       cr:rectangle(0, 0, w, dpi(1.5)); cr:fill()
     end,
     widget = wibox.container.background,
   }
 
   -- pulsação do REC (kit .monrec: 1.4s, dois estados): alterna a plenitude do ponto.
+  -- Devolve-se o relógio ao chamador, para que o teardown de re-inicialização o
+  -- possa deter (do contrário, uma segunda montagem legaria um pulso órfão).
   local on = true
-  gears.timer {
+  local rec_timer = gears.timer {
     timeout = 1.4, autostart = true, call_now = true,
     callback = function()
       on = not on
@@ -419,7 +451,7 @@ local function make_strip()
     end,
   }
 
-  return strip
+  return strip, rec_timer
 end
 
 -- ── LEMMA make_rail ───────────────────────────────────────────────────────
@@ -522,16 +554,17 @@ local function make_rail(s)
     shape  = rail_shape,
     widget = wibox.container.background,
   }
+  local rail_grad = grad_memo(function(h) return {
+    type = "linear", from = { 0, 0 }, to = { 0, h },
+    stops = { { 0, p.a(p.glow_soft, 0.8) }, { 1, p.a(p.v700, 0.8) } },
+  } end)
   local rail_widget = wibox.widget {
     { rail_inner, margins = dpi(mt.mon_edge), widget = wibox.container.margin },
     bg           = p.transparent,
     shape        = rail_shape,
     forced_width = dpi(mt.mon_rail_w),
     bgimage = function(_, cr, w, h)
-      cr:set_source(gears.color({
-        type = "linear", from = { 0, 0 }, to = { 0, h },
-        stops = { { 0, p.a(p.glow_soft, 0.8) }, { 1, p.a(p.v700, 0.8) } },
-      }))
+      cr:set_source(rail_grad(h))
       cr:rectangle(0, 0, w, h); cr:fill()
     end,
     widget = wibox.container.background,
@@ -565,29 +598,29 @@ end
 return function(s)
   local iface = (user_vars and user_vars.network and user_vars.network.ethernet) or "eno1"
 
-  -- os quatro módulos de telemetria — manifesto verbatim do kit (monitorbar.jsx).
-  -- UMA série por módulo (a métrica REAL primária), toda em GRAPH_ACCENT (laranja das janellas).
+  -- os quatro módulos de telemetria — manifesto verbatim do kit (monitorbar.jsx),
+  -- cada qual no SEU matiz do espectro do poente (MOD_ACCENT, vide supra).
   -- Os rótulos partem de um valor prudente e são CORRIGIDOS ao hardware real logo abaixo.
   local mod_gpu = make_module(s, {
     label = "GPU", lbl = 24, sub = "GPU", icon = "gpu",
-    colors = { GRAPH_ACCENT }, group = "system", fixed100 = true, first = true,
+    colors = { MOD_ACCENT.gpu }, group = "system", fixed100 = true, first = true,
     cells = { "USE", "TEMP", "CLK", "VRAM" },
   })
   local mod_cpu = make_module(s, {
     label = "CPU", lbl = 24, sub = "CPU", icon = "cpu",
-    colors = { GRAPH_ACCENT }, group = "system", fixed100 = true,
+    colors = { MOD_ACCENT.cpu }, group = "system", fixed100 = true,
     cells = { "LOAD", "TEMP", "CLK", "CORES" },
   })
   local mod_mem = make_module(s, {
     label = "MEMORY", lbl = 15, sub = "RAM", icon = "mem",
-    colors = { GRAPH_ACCENT }, group = "system", fixed100 = true,
+    colors = { MOD_ACCENT.mem }, group = "system", fixed100 = true,
     cells = { "USED", "CACHE", "SWAP", "BUFF" },
   })
   local mod_net = make_module(s, {
     label = "NET", lbl = 22, sub = "NET // " .. iface, icon = "net",
-    -- DUAS séries sobrepostas: {download (frente, laranja), upload (trás, amarelo-neon)}.
+    -- DUAS séries sobrepostas: {download (frente, laranja), upload (trás, lima-neon)}.
     -- blend "screen" acende o cruzamento; escala partilhada (fixed100=false) mede ambas igual.
-    colors = { GRAPH_ACCENT, GRAPH_ACCENT_UP }, blend = "screen",
+    colors = { MOD_ACCENT.net, MOD_ACCENT.net_up }, blend = "screen",
     group = "network", fixed100 = false,
     cells = { "DOWN", "UP", "PING", "CONN" },
   })
@@ -634,7 +667,7 @@ return function(s)
     end
   )
 
-  local strip = make_strip()
+  local strip, rec_timer = make_strip()
   local rail  = make_rail(s)
 
   -- FILA DE MÓDULOS: tesselação por sobreposição negativa (-16). O 1º módulo
@@ -704,7 +737,13 @@ return function(s)
   bar_widget.forced_height = MON_H
   bar_widget.forced_width  = s.geometry.width
 
-  -- GUARDA contra duplicata em novo carregamento: occulta-se a barra pretérita.
+  -- GUARDA contra duplicata em novo carregamento. EMENDA (Braga Us): occultar a
+  -- barra pretérita NÃO bastava — os seus relógios (a sonda de 1 s e o pulso REC
+  -- de 1,4 s) e o seu manejo de property::geometry sobreviviam, a sondar e a
+  -- responder por uma doca invisível PARA SEMPRE. Ora, havendo teardown pregresso,
+  -- invoca-se-o: detém relógios, desata o manejo e retira os struts. Defensivo —
+  -- hoje o hotplug reinicia o awesome —, mas fecha a família do vazamento.
+  if s._mon_teardown then s._mon_teardown() end
   if s._monitor_bar then s._monitor_bar.visible = false end
 
   local bar = awful.popup {
@@ -713,7 +752,7 @@ return function(s)
     visible   = true,
     screen    = s,
     type      = "dock",       -- DOCA: reserva a sua faixa na área de trabalho (struts, abaixo)
-    bg        = "#00000000", -- a doca pinta o seu próprio gradiente; o popup é diáphano
+    bg        = p.transparent, -- a doca pinta o seu próprio gradiente; o popup é diáphano
     placement = function(c) awful.placement.bottom_left(c, { margins = 0 }) end,
   }
   s._monitor_bar = bar
@@ -724,11 +763,14 @@ return function(s)
   bar:struts({ bottom = MON_H })
 
   -- REAJUSTA a largura, a posição e a reserva sempre que a geometria da tela se altere.
-  s:connect_signal("property::geometry", function()
+  -- O manejo guarda-se em nome, para que o teardown o possa desatar (disconnect_signal
+  -- exige a MESMA referência de funcção).
+  local function on_geometry()
     bar_widget.forced_width = s.geometry.width
     awful.placement.bottom_left(bar, { margins = 0 })
     bar:struts({ bottom = MON_H })
-  end)
+  end
+  s:connect_signal("property::geometry", on_geometry)
 
   -- ── ESTADO PERSISTENTE entre ticks ─────────────────────────────────────────
   -- Grandezas conservadas de um tick ao seguinte (os deltas de CPU e de NET), e
@@ -738,12 +780,12 @@ return function(s)
   local last_cpu, last_mem, last_gpu = 0, 0, 0
   local tick = 0
 
-  -- ── COROLLÁRIO update_cpu ───────────────────────────────────────────────────
+  -- ── COROLLÁRIO parse_cpu ────────────────────────────────────────────────────
   -- Funcção urdida pelo Doutor Braga Us que apura a percentagem de CPU por meio
   -- de /proc/stat (o delta entre o tempo occupado e o ocioso). Alimenta a leitura
-  -- grande, a série A (accento) e a célula LOAD.
-  local function update_cpu()
-    awful.spawn.easy_async_with_shell("cat /proc/stat 2>/dev/null | head -n 1", function(out)
+  -- grande, a série A (accento) e a célula LOAD. Recebe já a secção de texto (a
+  -- sonda fundida a colhe); o corpo conserva-se ipsis litteris.
+  local function parse_cpu(out)
       out = out or ""
       local nums = {}
       for tok in out:gmatch("%d+") do nums[#nums + 1] = tonumber(tok) end
@@ -763,24 +805,14 @@ return function(s)
       mod_cpu.set_big("", tostring(r), "%", r)
       mod_cpu.push(1, r)
       mod_cpu.set_cell(1, r .. "%") -- célula LOAD
-    end)
   end
 
-  -- ── COROLLÁRIO update_cpu_extra ─────────────────────────────────────────────
+  -- ── COROLLÁRIO parse_cpu_extra ──────────────────────────────────────────────
   -- Funcção urdida pelo Doutor Braga Us que colhe os predicados accessórios do
   -- CPU (temperatura, frequência, núcleos, carga de 1 minuto) num único invólucro
   -- de shell. Povoa as células TEMP/CLK/CORES e alimenta as séries B (temp) e C
   -- (carga normalizada aos núcleos).
-  local function update_cpu_extra()
-    local script = [[
-      T=--; for h in /sys/class/hwmon/hwmon*; do n=$(cat "$h/name" 2>/dev/null); case "$n" in
-        k10temp|zenpower|coretemp) T=$(cat "$h/temp1_input" 2>/dev/null); break;; esac; done
-      echo "TEMP:$T"
-      echo "MHZ:$(awk '/cpu MHz/{s+=$4;n++} END{if(n>0)printf "%.0f", s/n}' /proc/cpuinfo 2>/dev/null)"
-      echo "CORES:$(nproc 2>/dev/null)"
-      echo "LOAD:$(cut -d' ' -f1 /proc/loadavg 2>/dev/null)"
-    ]]
-    awful.spawn.easy_async_with_shell(script, function(out)
+  local function parse_cpu_extra(out)
       out = out or ""
       local temp_m = tonumber(out:match("TEMP:(%d+)"))
       local mhz    = tonumber(out:match("MHZ:(%d+)"))
@@ -791,15 +823,14 @@ return function(s)
       mod_cpu.set_cell(4, cores and tostring(cores) or "--")
       -- (temp/carga já não alimentam o grapho: a série única traça SÓ o uso% real do CPU;
       --  temperatura e clock vivem nas células do rodapé.) — Braga Us.
-    end)
   end
 
-  -- ── COROLLÁRIO update_mem ───────────────────────────────────────────────────
+  -- ── COROLLÁRIO parse_mem ────────────────────────────────────────────────────
   -- Funcção urdida pelo Doutor Braga Us que afere a memória por /proc/meminfo.
   -- Alimenta a leitura, as células USED/CACHE/SWAP/BUFF e as séries A (uso%) e B
   -- (swap%). Abstem-se á falta de MemTotal/MemAvailable ou total não-positivo.
-  local function update_mem()
-    awful.spawn.easy_async_with_shell("cat /proc/meminfo 2>/dev/null", function(out)
+  -- Recebe já a secção de texto (da sonda fundida); o corpo conserva-se ipsis litteris.
+  local function parse_mem(out)
       out = out or ""
       local total   = tonumber(out:match("MemTotal:%s*(%d+)"))      -- em kibibytes
       local avail   = tonumber(out:match("MemAvailable:%s*(%d+)"))
@@ -822,16 +853,12 @@ return function(s)
         buffers and fmt_gib(buffers * 1024) or "--",
       }
       mod_mem.push(1, pct) -- série única: uso% real da memória (swap fica na célula)
-    end)
   end
 
-  -- ── COROLLÁRIO update_gpu ───────────────────────────────────────────────────
+  -- ── COROLLÁRIO parse_gpu ────────────────────────────────────────────────────
   -- Funcção urdida pelo Doutor Braga Us que interroga a placa gráphica por meio
   -- de nvidia-smi (uma só chamada CSV). Faltando o apparato, tudo recahe em "--".
-  local function update_gpu()
-    awful.spawn.easy_async_with_shell(
-      "nvidia-smi --query-gpu=utilization.gpu,temperature.gpu,clocks.current.graphics,memory.used,memory.total,fan.speed --format=csv,noheader,nounits 2>/dev/null",
-      function(out)
+  local function parse_gpu(out)
         out = out or ""
         -- partição por vírgula (preserva a posição; o campo "[N/A]" torna-se nil sem deslocar os índices)
         local f, i = {}, 0
@@ -860,17 +887,15 @@ return function(s)
           (mused and mtot and mtot > 0) and string.format("%.1fG", mused / 1024) or "--", -- VRAM
         }
         mod_gpu.push(1, r) -- série única: utilização% real da GPU (temp fica na célula)
-      end
-    )
   end
 
-  -- ── COROLLÁRIO update_net ───────────────────────────────────────────────────
+  -- ── COROLLÁRIO parse_net ────────────────────────────────────────────────────
   -- Funcção urdida pelo Doutor Braga Us que mede a rede por /proc/net/dev,
   -- sommando todas as interfaces excepto a de loopback (lo) e derivando a taxa do
   -- delta entre duas amostras. Alimenta a leitura (↓ com unidade /s), as células
-  -- DOWN/UP e as séries A (down) e B (up).
-  local function update_net()
-    awful.spawn.easy_async_with_shell("cat /proc/net/dev 2>/dev/null", function(out)
+  -- DOWN/UP e as séries A (down) e B (up). Recebe já a secção (da sonda fundida);
+  -- o corpo conserva-se ipsis litteris.
+  local function parse_net(out)
       out = out or ""
       local rx_sum, tx_sum = 0, 0
       for line in out:gmatch("[^\r\n]+") do
@@ -899,7 +924,6 @@ return function(s)
       mod_net.set_cell(2, format.rate(up_rate, "compact"))   -- UP
       mod_net.push(1, down_rate / 1024) -- série 1 (frente, laranja): download real em KiB/s
       mod_net.push(2, up_rate   / 1024) -- série 2 (trás, amarelo-neon): upload real em KiB/s (escala partilhada)
-    end)
   end
 
   -- ── COROLLÁRIO update_net_extra ─────────────────────────────────────────────
@@ -925,15 +949,13 @@ return function(s)
     end)
   end
 
-  -- ── COROLLÁRIO update_vol ───────────────────────────────────────────────────
+  -- ── COROLLÁRIO parse_vol ────────────────────────────────────────────────────
   -- Funcção urdida pelo Doutor Braga Us que interroga o volume sonoro por pactl,
   -- e ajusta a barra do MonRail (valor e leitura textual).
-  local function update_vol()
-    awful.spawn.easy_async_with_shell("pactl get-sink-volume @DEFAULT_SINK@ 2>/dev/null", function(out)
+  local function parse_vol(out)
       out = out or ""
       local v = tonumber(out:match("(%d+)%%"))
       if v then rail.set_vol(v) end
-    end)
   end
 
   -- ── COROLLÁRIO update_aggregate ─────────────────────────────────────────────
@@ -943,24 +965,78 @@ return function(s)
     rail.set_load((last_cpu + last_mem + last_gpu) / 3)
   end
 
-  gears.timer {
+  -- ── LEMMA DA SONDA FUNDIDA DE 1s (Braga Us) ─────────────────────────────────
+  -- Outr'ora cada tick lançava TRÊS invólucros de shell (stat, meminfo, net/dev):
+  -- três forks por segundo, eternos. Ora funde-os n'UM só, seccionado por
+  -- marcadores @@ (precedente do system_graph_panel). Regras da fusão: os membros
+  -- unem-se por ';' (jamais '&&' — um membro falho não deve engolir os seguintes);
+  -- cada qual traz o seu '2>/dev/null'; e cada secção extrahe-se com guarda a nil
+  -- (marcador ausente -> ""). Os marcadores nunca surgem em /proc. Q.E.D.
+  local SAMPLE_1S = "echo '@@CPU'; cat /proc/stat 2>/dev/null | head -n 1; "
+                 .. "echo '@@MEM'; cat /proc/meminfo 2>/dev/null; "
+                 .. "echo '@@NET'; cat /proc/net/dev 2>/dev/null"
+  local function sample_1s()
+    awful.spawn.easy_async_with_shell(SAMPLE_1S, function(out)
+      out = out or ""
+      parse_cpu(out:match("@@CPU%s*(.-)@@MEM") or "")
+      parse_mem(out:match("@@MEM%s*(.-)@@NET") or "")
+      parse_net(out:match("@@NET%s*(.*)$") or "")
+    end)
+  end
+
+  -- ── LEMMA DA SONDA FUNDIDA DE 2s (Braga Us) ─────────────────────────────────
+  -- Os invólucros mais custosos (a cada 2s) fundem-se n'um só: GPU (nvidia-smi),
+  -- os accessórios do CPU (hwmon+cpuinfo+nproc+loadavg) e o volume (pactl). O
+  -- corpo de cada script embute-se entre marcadores @@; os membros separam-se por
+  -- nova-linha (equivale a ';', nunca '&&'). O PING FICA DE FÓRA, em fork próprio
+  -- (bloqueia até -W1 s; fundido, retardaria toda a leva). Marcadores nunca surgem
+  -- na saída do nvidia-smi/hwmon/pactl. Q.E.D.
+  local SAMPLE_2S = [[
+echo '@@GPU'; nvidia-smi --query-gpu=utilization.gpu,temperature.gpu,clocks.current.graphics,memory.used,memory.total,fan.speed --format=csv,noheader,nounits 2>/dev/null
+echo '@@CPUX'
+T=--; for h in /sys/class/hwmon/hwmon*; do n=$(cat "$h/name" 2>/dev/null); case "$n" in
+  k10temp|zenpower|coretemp) T=$(cat "$h/temp1_input" 2>/dev/null); break;; esac; done
+echo "TEMP:$T"
+echo "MHZ:$(awk '/cpu MHz/{s+=$4;n++} END{if(n>0)printf "%.0f", s/n}' /proc/cpuinfo 2>/dev/null)"
+echo "CORES:$(nproc 2>/dev/null)"
+echo "LOAD:$(cut -d' ' -f1 /proc/loadavg 2>/dev/null)"
+echo '@@VOL'; pactl get-sink-volume @DEFAULT_SINK@ 2>/dev/null
+]]
+  local function sample_2s()
+    awful.spawn.easy_async_with_shell(SAMPLE_2S, function(out)
+      out = out or ""
+      parse_gpu(out:match("@@GPU%s*(.-)@@CPUX") or "")
+      parse_cpu_extra(out:match("@@CPUX%s*(.-)@@VOL") or "")
+      parse_vol(out:match("@@VOL%s*(.*)$") or "")
+    end)
+  end
+
+  local sample_timer = gears.timer {
     timeout   = INTERVAL,
     call_now  = true,
     autostart = true,
     callback  = function()
       tick = tick + 1
-      update_cpu()
-      update_mem()
-      update_net()
-      if tick % 2 == 1 then -- os invólucros de shell mais custosos, a cada dois segundos
-        update_gpu()
-        update_cpu_extra()
-        update_net_extra()
-        update_vol()
+      sample_1s() -- CPU + MEM + NET n'um só fork
+      if tick % 2 == 1 then -- os invólucros mais custosos, a cada dois segundos
+        sample_2s()        -- GPU + CPU_EXTRA + VOL n'um só fork
+        update_net_extra() -- ping+ss: fork próprio (o ping bloqueia até -W1 s)
       end
       update_aggregate()
     end,
   }
+
+  -- LEMMA DO TEARDOWN (Braga Us): consigna-se em s._mon_teardown o desmanche
+  -- completo desta montagem — deter a sonda de 1 s e o pulso REC, desatar o manejo
+  -- de geometria, occultar a doca e franquear a workarea (struts a zero). O guard
+  -- de re-inicialização invoca-o ANTES de erguer a próxima barra. Q.E.D.
+  s._mon_teardown = function()
+    sample_timer:stop()
+    if rec_timer then rec_timer:stop() end
+    s:disconnect_signal("property::geometry", on_geometry)
+    bar.visible = false
+    bar:struts({ bottom = 0 })
+  end
 
   return bar
 end

@@ -1,12 +1,17 @@
 -- ══════════════════════════════════════════════════════════════════════════
---   O CÓDICE PRINCIPAL DO THEMA — VIOLET HUD, edição roxa
+--   O CÓDICE PRINCIPAL DO THEMA — SUNCORE HUD, edição violeta
 -- ══════════════════════════════════════════════════════════════════════════
 -- Seja dado este o códice cardeal da aparência. Os tokens chromáticos residem
 -- no TRACTADO DAS CÔRES (src/theme/palette.lua); a este manuscripto compete
 -- transportá-los, com toda a fidelidade, ao motor `beautiful` e à taboa `Theme`.
--- A hierarchia rege-se por luminosidade e opacidade (roxo monochromático); o
--- acento primário — invariante soberano desta obra — é o token v500, tal como
--- o estabeleceu, por definitivo, o eminente geómetra BRAGA US.
+-- A hierarchia rege-se por luminosidade e opacidade (violeta soberano, com o
+-- poente contido nos acentos); o acento primário — invariante soberano desta
+-- obra — é o token v500, tal como o estabeleceu, por definitivo, o eminente
+-- geómetra BRAGA US. Regra da inversão da tinta (escopo restricto na rampa
+-- violeta, cujo miolo é escuro): tinta ESCURA (v975/void) sómente sobre os
+-- enchimentos VERDADEIRAMENTE claros — o magenta glow_hot pleno e as faixas
+-- do horizonte; sobre a rampa violeta (v400 e abaixo), tinta clara (v50),
+-- que ahi mede contraste superior. Q.E.D.
 -- ══════════════════════════════════════════════════════════════════════════
 
 -- Das bibliothecas do Awesome: os instrumentos importados para esta lavra.
@@ -29,7 +34,7 @@ Theme.bg_systray  = p.v800   -- violeta SÓLIDO (= meio do chevron), pintado pel
 
 Theme.fg_normal   = p.text_primary
 Theme.fg_focus    = p.text_bright
-Theme.fg_urgent   = p.v50
+Theme.fg_urgent   = p.void   -- tinta negra sobre o magenta glow_hot (CR 6.2; v50 dava 3.29)
 Theme.fg_minimize = p.text_muted
 
 Theme.useless_gap   = dpi(8)  -- kit .grid-bg gap:8 — o intervallo entre as janellas ladrilhadas
@@ -44,7 +49,7 @@ Theme.border_marked = p.launcher_ring_on
 Theme.menu_height       = dpi(26)
 Theme.menu_width        = dpi(220)
 Theme.menu_bg_normal    = p.a(p.panel, 0.95)
-Theme.menu_bg_focus     = p.v700
+Theme.menu_bg_focus     = p.v800  -- um degrau mais fundo que d'antes: mais contraste p/ tinta v50 (CR 5.4 → 6.7)
 Theme.menu_fg_normal    = p.text_primary
 Theme.menu_fg_focus     = p.v50
 Theme.menu_border_color  = p.line_base
@@ -59,6 +64,8 @@ Theme.menu_shape = function(cr, width, heigth)
 end
 
 -- Da lista de tags (taglist): as côres com que se distingue o foco.
+-- Na rampa violeta o v500 é escuro: a tinta CLARA v50 mede contraste superior
+-- á escura (CR 4.0 contra 3.6) — restituída, pois, a tinta clara.
 Theme.taglist_fg_focus = p.v50
 Theme.taglist_bg_focus = p.v500
 

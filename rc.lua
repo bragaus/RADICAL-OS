@@ -22,6 +22,17 @@ for _, loc in ipairs({ "pt_BR.UTF-8", "pt_BR.utf8", "C.UTF-8", "C.utf8", "C" }) 
   if os.setlocale(loc, "time") then break end
 end
 
+-- 0.5. Afinação do colector de lixo (Braga Us). O "pause" rege quanto o montão pode
+--      medrar entre colectas: 200 (padrão do Lua 5.3) deixa-o duplicar o conjunto
+--      vivo antes de collher; 125 cinge-o a ~1,25× — montão residente mais enxuto,
+--      a custo de CPU desprezível (o trabalho do colector escala com a taxa de
+--      allocação, que as emendas de perda e de cache d'este mesmo trabalho já
+--      abateram). O "stepmul" 300 apressa o encerro de cada cyclo. JAMAIS se agenda
+--      um collectgarbage("collect") periódico (o anti-padrão do extincto cpu_info):
+--      o incremental basta e não trava o laço.
+collectgarbage("setpause", 125)
+collectgarbage("setstepmul", 300)
+
 -- 1. user_vars first (defines global `user_vars` used by error_handling for terminal/modkey).
 require("src.theme.user_variables")
 
@@ -32,10 +43,6 @@ require("src.theme.user_variables")
 --    the whole session.
 local err = require("src.core.error_handling")
 
-err.safe_call("plano_gif.preload", function()
-  local plano_gif = require("src.molecules.plano_gif")
-  plano_gif.preload(math.max(72, (user_vars.dock_icon_size or 64) + 36))
-end)
 err.safe_call("theme.init", function() require("src.theme.init") end)
 err.safe_call("alacritty_lain_overlay", function() require("src.molecules.alacritty_lain_overlay") end)
 err.safe_call("signals", function() require("src.core.signals") end)
@@ -48,15 +55,3 @@ err.safe_call("auto_starter", function() require("src.tools.auto_starter")(user_
 awful.spawn.with_shell("xset s off")
 awful.spawn.with_shell("xset -dpms")
 awful.spawn.with_shell("xset s noblank")
---local cyber = require("cyber_hotkeys_dashboard")
---
---cyber.setup({
-  --modkey = modkey,
-  --terminal = terminal,
-  --browser = "firefox",
-  --file_manager = "thunar",
-  --launcher = "rofi -show drun",
---})
---
---globalkeys = gears.table.join(globalkeys, cyber.keys)
---root.keys(globalkeys)

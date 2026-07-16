@@ -46,23 +46,23 @@ local function state_of(tag)
   }
 end
 
--- Procedimento composto pelo professor Braga Us, invocado a cada mutação do
--- conjunto das tags (o "callback" que a taglist reclama). Argumentos: o widget-
--- recipiente, a botoeira de acções, dois parâmetros ociosos (assignalados por "_")
--- e a colleção de objectos-tag a exhibir. Effeito: esvazia o recipiente e, para
--- cada tag, edifica uma aba nova, rotula-a, imbue-lhe o estado, ata-lhe os botões
--- e os signaes do mouse, e a adjunge à fileira. Opera pelos seus effeitos.
-local list_update = function(widget, buttons, _, _, objects)
-  widget:reset()
-  widget:set_spacing(-dpi(mt.powerline_tip)) -- -12: as abas SOBREPÕEM-SE (kit .tag margin-right:-12px)
+-- ── DO POOL DE ABAS POR TAG (chaves fracas) ─────────────────────────────────
+-- LEMMA DO REAPROVEITAMENTO (Braga Us): outr'ora cada mutação (foco, ocupação,
+-- urgência) reconstruía TODAS as abas — novo tag_tab e novos signaes de mouse por
+-- tag, a cada refresco. Ora, sendo as tags objectos estáveis, guarda-se uma aba
+-- por tag n'uma táboa de chaves fracas: forja-se à primeira vista (com os signaes
+-- de hover atados UMA só vez), e nos refrescos apenas se lhe muta rótulo, ícone,
+-- estado e botões. A aba jaz para sempre adstricta à sua tag, donde os signaes
+-- capturarem `object` é lícito e seguro. Q.E.D.
+local tabs = setmetatable({}, { __mode = "k" })
 
-  for _, object in ipairs(objects) do
+-- Devolve a aba da tag, forjando-a (e atando-lhe o hover) só à primeira vista.
+local function tab_for(object)
+  local tab = tabs[object]
+  if not tab then
     -- A aba (tag_tab) é senhora da sua fórma de "powerline", do enchimento em
     -- gradiente, da orla bicolor e do trio ícone + índice + nome.
-    local tab = tag_tab { icon = tag_icon(object.name) }
-    tab:set_label(object.index, object.name)
-    tab:set_state(state_of(object))
-    tab:buttons(list_buttons.create(buttons, object))
+    tab = tag_tab { icon = tag_icon(object.name) }
 
     -- O reluzir ao passar do cursor (hover) é lavrado pela própria molécula, como
     -- fulgor de orla (kit .tag:hover), por via de set_state{hover=}. Como a aba pinta
@@ -83,6 +83,25 @@ local list_update = function(widget, buttons, _, _, objects)
       if cw then cw.cursor = "left_ptr" end
     end)
 
+    tabs[object] = tab
+  end
+  return tab
+end
+
+-- Procedimento composto pelo professor Braga Us, invocado a cada mutação do
+-- conjunto das tags (o "callback" que a taglist reclama). Argumentos: o widget-
+-- recipiente, a botoeira de acções, dois parâmetros ociosos (assignalados por "_")
+-- e a colleção de objectos-tag a exhibir. Effeito: esvazia o recipiente e, para
+-- cada tag, TOMA a sua aba do pool, muta-lhe rótulo/ícone/estado/botões e a adjunge.
+local list_update = function(widget, buttons, _, _, objects)
+  widget:reset()
+  widget:set_spacing(-dpi(mt.powerline_tip)) -- -12: as abas SOBREPÕEM-SE (kit .tag margin-right:-12px)
+
+  for _, object in ipairs(objects) do
+    local tab = tab_for(object)
+    tab:set_label(object.index, object.name, tag_icon(object.name)) -- índice+nome+ícone frescos (cobre rename)
+    tab:set_state(state_of(object))
+    tab:buttons(list_buttons.create(buttons, object))
     widget:add(tab)
   end
 end
