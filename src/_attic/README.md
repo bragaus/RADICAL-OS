@@ -20,6 +20,7 @@ rather than ported.
 | `cpu_info.lua`, `gpu_info.lua`, `ram_info.lua` | **superseded** by the gated/batched `monitor_bar` + `system_graph_panel` sampling; zero require sites. `cpu_info` also ran `collectgarbage("collect")` every 3 s on the main loop — an anti-pattern; do not revive as-is. |
 | `bt.sh` | shell helper whose only consumers were `audio.lua`/`bluetooth.lua` (above); unquoted vars, superseded. |
 | `cyber_hotkeys_dashboard.lua` | hotkeys popup (493 lines) whose `require` sat commented out in `rc.lua` since the redesign; zero live require sites. |
+| `plano_gif.lua` | GIF frame cache/animator for the retired macOS-style dock; its only consumer was the boot preload in `rc.lua` (one ImageMagick `convert` spawn + a full frame-surface set retained per size, for a widget nothing displays). `app_launcher` has its own independent GIF loader. |
 
 To revive either: convert all blocking IO to `awful.spawn.easy_async` /
 `awful.widget.watch` / GIO async first, then move it into `molecules/` (single

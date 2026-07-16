@@ -32,10 +32,6 @@ require("src.theme.user_variables")
 --    the whole session.
 local err = require("src.core.error_handling")
 
-err.safe_call("plano_gif.preload", function()
-  local plano_gif = require("src.molecules.plano_gif")
-  plano_gif.preload(math.max(72, (user_vars.dock_icon_size or 64) + 36))
-end)
 err.safe_call("theme.init", function() require("src.theme.init") end)
 err.safe_call("alacritty_lain_overlay", function() require("src.molecules.alacritty_lain_overlay") end)
 err.safe_call("signals", function() require("src.core.signals") end)
