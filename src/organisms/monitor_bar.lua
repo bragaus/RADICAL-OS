@@ -59,6 +59,22 @@ local MON_H    = dpi(mt.mon_h)         -- altura canónica, do symbolo --mon-h (
 local SAMPLES  = mt.mon_samples        -- profundidade do histórico de cada série
 local INTERVAL = 1                     -- segundos que medeiam entre duas amostras (gráfico vivo)
 
+-- ── LEMMA DO GRADIENTE MEMOIZADO (Braga Us) ─────────────────────────────────
+-- gears.color memoiza descriptores em CADEIA de caracteres, jamais em TÁBOA; ora
+-- os gradientes das docas são táboas, recriadas a CADA desenho (as sondas repintam
+-- 1×/s). Como cada um só depende de UMA dimensão (a altura OU a largura, estáveis),
+-- guarda-se o padrão cairo por essa dimensão. Padrões cairo são immutáveis, donde
+-- partilhá-los entre desenhos é seguro. `grad_memo(builder)` devolve uma funcção que
+-- recebe a dimensão e cede o padrão, forjando-o só à primeira vez. Q.E.D.
+local function grad_memo(builder)
+  local cache = {}
+  return function(dim)
+    local g = cache[dim]
+    if not g then g = gears.color(builder(dim)); cache[dim] = g end
+    return g
+  end
+end
+
 -- O ESPECTRO DO POENTE (SUNCORE, edição violeta): a cada módulo, o SEU matiz —
 -- CPU o violeta soberano (glow_core), GPU o magenta das montanhas
 -- (data4), MEM o amarello-sol (data2), NET o laranja do céu (data3). GPU/CPU/MEM
@@ -167,16 +183,17 @@ local function make_module(s, cfg)
 
   -- o véu de escurecimento (.monmod__bg::after): gradiente vertical de abyss, do
   -- topo tênue ao fundo mais denso — dá legibilidade ao texto sobreposto.
+  local darken_grad = grad_memo(function(h) return {
+    type = "linear", from = { 0, 0 }, to = { 0, h },
+    stops = { { 0, p.transparent }, { 0.55, p.a(p.abyss, 0.10) }, { 1, p.a(p.abyss, 0.38) } },
+  } end)
   local darken = wibox.widget.base.make_widget()
   function darken:fit(_, w, h) return w, h end
   function darken:draw(_, cr, w, h)
     -- Véu MUITO mais tênue que d'antes (0.22->0.72 apagava a parte baixa do grapho, donde
     -- este parecia "cortado" à esquerda). Agora quasi-diáphano no topo, ténue no fundo: o
     -- grapho laranja lê-se de borda a borda, e o texto (brilhante) continua legível. — Braga Us.
-    cr:set_source(gears.color({
-      type = "linear", from = { 0, 0 }, to = { 0, h },
-      stops = { { 0, p.transparent }, { 0.55, p.a(p.abyss, 0.10) }, { 1, p.a(p.abyss, 0.38) } },
-    }))
+    cr:set_source(darken_grad(h))
     cr:rectangle(0, 0, w, h); cr:fill()
   end
 
@@ -250,6 +267,10 @@ local function make_module(s, cfg)
     or  shapes.powerline({ tip = dpi(mt.powerline_tip_lg), socket = true })
 
   -- MIOLO (.monmod__inner): gradiente v950->abyss, encerra grapho+véu+overlay.
+  local inner_grad = grad_memo(function(h) return {
+    type = "linear", from = { 0, 0 }, to = { 0, h },
+    stops = { { 0, p.a(p.v950, 0.94) }, { 1, p.a(p.abyss, 0.97) } },
+  } end)
   local inner = wibox.widget {
     {
       graph, darken, overlay,
@@ -258,10 +279,7 @@ local function make_module(s, cfg)
     bg      = p.transparent,
     shape   = shape_fn,
     bgimage = function(_, cr, w, h)
-      cr:set_source(gears.color({
-        type = "linear", from = { 0, 0 }, to = { 0, h },
-        stops = { { 0, p.a(p.v950, 0.94) }, { 1, p.a(p.abyss, 0.97) } },
-      }))
+      cr:set_source(inner_grad(h))
       cr:rectangle(0, 0, w, h); cr:fill()
     end,
     widget = wibox.container.background,
@@ -269,15 +287,16 @@ local function make_module(s, cfg)
 
   -- ARESTA (.monmod__edge): gradiente glow_soft->v700; o miolo, inset de 1.6px,
   -- deixa transparecer 1.6px de orla — a "seta" que o kit desenha.
+  local frame_grad = grad_memo(function(h) return {
+    type = "linear", from = { 0, 0 }, to = { 0, h },
+    stops = { { 0, p.a(p.glow_soft, 0.8) }, { 1, p.a(p.v700, 0.8) } },
+  } end)
   local frame = wibox.widget {
     { inner, margins = dpi(mt.mon_edge), widget = wibox.container.margin },
     bg      = p.transparent,
     shape   = shape_fn,
     bgimage = function(_, cr, w, h)
-      cr:set_source(gears.color({
-        type = "linear", from = { 0, 0 }, to = { 0, h },
-        stops = { { 0, p.a(p.glow_soft, 0.8) }, { 1, p.a(p.v700, 0.8) } },
-      }))
+      cr:set_source(frame_grad(h))
       cr:rectangle(0, 0, w, h); cr:fill()
     end,
     widget = wibox.container.background,
@@ -385,32 +404,36 @@ local function make_strip()
     layout = wibox.layout.align.horizontal,
   }
 
+  -- Gradientes da fita, memoizados pela LARGURA (são horizontais e estáveis).
+  local strip_fill_grad = grad_memo(function(w) return {
+    type = "linear", from = { 0, 0 }, to = { w, 0 },
+    stops = { { 0, p.a(p.v950, 0.72) }, { 0.58, p.transparent } },
+  } end)
+  local strip_neon_grad = grad_memo(function(w) return {
+    type = "linear", from = { 0, 0 }, to = { w, 0 },
+    stops = {
+      { 0,    p.transparent },
+      { 0.18, p.a(p.glow_core, 0.85) },
+      { 0.5,  p.a(p.glow_ice, 0.85) },
+      { 0.82, p.a(p.glow_core, 0.85) },
+      { 1,    p.transparent },
+    },
+  } end)
+
   local strip = wibox.widget {
     { row, left = dpi(mt.mon_strip_pad_x), right = dpi(mt.mon_strip_pad_x), widget = wibox.container.margin },
     bg            = p.transparent,
     forced_height = dpi(mt.mon_strip_h),
     bgimage = function(_, cr, w, h)
       -- enchimento: gradiente horizontal v950@0.72 (0%) -> diáphano (58%)
-      cr:set_source(gears.color({
-        type = "linear", from = { 0, 0 }, to = { w, 0 },
-        stops = { { 0, p.a(p.v950, 0.72) }, { 0.58, p.transparent } },
-      }))
+      cr:set_source(strip_fill_grad(w))
       cr:rectangle(0, 0, w, h); cr:fill()
       -- orla inferior de 1px (border-bottom line_faint)
       local lr, lg, lb = p.rgb(p.line_faint)
       cr:set_source_rgba(lr, lg, lb, 1)
       cr:rectangle(0, h - dpi(1), w, dpi(1)); cr:fill()
       -- aresta néon superior de 1.5px (transparente -> glow_core -> glow_ice -> glow_core -> transparente)
-      cr:set_source(gears.color({
-        type = "linear", from = { 0, 0 }, to = { w, 0 },
-        stops = {
-          { 0,    p.transparent },
-          { 0.18, p.a(p.glow_core, 0.85) },
-          { 0.5,  p.a(p.glow_ice, 0.85) },
-          { 0.82, p.a(p.glow_core, 0.85) },
-          { 1,    p.transparent },
-        },
-      }))
+      cr:set_source(strip_neon_grad(w))
       cr:rectangle(0, 0, w, dpi(1.5)); cr:fill()
     end,
     widget = wibox.container.background,
@@ -531,16 +554,17 @@ local function make_rail(s)
     shape  = rail_shape,
     widget = wibox.container.background,
   }
+  local rail_grad = grad_memo(function(h) return {
+    type = "linear", from = { 0, 0 }, to = { 0, h },
+    stops = { { 0, p.a(p.glow_soft, 0.8) }, { 1, p.a(p.v700, 0.8) } },
+  } end)
   local rail_widget = wibox.widget {
     { rail_inner, margins = dpi(mt.mon_edge), widget = wibox.container.margin },
     bg           = p.transparent,
     shape        = rail_shape,
     forced_width = dpi(mt.mon_rail_w),
     bgimage = function(_, cr, w, h)
-      cr:set_source(gears.color({
-        type = "linear", from = { 0, 0 }, to = { 0, h },
-        stops = { { 0, p.a(p.glow_soft, 0.8) }, { 1, p.a(p.v700, 0.8) } },
-      }))
+      cr:set_source(rail_grad(h))
       cr:rectangle(0, 0, w, h); cr:fill()
     end,
     widget = wibox.container.background,
