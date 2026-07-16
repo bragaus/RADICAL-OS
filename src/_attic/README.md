@@ -19,6 +19,7 @@ rather than ported.
 | `clock.lua`, `date.lua` | superseded by `control_center`'s date pill; zero require sites. |
 | `cpu_info.lua`, `gpu_info.lua`, `ram_info.lua` | **superseded** by the gated/batched `monitor_bar` + `system_graph_panel` sampling; zero require sites. `cpu_info` also ran `collectgarbage("collect")` every 3 s on the main loop — an anti-pattern; do not revive as-is. |
 | `bt.sh` | shell helper whose only consumers were `audio.lua`/`bluetooth.lua` (above); unquoted vars, superseded. |
+| `cyber_hotkeys_dashboard.lua` | hotkeys popup (493 lines) whose `require` sat commented out in `rc.lua` since the redesign; zero live require sites. |
 
 To revive either: convert all blocking IO to `awful.spawn.easy_async` /
 `awful.widget.watch` / GIO async first, then move it into `molecules/` (single

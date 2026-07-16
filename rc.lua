@@ -48,15 +48,3 @@ err.safe_call("auto_starter", function() require("src.tools.auto_starter")(user_
 awful.spawn.with_shell("xset s off")
 awful.spawn.with_shell("xset -dpms")
 awful.spawn.with_shell("xset s noblank")
---local cyber = require("cyber_hotkeys_dashboard")
---
---cyber.setup({
-  --modkey = modkey,
-  --terminal = terminal,
-  --browser = "firefox",
-  --file_manager = "thunar",
-  --launcher = "rofi -show drun",
---})
---
---globalkeys = gears.table.join(globalkeys, cyber.keys)
---root.keys(globalkeys)
