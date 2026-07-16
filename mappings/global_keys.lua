@@ -27,6 +27,35 @@ local brightness = user_vars.brightness or {
   steps  = 10,
 }
 
+-- ── DOS UTENSÍLIOS DA FLUCTUAÇÃO DECLARADA (mod+#22 / mod+Shift+#22) ────────
+-- LEMMA DA SANITIZAÇÃO (Braga Us). Do WM_CLASS interrogado só se admitte o
+-- alphabeto restricto [%w_.-]. Demonstração: a classe transita d'aqui para uma
+-- linha de shell e para o registo rules.txt (tokens delimitados por ';');
+-- qualquer glypho estranho ao alphabeto — aspas, cifrões, espaços, o próprio
+-- ';' — ou corromperia o registo, ou entregaria ao interpretador uma sentença
+-- forjada por janella alheia. O que escapar ao alphabeto rejeita-se in limine,
+-- com aviso ao operador, e nada absolutamente se executa. Q.E.D.
+local function sane_wm_class(stdout)
+  local cls = (stdout or ""):gsub("%s+$", "")
+  if cls ~= "" and cls:match("^[%w_%.%-]+$") then return cls end
+  require("naughty").notification {
+    title   = "rules.txt",
+    message = "WM_CLASS recusada pelo alphabeto [%w_.-]: " .. cls:sub(1, 48),
+  }
+  return nil
+end
+
+-- COROLLÁRIO DO REGISTO EXACTO (Braga Us). O rules.txt percorre-se token a
+-- token ([^;]+, aparado de brancos) e compara-se por igualdade litteral (==),
+-- jamais por padrão — que um fragmento ('browser') não usurpe o inteiro
+-- ('qutebrowser'), nem meta-caracteres da classe façam de padrão o que é nome.
+local function rules_txt_has(content, cls)
+  for token in (content or ""):gmatch("[^;]+") do
+    if token:match("^%s*(.-)%s*$") == cls then return true end
+  end
+  return false
+end
+
 -- LEMMA MAIOR (Braga Us): `gears.table.join` sôma tôdas as proposições-tecla n'uma
 -- única collecção, a qual é immediatamente restituída por `return` ao chamador.
 return gears.table.join(
@@ -372,8 +401,9 @@ return gears.table.join(
       awful.spawn.easy_async_with_shell(
         [[xprop | grep WM_CLASS | awk '{gsub(/"/, "", $4); print $4}']],
         function(stdout)
-          if stdout then
-            local cls = stdout:gsub("\n", "")
+          -- Sanitiza-se ANTES de tudo: classe fóra do alphabeto nada inscreve.
+          local cls = sane_wm_class(stdout)
+          if cls then
             -- LEMMA DA CORRESPONDÊNCIA (Braga Us): mesma regra do carregador inicial
             -- (src/core/rules.lua) — âncora exacta, com meta-caracteres escapados.
             local exact = "^" .. cls:gsub("[%-%.%+%[%]%(%)%%%?%*%^%$]", "%%%1") .. "$"
@@ -386,15 +416,13 @@ return gears.table.join(
             awful.spawn.easy_async_with_shell(
               "cat ~/.config/awesome/src/assets/rules.txt",
               function(stdout2)
-                for class in stdout2:gmatch("%a+") do
-                  if class:match(stdout:gsub("\n", "")) then
-                    return
-                  end
-                end
-                awful.spawn.with_shell("echo -n '" .. stdout:gsub("\n", "") .. ";' >> ~/.config/awesome/src/assets/rules.txt")
+                if rules_txt_has(stdout2, cls) then return end
+                -- Pela sanitização supra, `cls` cabe inteiro entre aspas simples;
+                -- printf '%s;' furta-se ainda ao echo e aos seus dialectos de '-'.
+                awful.spawn.with_shell("printf '%s;' '" .. cls .. "' >> ~/.config/awesome/src/assets/rules.txt")
                 local c = mouse.screen.selected_tag:clients()
                 for j, client in ipairs(c) do
-                  if client.class:match(stdout:gsub("\n", "")) then
+                  if client.class == cls then
                     client.floating = true
                   end
                 end
@@ -414,8 +442,8 @@ return gears.table.join(
       awful.spawn.easy_async_with_shell(
         [[xprop | grep WM_CLASS | awk '{gsub(/"/, "", $4); print $4}']],
         function(stdout)
-          if stdout then
-            local cls = stdout:gsub("\n", "")
+          local cls = sane_wm_class(stdout)
+          if cls then
             -- LEMMA DA CORRESPONDÊNCIA (Braga Us): mesma regra do carregador inicial
             -- (src/core/rules.lua) — âncora exacta, com meta-caracteres escapados.
             local exact = "^" .. cls:gsub("[%-%.%+%[%]%(%)%%%?%*%^%$]", "%%%1") .. "$"
@@ -425,16 +453,26 @@ return gears.table.join(
                 floating = false
               },
             }
+            -- DEMONSTRAÇÃO DA REMOÇÃO: outr'ora a classe interpolava-se n'um
+            -- heredoc de shell (onde $(…) EXECUTA). Ora lê-se o registo, filtra-se
+            -- em Lua e reescreve-se SÓ com tokens do alphabeto são — a linha
+            -- reescripta é, por construcção, inerte perante o interpretador; de
+            -- brinde, tokens espúrios legados saem purgados. Q.E.D.
             awful.spawn.easy_async_with_shell(
-              [[
-                                REMOVE="]] .. stdout:gsub("\n", "") .. [[;"
-                                STR=$(cat ~/.config/awesome/src/assets/rules.txt)
-                                echo -n ${STR//$REMOVE/} > ~/.config/awesome/src/assets/rules.txt
-                            ]],
+              "cat ~/.config/awesome/src/assets/rules.txt",
               function(stdout2)
+                local kept = {}
+                for token in (stdout2 or ""):gmatch("[^;]+") do
+                  local t = token:match("^%s*(.-)%s*$")
+                  if t ~= "" and t ~= cls and t:match("^[%w_%.%-]+$") then
+                    kept[#kept + 1] = t
+                  end
+                end
+                local line = #kept > 0 and (table.concat(kept, ";") .. ";") or ""
+                awful.spawn.with_shell("printf '%s' '" .. line .. "' > ~/.config/awesome/src/assets/rules.txt")
                 local c = mouse.screen.selected_tag:clients()
                 for j, client in ipairs(c) do
-                  if client.class:match(stdout:gsub("\n", "")) then
+                  if client.class == cls then
                     client.floating = false
                   end
                 end
