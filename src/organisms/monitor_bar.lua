@@ -756,12 +756,12 @@ return function(s)
   local last_cpu, last_mem, last_gpu = 0, 0, 0
   local tick = 0
 
-  -- ── COROLLÁRIO update_cpu ───────────────────────────────────────────────────
+  -- ── COROLLÁRIO parse_cpu ────────────────────────────────────────────────────
   -- Funcção urdida pelo Doutor Braga Us que apura a percentagem de CPU por meio
   -- de /proc/stat (o delta entre o tempo occupado e o ocioso). Alimenta a leitura
-  -- grande, a série A (accento) e a célula LOAD.
-  local function update_cpu()
-    awful.spawn.easy_async_with_shell("cat /proc/stat 2>/dev/null | head -n 1", function(out)
+  -- grande, a série A (accento) e a célula LOAD. Recebe já a secção de texto (a
+  -- sonda fundida a colhe); o corpo conserva-se ipsis litteris.
+  local function parse_cpu(out)
       out = out or ""
       local nums = {}
       for tok in out:gmatch("%d+") do nums[#nums + 1] = tonumber(tok) end
@@ -781,7 +781,6 @@ return function(s)
       mod_cpu.set_big("", tostring(r), "%", r)
       mod_cpu.push(1, r)
       mod_cpu.set_cell(1, r .. "%") -- célula LOAD
-    end)
   end
 
   -- ── COROLLÁRIO update_cpu_extra ─────────────────────────────────────────────
@@ -812,12 +811,12 @@ return function(s)
     end)
   end
 
-  -- ── COROLLÁRIO update_mem ───────────────────────────────────────────────────
+  -- ── COROLLÁRIO parse_mem ────────────────────────────────────────────────────
   -- Funcção urdida pelo Doutor Braga Us que afere a memória por /proc/meminfo.
   -- Alimenta a leitura, as células USED/CACHE/SWAP/BUFF e as séries A (uso%) e B
   -- (swap%). Abstem-se á falta de MemTotal/MemAvailable ou total não-positivo.
-  local function update_mem()
-    awful.spawn.easy_async_with_shell("cat /proc/meminfo 2>/dev/null", function(out)
+  -- Recebe já a secção de texto (da sonda fundida); o corpo conserva-se ipsis litteris.
+  local function parse_mem(out)
       out = out or ""
       local total   = tonumber(out:match("MemTotal:%s*(%d+)"))      -- em kibibytes
       local avail   = tonumber(out:match("MemAvailable:%s*(%d+)"))
@@ -840,7 +839,6 @@ return function(s)
         buffers and fmt_gib(buffers * 1024) or "--",
       }
       mod_mem.push(1, pct) -- série única: uso% real da memória (swap fica na célula)
-    end)
   end
 
   -- ── COROLLÁRIO update_gpu ───────────────────────────────────────────────────
@@ -882,13 +880,13 @@ return function(s)
     )
   end
 
-  -- ── COROLLÁRIO update_net ───────────────────────────────────────────────────
+  -- ── COROLLÁRIO parse_net ────────────────────────────────────────────────────
   -- Funcção urdida pelo Doutor Braga Us que mede a rede por /proc/net/dev,
   -- sommando todas as interfaces excepto a de loopback (lo) e derivando a taxa do
   -- delta entre duas amostras. Alimenta a leitura (↓ com unidade /s), as células
-  -- DOWN/UP e as séries A (down) e B (up).
-  local function update_net()
-    awful.spawn.easy_async_with_shell("cat /proc/net/dev 2>/dev/null", function(out)
+  -- DOWN/UP e as séries A (down) e B (up). Recebe já a secção (da sonda fundida);
+  -- o corpo conserva-se ipsis litteris.
+  local function parse_net(out)
       out = out or ""
       local rx_sum, tx_sum = 0, 0
       for line in out:gmatch("[^\r\n]+") do
@@ -917,7 +915,6 @@ return function(s)
       mod_net.set_cell(2, format.rate(up_rate, "compact"))   -- UP
       mod_net.push(1, down_rate / 1024) -- série 1 (frente, laranja): download real em KiB/s
       mod_net.push(2, up_rate   / 1024) -- série 2 (trás, amarelo-neon): upload real em KiB/s (escala partilhada)
-    end)
   end
 
   -- ── COROLLÁRIO update_net_extra ─────────────────────────────────────────────
@@ -961,15 +958,32 @@ return function(s)
     rail.set_load((last_cpu + last_mem + last_gpu) / 3)
   end
 
+  -- ── LEMMA DA SONDA FUNDIDA DE 1s (Braga Us) ─────────────────────────────────
+  -- Outr'ora cada tick lançava TRÊS invólucros de shell (stat, meminfo, net/dev):
+  -- três forks por segundo, eternos. Ora funde-os n'UM só, seccionado por
+  -- marcadores @@ (precedente do system_graph_panel). Regras da fusão: os membros
+  -- unem-se por ';' (jamais '&&' — um membro falho não deve engolir os seguintes);
+  -- cada qual traz o seu '2>/dev/null'; e cada secção extrahe-se com guarda a nil
+  -- (marcador ausente -> ""). Os marcadores nunca surgem em /proc. Q.E.D.
+  local SAMPLE_1S = "echo '@@CPU'; cat /proc/stat 2>/dev/null | head -n 1; "
+                 .. "echo '@@MEM'; cat /proc/meminfo 2>/dev/null; "
+                 .. "echo '@@NET'; cat /proc/net/dev 2>/dev/null"
+  local function sample_1s()
+    awful.spawn.easy_async_with_shell(SAMPLE_1S, function(out)
+      out = out or ""
+      parse_cpu(out:match("@@CPU%s*(.-)@@MEM") or "")
+      parse_mem(out:match("@@MEM%s*(.-)@@NET") or "")
+      parse_net(out:match("@@NET%s*(.*)$") or "")
+    end)
+  end
+
   local sample_timer = gears.timer {
     timeout   = INTERVAL,
     call_now  = true,
     autostart = true,
     callback  = function()
       tick = tick + 1
-      update_cpu()
-      update_mem()
-      update_net()
+      sample_1s() -- CPU + MEM + NET n'um só fork
       if tick % 2 == 1 then -- os invólucros de shell mais custosos, a cada dois segundos
         update_gpu()
         update_cpu_extra()
